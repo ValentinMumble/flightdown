@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {Sortie} from '../types';
 import {parseCsv} from './csv';
-import {matchSortie, modelFromFileName, readDay, readTelemetry} from './telemetry';
+import {matchSortie, modelFromFileName, readDay, readTelemetry, sampleAt} from './telemetry';
 import {estimateCells, packOf, telemetryInsights} from './insights';
 
 /** A made-up EdgeTX log of a 3S pack: hover, then the pack sags and the ESC cuts with the throttle up. */
@@ -82,5 +82,22 @@ describe('telemetryInsights', () => {
     });
     expect(estimateCells(12.56)).toBe(3);
     expect(estimateCells(22.2)).toBe(6);
+  });
+});
+
+describe('sampleAt', () => {
+  const time = [0, 1, 2, 4];
+  const values = [0, 10, -10, 30];
+
+  it('reads a sample, or between two in a straight line', () => {
+    expect(sampleAt(time, values, 1)).toBe(10);
+    expect(sampleAt(time, values, 1.5)).toBe(0);
+    expect(sampleAt(time, values, 3)).toBe(10);
+  });
+
+  it('holds the first and last samples outside the log', () => {
+    expect(sampleAt(time, values, -2)).toBe(0);
+    expect(sampleAt(time, values, 9)).toBe(30);
+    expect(sampleAt(time, undefined, 1)).toBeNull();
   });
 });

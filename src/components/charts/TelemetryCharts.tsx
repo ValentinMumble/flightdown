@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
-import {Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
+import {Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import type {TelemetryLog, TelemetrySeries} from '../../types';
 import {useStore} from '../../data/store';
 import {CHANNELS, type Channel} from '../../model/telemetry';
@@ -7,6 +7,7 @@ import {telemetryInsights} from '../../model/insights';
 import {StickMap} from './StickMap';
 import {formatTimer} from '../../model/format';
 import {useChartInk} from '../colors';
+import {StickReplay} from './StickReplay';
 
 /** Avionics colours, a sensor each, as on a multi-function display. */
 const TRACE: Partial<Record<Channel, string>> = {
@@ -27,6 +28,8 @@ export function TelemetryCharts({log, pack}: {log: TelemetryLog; pack?: {cells?:
   const {loadSeries} = useStore();
   const ink = useChartInk();
   const [series, setSeries] = useState<TelemetrySeries | null | undefined>(undefined);
+  // The replay's moment, shown as a cursor on every trace.
+  const [cursor, setCursor] = useState<number | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -124,6 +127,7 @@ export function TelemetryCharts({log, pack}: {log: TelemetryLog; pack?: {cells?:
                         );
                       }}
                     />
+                    {cursor !== null && <ReferenceLine x={cursor} stroke="#7cffb2" strokeWidth={1.5} />}
                     <Area
                       type="monotone"
                       dataKey={channel}
@@ -144,6 +148,7 @@ export function TelemetryCharts({log, pack}: {log: TelemetryLog; pack?: {cells?:
         })}
       </div>
       <StickMap series={series} />
+      <StickReplay series={series} onTime={setCursor} />
     </>
   );
 }

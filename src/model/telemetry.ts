@@ -206,3 +206,20 @@ export function matchSortie(
     sortie.packs * (sortie.timer ?? 0) > best.packs * (best.timer ?? 0) ? sortie : best,
   );
 }
+
+/** A channel's value at a moment between two samples, drawn in a straight line between them; null with no samples. */
+export function sampleAt(time: number[], values: number[] | undefined, second: number): number | null {
+  if (!values?.length || !time.length) return null;
+  const last = Math.min(time.length, values.length) - 1;
+  if (second <= time[0]) return values[0];
+  if (second >= time[last]) return values[last];
+  let low = 0;
+  let high = last;
+  while (high - low > 1) {
+    const middle = (low + high) >> 1;
+    if (time[middle] <= second) low = middle;
+    else high = middle;
+  }
+  const span = time[high] - time[low] || 1;
+  return values[low] + ((values[high] - values[low]) * (second - time[low])) / span;
+}

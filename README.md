@@ -17,7 +17,7 @@ small monospace labels, one soft green for anything good, a rolling counter of m
 - **Log a sortie:** heli, day, packs and time per pack, crashes, broken parts, manoeuvres practised, notes and links.
   Quick with one hand at the field; changes made without signal wait and sync later.
 - **Telemetry:** add EdgeTX logs (the radio's `LOGS` folder) to a sortie for voltage, current, signal and throttle
-  traces, a map of the sticks, and what the log says: the pack ran flat, how much of it was used, sag per cell, when
+  traces, a map of the sticks and a replay of them (with a cursor on the traces), and what the log says: the pack ran flat, how much of it was used, sag per cell, when
   80 % was used (a timer that fits), pack resistance, the radio link. `npm run logs` brings them from the plugged-in
   radio. Debrief compares every pack's voltage under load.
 - **Debrief:** the learning curve (crashes every 10 packs), milestones, where the heli breaks (a damage map on a heli

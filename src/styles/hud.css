@@ -436,3 +436,48 @@
 .gear-card.gone .heli-name {
   opacity: 0.6;
 }
+
+/* The stick replay: the two gimbals moving, then play, the timeline and the speed. */
+.stick-replay {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--bezel);
+}
+
+.stick-shaft {
+  stroke: var(--ink-2);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+
+.stick-knob {
+  stroke: var(--page);
+  stroke-width: 2;
+}
+
+.replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-top: 12px;
+}
+
+.replay-scrub {
+  flex: 1 1 180px;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+
+.replay-time,
+.replay-readout {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-readout {
+  margin-top: 8px;
+}

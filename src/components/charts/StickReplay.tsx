@@ -1,0 +1,158 @@
+import {useEffect, useRef, useState} from 'react';
+import {Pause, Play, RotateCcw} from 'lucide-react';
+import type {TelemetrySeries} from '../../types';
+import {sampleAt} from '../../model/telemetry';
+import {formatNumber, formatTimer} from '../../model/format';
+
+const SIZE = 150;
+/** The trail behind each stick: this many seconds, a point every tenth of one. */
+const TRAIL = 1.5;
+const SPEEDS = [1, 2, 4];
+/** The charts' cursor follows ten times a second: enough to read, light enough for the charts. */
+const CURSOR_EVERY_MS = 100;
+
+const scale = (value: number) => ((Math.max(-100, Math.min(100, value)) + 100) / 200) * SIZE;
+
+function Gimbal({points, color, label}: {points: {x: number; y: number}[]; color: string; label: string}) {
+  const now = points[points.length - 1];
+  return (
+    <figure className="stick">
+      <svg viewBox={`-2 -2 ${SIZE + 4} ${SIZE + 4}`} role="img" aria-label={label}>
+        <rect x={0} y={0} width={SIZE} height={SIZE} rx={14} className="stick-gate" />
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={SIZE * 0.375} className="stick-ring" />
+        <line x1={SIZE / 2} x2={SIZE / 2} y1={6} y2={SIZE - 6} className="stick-cross" />
+        <line y1={SIZE / 2} y2={SIZE / 2} x1={6} x2={SIZE - 6} className="stick-cross" />
+        {points.slice(1).map((point, index) => (
+          <line
+            key={index}
+            x1={scale(points[index].x)}
+            y1={SIZE - scale(points[index].y)}
+            x2={scale(point.x)}
+            y2={SIZE - scale(point.y)}
+            stroke={color}
+            strokeWidth={3}
+            strokeLinecap="round"
+            opacity={((index + 1) / points.length) * 0.7}
+          />
+        ))}
+        {now && (
+          <>
+            <line x1={SIZE / 2} y1={SIZE / 2} x2={scale(now.x)} y2={SIZE - scale(now.y)} className="stick-shaft" />
+            <circle cx={scale(now.x)} cy={SIZE - scale(now.y)} r={8} fill={color} className="stick-knob" />
+          </>
+        )}
+      </svg>
+      <figcaption>
+        <b>{label}</b>
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
+ * The flight played back: the two sticks moving as they did, from the radio's log (mode 2: throttle and rudder on the
+ * left, elevator and aileron on the right), with a short trail. Between samples the sticks move in a straight line, so
+ * a log taken once a second still plays smoothly. The time is shared with the charts, which show it as a cursor.
+ */
+export function StickReplay({series, onTime}: {series: TelemetrySeries; onTime: (second: number | null) => void}) {
+  const {time, channels} = series;
+  const end = time[time.length - 1] ?? 0;
+  const [second, setSecond] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(2);
+  const reported = useRef(0);
+  const report = useRef(onTime);
+  report.current = onTime;
+  // The moment as the animation loop reads it, between renders.
+  const moment = useRef(0);
+
+  useEffect(() => {
+    if (!playing) return;
+    let frame = 0;
+    let before = performance.now();
+    const step = (now: number) => {
+      const elapsed = (now - before) / 1000;
+      before = now;
+      const next = Math.min(end, moment.current + elapsed * speed);
+      moment.current = next;
+      setSecond(next);
+      if (now - reported.current >= CURSOR_EVERY_MS || next >= end) {
+        reported.current = now;
+        report.current(next);
+      }
+      if (next >= end) {
+        setPlaying(false);
+        return;
+      }
+      frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [playing, speed, end]);
+
+  if (!channels.aileron?.length || !channels.elevator?.length || end <= 0) return null;
+
+  const at = (channel: keyof typeof channels, when: number) => sampleAt(time, channels[channel], when) ?? 0;
+  const trail = (x: keyof typeof channels, y: keyof typeof channels, throttle = false) => {
+    const points = [];
+    for (let past = Math.max(0, second - TRAIL); past <= second + 0.001; past += 0.1) {
+      points.push({x: at(x, past), y: throttle ? at(y, past) * 2 - 100 : at(y, past)});
+    }
+    return points;
+  };
+  const hasLeft = Boolean(channels.rudder?.length && channels.throttle?.length);
+  const readout = [
+    channels.throttle?.length && `throttle ${formatNumber(at('throttle', second))} %`,
+    channels.voltage?.length && `${formatNumber(at('voltage', second), 2)} V`,
+    channels.current?.length && `${formatNumber(at('current', second), 1)} A`,
+  ].filter(Boolean);
+
+  const seek = (to: number) => {
+    moment.current = to;
+    setSecond(to);
+    onTime(to);
+  };
+
+  return (
+    <div className="stick-replay">
+      <div className="stick-pair">
+        {hasLeft && <Gimbal points={trail('rudder', 'throttle', true)} color="#ffb020" label="Left stick" />}
+        <Gimbal points={trail('aileron', 'elevator')} color="#49cfe6" label="Right stick" />
+      </div>
+      <div className="replay-controls">
+        <button
+          type="button"
+          className="icon-button"
+          aria-label={playing ? 'Pause' : second >= end ? 'Play again' : 'Play'}
+          onClick={() => {
+            if (!playing && second >= end) seek(0);
+            setPlaying(!playing);
+          }}
+        >
+          {playing ? <Pause size={17} /> : second >= end ? <RotateCcw size={17} /> : <Play size={17} />}
+        </button>
+        <input
+          type="range"
+          className="replay-scrub"
+          min={0}
+          max={end}
+          step={0.1}
+          value={second}
+          aria-label="Moment of the flight"
+          onChange={event => seek(Number(event.target.value))}
+        />
+        <span className="replay-time">
+          {formatTimer(second)} / {formatTimer(end)}
+        </span>
+        <div className="segmented" aria-label="Speed">
+          {SPEEDS.map(option => (
+            <button key={option} type="button" aria-pressed={option === speed} onClick={() => setSpeed(option)}>
+              {option}×
+            </button>
+          ))}
+        </div>
+      </div>
+      {readout.length > 0 && <div className="replay-readout">{readout.join(' · ')}</div>}
+    </div>
+  );
+}
