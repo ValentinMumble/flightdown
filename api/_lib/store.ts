@@ -1,5 +1,5 @@
 import {Redis} from '@upstash/redis';
-import {KINDS, type Doc, type Kind, type TelemetrySeries} from '../../src/types';
+import {KINDS, type Doc, type Kind, type TelemetrySeries} from '../../src/types.js';
 import {HttpError} from './http.js';
 
 /** One hash per kind of item (helis, spots, sessions, spares, batteries, tips, gear), by id. */

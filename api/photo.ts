@@ -1,4 +1,4 @@
-import type {Heli} from '../src/types';
+import type {Heli} from '../src/types.js';
 import {handle, HttpError} from './_lib/http.js';
 import {kindKey, readCutout, redis} from './_lib/store.js';
 

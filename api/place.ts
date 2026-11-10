@@ -1,5 +1,5 @@
 import {handle, HttpError, json} from './_lib/http.js';
-import {parseLocation, type LatLng} from '../src/model/geo';
+import {parseLocation, type LatLng} from '../src/model/geo.js';
 
 /** The hosts a shared Maps link starts on or goes through. */
 const MAPS = /^(maps\.app\.goo\.gl|goo\.gl|g\.co|maps\.apple|maps\.apple\.com|((www|maps|consent)\.)?google\.[a-z.]+)$/;

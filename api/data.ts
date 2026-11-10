@@ -1,4 +1,4 @@
-import {KINDS, type Doc, type TelemetrySeries} from '../src/types';
+import {KINDS, type Doc, type TelemetrySeries} from '../src/types.js';
 import {handle, HttpError, json, readJson} from './_lib/http.js';
 import {requireOwner} from './_lib/owner.js';
 import {deleteItem, isKind, putItem, readDoc, replaceDoc} from './_lib/store.js';
