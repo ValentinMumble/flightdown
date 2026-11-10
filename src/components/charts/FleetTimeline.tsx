@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import {useNavigate} from 'react-router';
-import type {Heli, Session} from '../../types';
+import type {Heli, Sortie} from '../../types';
 import {fleetLives} from '../../model/debrief';
 import {daysBetween, formatAirtime, formatDay, today} from '../../model/format';
 import {useSeriesColor} from '../colors';
@@ -19,15 +19,15 @@ const END: Record<Heli['status'], string> = {
 };
 
 /**
- * Every heli's life on one time line: a bar from its first session to its last, a dot a session (bigger for more
+ * Every heli's life on one time line: a bar from its first sortie to its last, a dot a sortie (bigger for more
  * packs), a red tick a crash, and how it left the hangar at the end.
  */
-export function FleetTimeline({helis, sessions}: {helis: Heli[]; sessions: Session[]}) {
+export function FleetTimeline({helis, sorties}: {helis: Heli[]; sorties: Sortie[]}) {
   const color = useSeriesColor();
   const navigate = useNavigate();
-  const lives = useMemo(() => fleetLives(helis, sessions), [helis, sessions]);
+  const lives = useMemo(() => fleetLives(helis, sorties), [helis, sorties]);
   const [hover, setHover] = useState<{x: number; y: number; text: string} | null>(null);
-  if (!lives.length) return <div className="muted">No session yet.</div>;
+  if (!lives.length) return <div className="muted">No sortie yet.</div>;
 
   const start = lives[0].first;
   const end = today();
@@ -66,25 +66,25 @@ export function FleetTimeline({helis, sessions}: {helis: Heli[]; sessions: Sessi
                 fill={hue}
                 opacity={0.35}
               />
-              {life.sessions.map(session => (
-                <g key={session.id}>
+              {life.sorties.map(sortie => (
+                <g key={sortie.id}>
                   <circle
-                    cx={x(session.date)}
+                    cx={x(sortie.date)}
                     cy={y}
-                    r={2.5 + Math.min(4, session.packs * 0.6)}
+                    r={2.5 + Math.min(4, sortie.packs * 0.6)}
                     fill={hue}
                     stroke="var(--panel)"
                     strokeWidth={1.5}
                     onMouseEnter={() =>
                       setHover({
-                        x: x(session.date),
+                        x: x(sortie.date),
                         y,
-                        text: `${life.heli.name} · ${formatDay(session.date, {year: true})} · ${session.packs} packs${session.crashes ? ` · 💥 ${session.crashes}` : ''}`,
+                        text: `${life.heli.name} · ${formatDay(sortie.date, {year: true})} · ${sortie.packs} packs${sortie.crashes ? ` · 💥 ${sortie.crashes}` : ''}`,
                       })
                     }
                   />
-                  {session.crashes > 0 && (
-                    <line x1={x(session.date)} x2={x(session.date)} y1={y - 15} y2={y - 9} className="timeline-crash" />
+                  {sortie.crashes > 0 && (
+                    <line x1={x(sortie.date)} x2={x(sortie.date)} y1={y - 15} y2={y - 9} className="timeline-crash" />
                   )}
                 </g>
               ))}

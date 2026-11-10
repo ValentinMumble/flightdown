@@ -2,12 +2,16 @@ import {Redis} from '@upstash/redis';
 import {KINDS, type Doc, type Kind, type TelemetrySeries} from '../../src/types.js';
 import {HttpError} from './http.js';
 
-/** One hash per kind of item (helis, spots, sessions, spares, batteries, tips, gear), by id. */
+/** One hash per kind of item (helis, spots, sorties, spares, batteries, tips, gear), by id. */
 export const kindKey = (kind: Kind) => `flightdown:${kind}`;
-/** Telemetry samples, by log id: read one at a time, when a session opens. */
+/** Telemetry samples, by log id: read one at a time, when a sortie opens. */
 export const TELEMETRY = 'flightdown:telemetry';
 /** Heli photos lifted out of their background on the Mac (`npm run cutouts`): base64 PNGs, by photo URL. */
 export const CUTOUTS = 'flightdown:cutouts';
+/** The link of the iCloud shared album that holds the sorties' photos. */
+export const ALBUM = 'flightdown:album';
+/** The album as last read from Apple, kept a while: Apple can take most of a minute to answer. */
+export const ALBUM_COPY = 'flightdown:album-copy';
 
 let client: Redis | null = null;
 
@@ -65,4 +69,22 @@ export async function readSeries(id: string) {
 
 export async function readCutout(photo: string) {
   return redis().hget<string>(CUTOUTS, photo);
+}
+
+export async function readAlbumLink() {
+  return redis().get<string>(ALBUM);
+}
+
+export async function putAlbumLink(link: string | null) {
+  if (link) await redis().set(ALBUM, link);
+  else await redis().del(ALBUM);
+  await redis().del(ALBUM_COPY);
+}
+
+export async function readAlbumCopy<Album>() {
+  return redis().get<{at: number; album: Album}>(ALBUM_COPY);
+}
+
+export async function putAlbumCopy(album: unknown) {
+  await redis().set(ALBUM_COPY, {at: Date.now(), album});
 }

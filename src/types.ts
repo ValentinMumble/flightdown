@@ -13,7 +13,7 @@ export interface Heli {
   status: HeliStatus;
   /** Day it joined the fleet (YYYY-MM-DD). */
   acquired?: string;
-  /** Flight time of one pack, in seconds: the next session starts with it. */
+  /** Flight time of one pack, in seconds: the next sortie starts with it. */
   timer?: number;
   /** The packs it flies on, in words ("3S 450 mAh"). */
   battery?: string;
@@ -41,7 +41,7 @@ export interface BrokenPart {
   note?: string;
 }
 
-/** What one EdgeTX log says, kept with its session. Its samples are stored apart (see TelemetrySeries). */
+/** What one EdgeTX log says, kept with its sortie. Its samples are stored apart (see TelemetrySeries). */
 export interface TelemetryLog {
   id: string;
   /** The file it came from. */
@@ -66,7 +66,7 @@ export interface TelemetrySeries {
   channels: Record<string, number[]>;
 }
 
-export interface Session {
+export interface Sortie {
   id: string;
   /** YYYY-MM-DD */
   date: string;
@@ -83,6 +83,11 @@ export interface Session {
   notes: string;
   /** Photos, videos, a map. */
   links: string[];
+  /**
+   * Photos of the shared album (their ids) picked for this sortie. Left out, the sortie shows the album's photos taken
+   * that day.
+   */
+  photos?: string[];
   telemetry: TelemetryLog[];
   /** When it was written down: spares in stock only count the parts broken after their count. */
   loggedAt: string;
@@ -93,7 +98,7 @@ export interface Spare {
   name: string;
   /** The heli it fits; none for a part that fits several. */
   heliId?: string;
-  /** How many there were at countedAt: parts broken in sessions logged since then come off it. */
+  /** How many there were at countedAt: parts broken in sorties logged since then come off it. */
   count: number;
   countedAt: string;
   /** Below this, the part goes on the shopping list. */
@@ -138,7 +143,7 @@ export interface Gear {
 export interface Doc {
   helis: Heli[];
   spots: Spot[];
-  sessions: Session[];
+  sorties: Sortie[];
   spares: Spare[];
   batteries: Battery[];
   tips: Tip[];
@@ -147,7 +152,7 @@ export interface Doc {
 
 export type Kind = keyof Doc;
 
-export const KINDS: Kind[] = ['helis', 'spots', 'sessions', 'spares', 'batteries', 'tips', 'gear'];
+export const KINDS: Kind[] = ['helis', 'spots', 'sorties', 'spares', 'batteries', 'tips', 'gear'];
 
 export type Item<K extends Kind> = Doc[K][number];
 
@@ -161,7 +166,7 @@ export type Change =
 export const emptyDoc = (): Doc => ({
   helis: [],
   spots: [],
-  sessions: [],
+  sorties: [],
   spares: [],
   batteries: [],
   tips: [],

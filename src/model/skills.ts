@@ -35,7 +35,7 @@ const HINTS: [RegExp, string][] = [
   [/fpv|goggles/i, 'FPV'],
 ];
 
-/** The manoeuvres a session's notes mention, for logs written before Flightdown asked. */
+/** The manoeuvres a sortie's notes mention, for logs written before Flightdown asked. */
 export function inferSkills(notes: string) {
   return SKILLS.filter(skill => HINTS.some(([pattern, name]) => name === skill && pattern.test(notes)));
 }

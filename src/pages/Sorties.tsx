@@ -3,11 +3,11 @@ import {useSearchParams} from 'react-router';
 import {Plus, Search} from 'lucide-react';
 import {useStore} from '../data/store';
 import {Empty, HeliDot, PageHeader, Segmented, useOverlay} from '../components/ui';
-import {FlightStrip} from '../components/SessionRow';
-import {SessionForm} from '../components/forms/SessionForm';
+import {FlightStrip} from '../components/SortieRow';
+import {SortieForm} from '../components/forms/SortieForm';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {formatAirtime, formatMonth, fromDay, plural} from '../model/format';
-import {monthOf, sortSessions, totals} from '../model/stats';
+import {monthOf, sortSorties, totals} from '../model/stats';
 import {partKey} from '../model/parts';
 import {sortSpots} from '../model/geo';
 
@@ -20,9 +20,9 @@ const plain = (text: string) =>
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase();
 
-/** The pickers of the filter bar, remembered in this browser so the logbook opens as it was left. */
+/** The pickers of the filter bar, remembered in this browser so the page opens as it was left. */
 const REMEMBERED = ['spot', 'heli', 'crashes'];
-const FILTERS_KEY = 'flightdown.logbook.filters';
+const FILTERS_KEY = 'flightdown.sorties.filters';
 /** Any of these in the address: the page was opened on purpose with its own filter, which wins. */
 const FILTERS = [...REMEMBERED, 'part', 'q'];
 
@@ -43,8 +43,8 @@ function remember(params: URLSearchParams) {
   }
 }
 
-/** The logbook: every session as a flight strip, newest first, a month at a time, with filters kept in the address. */
-export function Sessions() {
+/** Every sortie as a flight strip, newest first, a month at a time, with filters kept in the address. */
+export function Sorties() {
   const {doc, heli, spot} = useStore();
   const {open} = useOverlay();
   const [params, setParams] = useSearchParams();
@@ -79,50 +79,50 @@ export function Sessions() {
 
   const filtered = useMemo(() => {
     const words = plain(query).split(/\s+/).filter(Boolean);
-    return sortSessions(doc.sessions)
+    return sortSorties(doc.sorties)
       .reverse()
-      .filter(session => {
-        if (heliId && session.heliId !== heliId) return false;
-        if (spotId && session.spotId !== spotId) return false;
-        if (part && !session.broken.some(broken => partKey(broken.part) === partKey(part))) return false;
-        if (crashes === 'crashed' && !session.crashes) return false;
-        if (crashes === 'clean' && session.crashes !== 0) return false;
+      .filter(sortie => {
+        if (heliId && sortie.heliId !== heliId) return false;
+        if (spotId && sortie.spotId !== spotId) return false;
+        if (part && !sortie.broken.some(broken => partKey(broken.part) === partKey(part))) return false;
+        if (crashes === 'crashed' && !sortie.crashes) return false;
+        if (crashes === 'clean' && sortie.crashes !== 0) return false;
         if (!words.length) return true;
         const haystack = plain(
           [
-            session.notes,
-            heli(session.heliId)?.name,
-            spot(session.spotId)?.name,
-            session.date,
-            fromDay(session.date).toLocaleDateString('en-GB', {day: 'numeric', month: 'long', year: 'numeric'}),
-            ...session.broken.map(broken => broken.part),
-            ...session.skills,
+            sortie.notes,
+            heli(sortie.heliId)?.name,
+            spot(sortie.spotId)?.name,
+            sortie.date,
+            fromDay(sortie.date).toLocaleDateString('en-GB', {day: 'numeric', month: 'long', year: 'numeric'}),
+            ...sortie.broken.map(broken => broken.part),
+            ...sortie.skills,
           ].join(' '),
         );
         return words.every(word => haystack.includes(word));
       });
-  }, [doc.sessions, query, heliId, spotId, part, crashes, heli, spot]);
+  }, [doc.sorties, query, heliId, spotId, part, crashes, heli, spot]);
 
   const months = useMemo(() => {
-    const groups: {month: string; sessions: typeof filtered}[] = [];
-    for (const session of filtered) {
-      const month = monthOf(session.date);
-      if (groups[groups.length - 1]?.month !== month) groups.push({month, sessions: []});
-      groups[groups.length - 1].sessions.push(session);
+    const groups: {month: string; sorties: typeof filtered}[] = [];
+    for (const sortie of filtered) {
+      const month = monthOf(sortie.date);
+      if (groups[groups.length - 1]?.month !== month) groups.push({month, sorties: []});
+      groups[groups.length - 1].sorties.push(sortie);
     }
     return groups;
   }, [filtered]);
 
   const shown = totals(filtered);
-  const helis = doc.helis.filter(one => doc.sessions.some(session => session.heliId === one.id));
+  const helis = doc.helis.filter(one => doc.sorties.some(sortie => sortie.heliId === one.id));
 
   return (
     <div className="page">
       <PageHeader
-        title="Logbook"
+        title="Sorties"
         sub="Every sortie, a flight strip each"
         actions={
-          <button className="button solid desktop-only" onClick={() => open(<SessionForm />)}>
+          <button className="button solid desktop-only" onClick={() => open(<SortieForm />)}>
             <Plus size={16} strokeWidth={2.4} /> Log
           </button>
         }
@@ -186,13 +186,13 @@ export function Sessions() {
       </div>
 
       <div className="summary-line">
-        {plural(shown.sessions, 'session')} · {plural(shown.packs, 'pack')} · {formatAirtime(shown.airtime, true)} ·{' '}
+        {plural(shown.sorties, 'sortie')} · {plural(shown.packs, 'pack')} · {formatAirtime(shown.airtime, true)} ·{' '}
         {plural(shown.crashes, 'crash', 'crashes')}
       </div>
 
       {months.length ? (
         months.map(group => {
-          const tally = totals(group.sessions);
+          const tally = totals(group.sorties);
           return (
             <section key={group.month} className="log-month">
               <div className="month-head">
@@ -203,8 +203,8 @@ export function Sessions() {
                 </span>
               </div>
               <div className="strip-board">
-                {group.sessions.map(session => (
-                  <FlightStrip key={session.id} session={session} />
+                {group.sorties.map(sortie => (
+                  <FlightStrip key={sortie.id} sortie={sortie} />
                 ))}
               </div>
             </section>
@@ -212,7 +212,7 @@ export function Sessions() {
         })
       ) : (
         <div className="card">
-          <Empty emoji="🔍">{doc.sessions.length ? 'No session matches.' : 'No session logged yet.'}</Empty>
+          <Empty emoji="🔍">{doc.sorties.length ? 'No sortie matches.' : 'No sortie logged yet.'}</Empty>
         </div>
       )}
     </div>

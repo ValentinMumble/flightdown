@@ -3,10 +3,10 @@ import {handle, HttpError, json, readJson} from './_lib/http.js';
 import {requireOwner} from './_lib/owner.js';
 import {deleteItem, isKind, putItem, readDoc, replaceDoc} from './_lib/store.js';
 
-/** No item comes near this: a bigger one is a mistake, not a session. */
+/** No item comes near this: a bigger one is a mistake, not a sortie. */
 const MAX_ITEM = 200_000;
 
-/** GET /api/data: the owner's whole log (helis, spots, sessions, spares, batteries, notes, gear). */
+/** GET /api/data: the owner's whole log (helis, spots, sorties, spares, batteries, notes, gear). */
 export function GET(request: Request) {
   return handle(async () => {
     requireOwner(request);
@@ -29,7 +29,7 @@ export function POST(request: Request) {
   });
 }
 
-/** DELETE /api/data?kind=sessions&id=...: removes one item. */
+/** DELETE /api/data?kind=sorties&id=...: removes one item. */
 export function DELETE(request: Request) {
   return handle(async () => {
     requireOwner(request);

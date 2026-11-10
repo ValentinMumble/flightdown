@@ -1,8 +1,8 @@
 import {describe, expect, it} from 'vitest';
-import type {Session, Spare} from '../types';
+import type {Sortie, Spare} from '../types';
 import {brokenRanking, parseBrokenParts, partKey, spareStock, WHOLE_HELI} from './parts';
 
-const session = (overrides: Partial<Session>): Session => ({
+const sortie = (overrides: Partial<Sortie>): Sortie => ({
   id: 's',
   date: '2026-01-01',
   heliId: 'h',
@@ -43,27 +43,27 @@ describe('partKey', () => {
 describe('spareStock', () => {
   const spare: Spare = {id: 'p', name: 'Main blade', heliId: 'h', count: 4, countedAt: '2026-02-01T12:00:00', min: 2};
 
-  it('takes off the parts broken in sessions logged after the count, on its heli', () => {
-    const sessions = [
-      session({loggedAt: '2026-01-15T20:00:00', broken: [{part: 'Main blade', qty: 2}]}),
-      session({loggedAt: '2026-02-03T20:00:00', broken: [{part: 'main blades', qty: 2}]}),
-      session({loggedAt: '2026-02-04T20:00:00', heliId: 'other', broken: [{part: 'Main blade', qty: 1}]}),
+  it('takes off the parts broken in sorties logged after the count, on its heli', () => {
+    const sorties = [
+      sortie({loggedAt: '2026-01-15T20:00:00', broken: [{part: 'Main blade', qty: 2}]}),
+      sortie({loggedAt: '2026-02-03T20:00:00', broken: [{part: 'main blades', qty: 2}]}),
+      sortie({loggedAt: '2026-02-04T20:00:00', heliId: 'other', broken: [{part: 'Main blade', qty: 1}]}),
     ];
-    expect(spareStock(spare, sessions)).toBe(2);
+    expect(spareStock(spare, sorties)).toBe(2);
   });
 });
 
 describe('brokenRanking', () => {
   it('counts parts by quantity, whole helis aside', () => {
     const ranking = brokenRanking([
-      session({
+      sortie({
         date: '2026-01-01',
         broken: [
           {part: 'Main shaft', qty: 1},
           {part: WHOLE_HELI, qty: 1},
         ],
       }),
-      session({
+      sortie({
         date: '2026-01-02',
         heliId: 'other',
         broken: [

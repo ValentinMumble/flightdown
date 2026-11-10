@@ -4,11 +4,11 @@ import {BookOpen, CloudOff, Gauge, MapPin, Plus, Radar, Settings as SettingsIcon
 import {useStore, type Mode} from './data/store';
 import {OverlayProvider, useOverlay} from './components/ui';
 import {MinuteMeter, RotorMark} from './components/instruments';
-import {SessionForm} from './components/forms/SessionForm';
+import {SortieForm} from './components/forms/SortieForm';
 import {airtime} from './model/stats';
 import {Home} from './pages/Home';
-import {Sessions} from './pages/Sessions';
-import {SessionPage} from './pages/SessionPage';
+import {Sorties} from './pages/Sorties';
+import {SortiePage} from './pages/SortiePage';
 import {Stats} from './pages/Stats';
 import {Hangar} from './pages/Hangar';
 import {HeliPage} from './pages/HeliPage';
@@ -17,7 +17,7 @@ import {Spots} from './pages/Spots';
 
 const TABS = [
   {to: '/', label: 'Cockpit', icon: Gauge},
-  {to: '/sessions', label: 'Logbook', icon: BookOpen},
+  {to: '/sorties', label: 'Sorties', icon: BookOpen},
   {to: '/stats', label: 'Debrief', icon: Radar},
   {to: '/hangar', label: 'Hangar', icon: Warehouse},
   {to: '/spots', label: 'Spots', icon: MapPin},
@@ -36,17 +36,17 @@ const MODE_LABEL: Record<Mode, string> = {
   sample: 'Made-up log',
 };
 
-function useLogSession() {
+function useLogSortie() {
   const {open} = useOverlay();
-  return () => open(<SessionForm />);
+  return () => open(<SortieForm />);
 }
 
 /** Wide screens: one bar along the top, the soft keys in the middle, the minute counter and the log button at the end. */
 function CockpitBar() {
   const {pathname} = useLocation();
   const {mode, waiting, doc} = useStore();
-  const logSession = useLogSession();
-  const total = useMemo(() => doc.sessions.reduce((sum, session) => sum + airtime(session), 0), [doc.sessions]);
+  const logSortie = useLogSortie();
+  const total = useMemo(() => doc.sorties.reduce((sum, sortie) => sum + airtime(sortie), 0), [doc.sorties]);
   return (
     <header className="cockpit-bar">
       <Link to="/" className="logotype">
@@ -75,7 +75,7 @@ function CockpitBar() {
         >
           <SettingsIcon size={17} />
         </Link>
-        <button className="button solid" onClick={logSession}>
+        <button className="button solid" onClick={logSortie}>
           <Plus size={16} strokeWidth={2.6} /> Log
         </button>
       </div>
@@ -86,7 +86,7 @@ function CockpitBar() {
 /** The phone dock: liquid glass, a lens under the open tab, and the round log button beside it. */
 function Dock() {
   const {pathname} = useLocation();
-  const logSession = useLogSession();
+  const logSortie = useLogSortie();
   const current = TABS.findIndex(({to}) => isActive(to, pathname));
   return (
     <div className="dock-row phone-only">
@@ -105,7 +105,7 @@ function Dock() {
           </Link>
         ))}
       </nav>
-      <button className="dock-plus glass" aria-label="Log a session" onClick={logSession}>
+      <button className="dock-plus glass" aria-label="Log a sortie" onClick={logSortie}>
         <Plus size={26} strokeWidth={2.2} />
       </button>
     </div>
@@ -163,8 +163,8 @@ function Shell() {
       <main className="main" {...swipe}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/sessions" element={<Sessions />} />
-          <Route path="/sessions/:id" element={<SessionPage />} />
+          <Route path="/sorties" element={<Sorties />} />
+          <Route path="/sorties/:id" element={<SortiePage />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/hangar" element={<Hangar />} />
           <Route path="/hangar/:view" element={<Hangar />} />

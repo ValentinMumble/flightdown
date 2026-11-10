@@ -1,4 +1,4 @@
-import type {BrokenPart, Doc, Heli, Session, Spot, TelemetrySeries} from '../types';
+import type {BrokenPart, Doc, Heli, Sortie, Spot, TelemetrySeries} from '../types';
 import {addDays, daysBetween, fromDay, today} from '../model/format';
 
 /**
@@ -102,10 +102,10 @@ const PROGRESS: [string, number][] = [
 ];
 
 const CALM_NOTES = [
-  'Nice session',
+  'Nice sortie',
   'Smooth, no wind at all',
   'Felt good',
-  'Long session with friends from the club',
+  'Long sortie with friends from the club',
   'Practised in the last light, lovely',
   'Tried a new throttle curve, much better',
   '',
@@ -125,7 +125,7 @@ export function sampleLog(end = addDays(today(), -3)): {doc: Doc; series: Teleme
   const pick = <T>(list: T[]) => list[Math.floor(random() * list.length)];
   const start = addDays(end, -900);
   const total = daysBetween(start, end);
-  const sessions: Session[] = [];
+  const sorties: Sortie[] = [];
 
   for (let day = 0; day <= total; day += 1) {
     const date = addDays(start, day);
@@ -159,7 +159,7 @@ export function sampleLog(end = addDays(today(), -3)): {doc: Doc; series: Teleme
     const skills = [...new Set(unlocked.slice(-3).filter(() => random() < 0.55))];
     if (!skills.length) skills.push(unlocked[unlocked.length - 1]);
 
-    sessions.push({
+    sorties.push({
       id: `s-${date}-${heli.id.slice(2)}`,
       date,
       heliId: heli.id,
@@ -176,9 +176,9 @@ export function sampleLog(end = addDays(today(), -3)): {doc: Doc; series: Teleme
     });
   }
 
-  // One telemetry log on the latest M2 EVO session.
+  // One telemetry log on the latest M2 EVO sortie.
   const series: TelemetrySeries[] = [];
-  const last = [...sessions].reverse().find(session => session.heliId === 'h-m2');
+  const last = [...sorties].reverse().find(sortie => sortie.heliId === 'h-m2');
   if (last) {
     const time: number[] = [];
     const voltage: number[] = [];
@@ -222,11 +222,11 @@ export function sampleLog(end = addDays(today(), -3)): {doc: Doc; series: Teleme
   const doc: Doc = {
     helis: HELIS.map(({parts: _parts, from: _from, to: _to, ...heli}) => ({
       ...heli,
-      acquired: sessions.find(session => session.heliId === heli.id)?.date,
+      acquired: sorties.find(sortie => sortie.heliId === heli.id)?.date,
       createdAt: `${start}T12:00:00`,
     })),
     spots: SPOTS,
-    sessions,
+    sorties,
     spares: [
       {id: 'sp-1', name: 'Main blade', heliId: 'h-m2', count: 6, countedAt: counted, min: 2, price: 6.5},
       {id: 'sp-2', name: 'Main shaft', heliId: 'h-m2', count: 3, countedAt: counted, min: 2, price: 4},
@@ -253,7 +253,7 @@ export function sampleLog(end = addDays(today(), -3)): {doc: Doc; series: Teleme
         name: 'RadioMaster TX16S MKII',
         category: 'radio',
         details: '4-in-1 module, AG01 Hall CNC gimbals',
-        since: sessions[0]?.date,
+        since: sorties[0]?.date,
       },
       {id: 'g-charger', name: 'Charger', category: 'charger', details: '4 ports, balance charging at 1C'},
     ],

@@ -5,7 +5,7 @@ import {cellKey, type Cell, type Sheet} from './xlsx';
 /** A log laid out like a Google Sheets flight log: totals on top, a header, a year on its own row. */
 function logSheet(): Sheet {
   const rows: Cell[][] = [
-    [null, 'Total sessions 🚁', 3],
+    [null, 'Total sorties 🚁', 3],
     [],
     [
       'Date 📅',
@@ -41,10 +41,10 @@ describe('importSheets', () => {
     {name: 'Tips', rows: [['Tips & tricks'], ['Level swashplate']], links: new Map()},
   ]);
 
-  it('reads every session row and skips the year rows', () => {
-    expect(report.sessions).toBe(4);
+  it('reads every sortie row and skips the year rows', () => {
+    expect(report.sorties).toBe(4);
     expect(report.skipped).toEqual([]);
-    const [first, second] = [...doc.sessions].sort((left, right) => left.date.localeCompare(right.date));
+    const [first, second] = [...doc.sorties].sort((left, right) => left.date.localeCompare(right.date));
     expect(first.date).toBe('2023-02-03');
     expect(first.timer).toBe(300);
     expect(first.broken).toEqual([

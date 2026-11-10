@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import {Link} from 'react-router';
 import {CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
-import type {Session, TelemetryLog, TelemetrySeries} from '../../types';
+import type {Sortie, TelemetryLog, TelemetrySeries} from '../../types';
 import {useStore} from '../../data/store';
 import {estimateCells, packOf} from '../../model/insights';
 import {formatDay, formatNumber, formatTimer} from '../../model/format';
@@ -11,7 +11,7 @@ const IDLE_AMPS = 2;
 
 interface Curve {
   key: string;
-  session: Session;
+  sortie: Sortie;
   log: TelemetryLog;
   /** Volts a cell under load, by seconds into the powered flight. */
   points: {second: number; cell: number}[];
@@ -21,7 +21,7 @@ interface Curve {
 }
 
 /** A log as volts a cell over the powered flight, every five seconds or so. */
-function curveOf(session: Session, log: TelemetryLog, series: TelemetrySeries, cells: number): Curve | null {
+function curveOf(sortie: Sortie, log: TelemetryLog, series: TelemetrySeries, cells: number): Curve | null {
   const voltage = series.channels.voltage ?? [];
   const current = series.channels.current ?? [];
   if (!voltage.length || !current.length) return null;
@@ -39,7 +39,7 @@ function curveOf(session: Session, log: TelemetryLog, series: TelemetrySeries, c
   const flyingCurrent = current.slice(first, last + 1).filter(amps => amps >= IDLE_AMPS);
   return {
     key: log.id,
-    session,
+    sortie,
     log,
     points,
     lowest: Math.min(...points.map(point => point.cell)),
@@ -52,23 +52,23 @@ function curveOf(session: Session, log: TelemetryLog, series: TelemetrySeries, c
  * Every log's pack on one chart: volts a cell under load through the flight, with the 3.5 V to land at and the
  * 3.3 V a LiPo should never see. Packs flown harder sag sooner.
  */
-export function PackCurves({sessions}: {sessions: Session[]}) {
+export function PackCurves({sorties}: {sorties: Sortie[]}) {
   const {doc, heli, loadSeries} = useStore();
   const ink = useChartInk();
   const color = useSeriesColor();
-  const logs = useMemo(() => sessions.flatMap(session => session.telemetry.map(log => ({session, log}))), [sessions]);
+  const logs = useMemo(() => sorties.flatMap(sortie => sortie.telemetry.map(log => ({sortie, log}))), [sorties]);
   const [curves, setCurves] = useState<Curve[] | null>(null);
 
   useEffect(() => {
     let current = true;
     const load = async () => {
       const found: Curve[] = [];
-      for (const {session, log} of logs) {
+      for (const {sortie, log} of logs) {
         const series = await loadSeries(log.id).catch(() => null);
         if (!series) continue;
-        const pack = packOf(heli(session.heliId), doc.batteries);
+        const pack = packOf(heli(sortie.heliId), doc.batteries);
         const cells = pack.cells ?? estimateCells(Math.max(...(series.channels.voltage ?? [0])));
-        const curve = curveOf(session, log, series, cells);
+        const curve = curveOf(sortie, log, series, cells);
         if (curve && curve.flight >= 20 && curve.points.length > 2) found.push(curve);
       }
       if (current) setCurves(found);
@@ -79,12 +79,12 @@ export function PackCurves({sessions}: {sessions: Session[]}) {
     };
   }, [logs, loadSeries, heli, doc.batteries]);
 
-  if (!logs.length) return <div className="muted">No telemetry log yet: add EdgeTX logs to a session.</div>;
+  if (!logs.length) return <div className="muted">No telemetry log yet: add EdgeTX logs to a sortie.</div>;
   if (!curves) return <div className="muted">Reading the logs…</div>;
   if (!curves.length) return <div className="muted">No log with voltage and current to compare.</div>;
 
   const name = (curve: Curve) =>
-    `${formatDay(curve.session.date, {weekday: false, year: true})}, ${curve.log.start?.slice(11, 16) ?? ''}`;
+    `${formatDay(curve.sortie.date, {weekday: false, year: true})}, ${curve.log.start?.slice(11, 16) ?? ''}`;
   const rows = new Map<number, Record<string, number>>();
   for (const curve of curves) {
     for (const point of curve.points) {
@@ -177,10 +177,10 @@ export function PackCurves({sessions}: {sessions: Session[]}) {
           <span>Lowest</span>
         </div>
         {curves.map((curve, index) => (
-          <Link key={curve.key} to={`/sessions/${curve.session.id}`} className="spot-row">
+          <Link key={curve.key} to={`/sorties/${curve.sortie.id}`} className="spot-row">
             <span className="name">
               <i className="dot" style={{background: color(index), marginRight: 8}} />
-              {name(curve)} <span className="muted">· {heli(curve.session.heliId)?.name}</span>
+              {name(curve)} <span className="muted">· {heli(curve.sortie.heliId)?.name}</span>
             </span>
             <span>{formatTimer(curve.flight)}</span>
             <span>{formatNumber(curve.average, 1)} A</span>

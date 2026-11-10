@@ -12,9 +12,9 @@ import {constants} from 'node:fs';
 import {copyFile, readdir, readFile, stat, unlink} from 'node:fs/promises';
 import {join} from 'node:path';
 import {loadEnv} from 'vite';
-import type {Session, TelemetryLog, TelemetrySeries} from '../src/types';
+import type {Sortie, TelemetryLog, TelemetrySeries} from '../src/types';
 import {formatAirtime, formatDay, formatNumber, formatTimer} from '../src/model/format';
-import {matchSession, modelFromFileName, readTelemetry, simple} from '../src/model/telemetry';
+import {matchSortie, modelFromFileName, readTelemetry, simple} from '../src/model/telemetry';
 import {parseCsv} from '../src/model/csv';
 import {newId, now} from '../src/model/ids';
 
@@ -86,11 +86,11 @@ async function cleanRadio() {
 }
 
 const doc = await readDoc();
-const known = new Set(doc.sessions.flatMap(session => session.telemetry.map(log => log.name)));
+const known = new Set(doc.sorties.flatMap(sortie => sortie.telemetry.map(log => log.name)));
 const heliName = (id: string) => doc.helis.find(heli => heli.id === id)?.name ?? '';
 const lines: string[] = [];
 const orphans: {log: TelemetryLog; series: TelemetrySeries; model: string | null}[] = [];
-const touched = new Map<string, Session>();
+const touched = new Map<string, Sortie>();
 const series: TelemetrySeries[] = [];
 
 const describe = (log: TelemetryLog) =>
@@ -118,23 +118,23 @@ for (const name of files) {
     continue;
   }
   const model = modelFromFileName(name);
-  const sessions = [...doc.sessions.filter(session => !touched.has(session.id)), ...touched.values()];
-  const found = matchSession(read.log, model, sessions, heliName);
+  const sorties = [...doc.sorties.filter(sortie => !touched.has(sortie.id)), ...touched.values()];
+  const found = matchSortie(read.log, model, sorties, heliName);
   if (!found) {
     orphans.push({...read, model});
     continue;
   }
-  const session = touched.get(found.id) ?? {...found, telemetry: [...found.telemetry]};
-  session.telemetry.push(read.log);
-  touched.set(session.id, session);
+  const sortie = touched.get(found.id) ?? {...found, telemetry: [...found.telemetry]};
+  sortie.telemetry.push(read.log);
+  touched.set(sortie.id, sortie);
   series.push(read.series);
   lines.push(
-    `  + ${name} → ${formatDay(session.date, {year: true})} on ${heliName(session.heliId)} (${describe(read.log)})`,
+    `  + ${name} → ${formatDay(sortie.date, {year: true})} on ${heliName(sortie.heliId)} (${describe(read.log)})`,
   );
 }
 
 // Logs of a day nobody logged: one sortie per heli and day when asked, the packs counted from the logs.
-const created: Session[] = [];
+const created: Sortie[] = [];
 for (const orphan of orphans) {
   const day = orphan.log.start?.slice(0, 10);
   const heli = orphan.model
@@ -145,9 +145,9 @@ for (const orphan of orphans) {
     lines.push(`  ? ${orphan.log.name}: ${why} (${describe(orphan.log)})`);
     continue;
   }
-  let session = created.find(one => one.date === day && one.heliId === heli.id);
-  if (!session) {
-    session = {
+  let sortie = created.find(one => one.date === day && one.heliId === heli.id);
+  if (!sortie) {
+    sortie = {
       id: newId(),
       date: day,
       heliId: heli.id,
@@ -161,10 +161,10 @@ for (const orphan of orphans) {
       telemetry: [],
       loggedAt: now(),
     };
-    created.push(session);
+    created.push(sortie);
   }
-  session.packs += 1;
-  session.telemetry.push(orphan.log);
+  sortie.packs += 1;
+  sortie.telemetry.push(orphan.log);
   series.push(orphan.series);
   lines.push(
     `  + ${orphan.log.name} → new sortie, ${formatDay(day, {year: true})} on ${heli.name} (${describe(orphan.log)})`,
@@ -172,17 +172,17 @@ for (const orphan of orphans) {
 }
 
 console.log(lines.length ? lines.join('\n') : '  Nothing new: Flightdown has every log.');
-const sessionsToWrite = [...touched.values(), ...created];
+const sortiesToWrite = [...touched.values(), ...created];
 if (dryRun) {
-  if (series.length) console.log(`Dry run: would add ${series.length} logs to ${sessionsToWrite.length} sorties.`);
+  if (series.length) console.log(`Dry run: would add ${series.length} logs to ${sortiesToWrite.length} sorties.`);
   process.exit(0);
 }
 if (series.length) {
   for (const one of series) await putSeries(one);
-  for (const session of sessionsToWrite) await putItem('sessions', session);
-  const added = created.reduce((sum, session) => sum + session.packs * (session.timer ?? 0), 0);
+  for (const sortie of sortiesToWrite) await putItem('sorties', sortie);
+  const added = created.reduce((sum, sortie) => sum + sortie.packs * (sortie.timer ?? 0), 0);
   console.log(
-    `Added ${series.length} logs to ${sessionsToWrite.length} sorties` +
+    `Added ${series.length} logs to ${sortiesToWrite.length} sorties` +
       (created.length ? `, ${created.length} of them new (${formatAirtime(added)} in the air)` : '') +
       '. Reload Flightdown to see them.',
   );

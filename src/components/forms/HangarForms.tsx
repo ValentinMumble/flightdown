@@ -53,7 +53,7 @@ export function HeliForm({heli}: {heli?: Heli}) {
   const [battery, setBattery] = useState(heli?.battery ?? '');
   const [photo, setPhoto] = useState(heli?.photo ?? '');
   const [setup, setSetup] = useState(heli?.setup ?? '');
-  const sessions = heli ? doc.sessions.filter(session => session.heliId === heli.id).length : 0;
+  const sorties = heli ? doc.sorties.filter(sortie => sortie.heliId === heli.id).length : 0;
 
   const save = () => {
     const saved: Heli = {
@@ -78,10 +78,8 @@ export function HeliForm({heli}: {heli?: Heli}) {
 
   const destroy = () => {
     if (!heli) return;
-    if (sessions) {
-      window.alert(
-        `${heli.name} has ${sessions} sessions. Set it as retired, sold or lost instead: its sessions stay.`,
-      );
+    if (sorties) {
+      window.alert(`${heli.name} has ${sorties} sorties. Set it as retired, sold or lost instead: its sorties stay.`);
       return;
     }
     if (!window.confirm(`Delete ${heli.name}?`)) return;
@@ -226,14 +224,14 @@ export function SpareForm({
 }) {
   const {doc, put, remove} = useStore();
   const {close, toast} = useOverlay();
-  const stock = spare ? spareStock(spare, doc.sessions) : 0;
+  const stock = spare ? spareStock(spare, doc.sorties) : 0;
   const [name, setName] = useState(spare?.name ?? suggested ?? '');
   const [heliId, setHeliId] = useState(spare?.heliId ?? suggestedHeli ?? '');
   const [count, setCount] = useState(spare ? Math.max(0, stock) : 2);
   const [min, setMin] = useState(spare?.min ?? 1);
   const [price, setPrice] = useState(spare?.price ? String(spare.price) : '');
   const [url, setUrl] = useState(spare?.url ?? '');
-  const known = brokenRanking(doc.sessions).map(part => part.name);
+  const known = brokenRanking(doc.sorties).map(part => part.name);
 
   const save = () => {
     const saved: Spare = {
@@ -560,7 +558,7 @@ export function TipForm({tip}: {tip?: Tip}) {
   );
 }
 
-/** A new spot, or one renamed, placed on the map, or merged into another: its sessions move there. */
+/** A new spot, or one renamed, placed on the map, or merged into another: its sorties move there. */
 export function SpotForm({spot}: {spot?: Spot}) {
   const {doc, put, remove} = useStore();
   const {close, toast} = useOverlay();
@@ -571,7 +569,7 @@ export function SpotForm({spot}: {spot?: Spot}) {
   const [where, setWhere] = useState<LatLng | null>(hasLocation(spot) ? {lat: spot.lat, lng: spot.lng} : null);
   const [typed, setTyped] = useState('');
   const [finding, setFinding] = useState(false);
-  const sessions = spot ? doc.sessions.filter(session => session.spotId === spot.id) : [];
+  const sorties = spot ? doc.sorties.filter(sortie => sortie.spotId === spot.id) : [];
 
   const [reading, setReading] = useState(false);
 
@@ -626,10 +624,10 @@ export function SpotForm({spot}: {spot?: Spot}) {
       onSubmit={event => {
         event.preventDefault();
         if (spot && into) {
-          for (const session of sessions) put('sessions', {...session, spotId: into});
+          for (const sortie of sorties) put('sorties', {...sortie, spotId: into});
           remove('spots', spot.id);
           close();
-          toast(`Merged ${sessions.length} sessions`);
+          toast(`Merged ${sorties.length} sorties`);
           return;
         }
         if (!name.trim() && !spot) return toast('Give the spot a name');
@@ -707,14 +705,14 @@ export function SpotForm({spot}: {spot?: Spot}) {
           onChange={event => setNotes(event.target.value)}
         />
       </div>
-      {spot && sessions.length > 0 && (
-        <Link to={`/sessions?spot=${spot.id}`} className="button small ghost" onClick={close}>
-          {plural(sessions.length, 'sortie')} here <ChevronRight size={14} />
+      {spot && sorties.length > 0 && (
+        <Link to={`/sorties?spot=${spot.id}`} className="button small ghost" onClick={close}>
+          {plural(sorties.length, 'sortie')} here <ChevronRight size={14} />
         </Link>
       )}
       {spot && (
         <div className="field">
-          <label htmlFor="spot-into">Merge its {plural(sessions.length, 'session')} into</label>
+          <label htmlFor="spot-into">Merge its {plural(sorties.length, 'sortie')} into</label>
           <select
             id="spot-into"
             className="input"
@@ -736,7 +734,7 @@ export function SpotForm({spot}: {spot?: Spot}) {
       <Actions
         label={into ? 'Merge' : 'Save'}
         onDelete={
-          !spot || sessions.length
+          !spot || sorties.length
             ? undefined
             : () => {
                 remove('spots', spot.id);

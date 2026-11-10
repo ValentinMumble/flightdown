@@ -1,4 +1,4 @@
-import type {Session, TelemetryLog, TelemetrySeries} from '../types';
+import type {Sortie, TelemetryLog, TelemetrySeries} from '../types';
 import {pad} from './format';
 import {newId} from './ids';
 
@@ -97,7 +97,7 @@ function thin(time: number[], channels: Record<string, number[]>) {
 
 /**
  * Reads an EdgeTX log (a CSV from the radio's LOGS folder, or the same table pasted in a sheet): the summary kept
- * with the session, and the samples kept apart for its charts.
+ * with the sortie, and the samples kept apart for its charts.
  */
 export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog; series: TelemetrySeries} | null {
   const headerIndex = rows.findIndex(row => row && isTelemetryHeader(row));
@@ -186,23 +186,23 @@ export const simple = (text: string) =>
     .toLowerCase();
 
 /**
- * The session a log belongs to: one on the log's day, on the heli whose name starts with the radio model's name; the
+ * The sortie a log belongs to: one on the log's day, on the heli whose name starts with the radio model's name; the
  * longest that day when the log does not name its model. None when the named model did not fly that day.
  */
-export function matchSession(
+export function matchSortie(
   log: TelemetryLog,
   model: string | null,
-  sessions: Session[],
+  sorties: Sortie[],
   heliName: (id: string) => string,
 ) {
   const day = log.start?.slice(0, 10);
   if (!day) return null;
-  const sameDay = sessions.filter(session => session.date === day);
+  const sameDay = sorties.filter(sortie => sortie.date === day);
   if (!sameDay.length) return null;
   const wanted = model ? simple(model) : '';
-  const candidates = wanted ? sameDay.filter(session => simple(heliName(session.heliId)).startsWith(wanted)) : sameDay;
+  const candidates = wanted ? sameDay.filter(sortie => simple(heliName(sortie.heliId)).startsWith(wanted)) : sameDay;
   if (!candidates.length) return null;
-  return candidates.reduce((best, session) =>
-    session.packs * (session.timer ?? 0) > best.packs * (best.timer ?? 0) ? session : best,
+  return candidates.reduce((best, sortie) =>
+    sortie.packs * (sortie.timer ?? 0) > best.packs * (best.timer ?? 0) ? sortie : best,
   );
 }

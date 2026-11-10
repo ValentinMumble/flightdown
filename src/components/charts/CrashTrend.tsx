@@ -3,12 +3,12 @@ import type {TrendPoint} from '../../model/stats';
 import {formatDay, formatRate, fromDay} from '../../model/format';
 import {useChartInk, useSeriesColor} from '../colors';
 
-/** Crashes every ten packs over the last ten sessions, session after session: one line, the learning curve. */
+/** Crashes every ten packs over the last ten sorties, sortie after sortie: one line, the learning curve. */
 export function CrashTrend({points}: {points: TrendPoint[]}) {
   const ink = useChartInk();
   const stroke = useSeriesColor()(7);
   const rows = points.map(point => ({...point, time: fromDay(point.date).getTime()}));
-  if (rows.length < 2) return <div className="muted">Ten sessions with a crash count are needed for this.</div>;
+  if (rows.length < 2) return <div className="muted">Ten sorties with a crash count are needed for this.</div>;
   const latest = rows[rows.length - 1];
   return (
     <div className="chart">
@@ -33,7 +33,7 @@ export function CrashTrend({points}: {points: TrendPoint[]}) {
               if (!active || !row) return null;
               return (
                 <div className="tooltip">
-                  <div className="tooltip-title">Ten sessions to {formatDay(row.date, {year: true})}</div>
+                  <div className="tooltip-title">Ten sorties to {formatDay(row.date, {year: true})}</div>
                   <div className="tooltip-row">
                     <span>Crashes every 10 packs</span>
                     <b>{formatRate(row.per10)}</b>

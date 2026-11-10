@@ -38,7 +38,7 @@ function useMap(element: RefObject<HTMLDivElement | null>, setUp: (map: L.Map) =
   return mapRef;
 }
 
-/** A round pin with the spot's emoji, bigger where more sessions were flown. */
+/** A round pin with the spot's emoji, bigger where more sorties were flown. */
 function pin(spot: Spot, size: number, faint = false) {
   const html = document.createElement('span');
   html.className = `map-pin-mark ${faint ? 'faint' : ''}`;
@@ -50,11 +50,11 @@ function pin(spot: Spot, size: number, faint = false) {
 /** Every spot with a location, its name beside it; a tap on one opens it. */
 export function SpotsMap({
   spots,
-  sessions,
+  sorties,
   onSelect,
 }: {
   spots: Spot[];
-  sessions: Map<string, number>;
+  sorties: Map<string, number>;
   onSelect: (spot: Spot) => void;
 }) {
   const element = useRef<HTMLDivElement>(null);
@@ -70,9 +70,9 @@ export function SpotsMap({
     if (!current || !layer.current) return;
     layer.current.clearLayers();
     const placed = spots.filter(hasLocation);
-    const most = Math.max(1, ...placed.map(spot => sessions.get(spot.id) ?? 0));
+    const most = Math.max(1, ...placed.map(spot => sorties.get(spot.id) ?? 0));
     for (const spot of placed) {
-      const size = Math.round(22 + 20 * Math.sqrt((sessions.get(spot.id) ?? 0) / most));
+      const size = Math.round(22 + 20 * Math.sqrt((sorties.get(spot.id) ?? 0) / most));
       L.marker([spot.lat, spot.lng], {icon: pin(spot, size), title: spot.name})
         .bindTooltip(spot.name, {permanent: true, direction: 'right', offset: [size / 2, 0], className: 'map-label'})
         .on('click', () => select.current(spot))
@@ -82,7 +82,7 @@ export function SpotsMap({
     if (placed.length > 1) {
       current.fitBounds(L.latLngBounds(placed.map(spot => [spot.lat, spot.lng])), {padding: [48, 48], maxZoom: 15});
     }
-  }, [map, spots, sessions]);
+  }, [map, spots, sorties]);
 
   return <div ref={element} className="spots-map" />;
 }

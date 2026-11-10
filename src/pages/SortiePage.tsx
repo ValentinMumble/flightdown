@@ -1,17 +1,18 @@
 import {useMemo, useRef} from 'react';
 import {Link, useParams} from 'react-router';
 import {ChevronRight, ExternalLink, FileUp, MapPin, Pencil, Trash, Wrench} from 'lucide-react';
-import type {Session} from '../types';
+import type {Sortie} from '../types';
 import {useStore} from '../data/store';
 import {Card, Empty, HeliName, PageHeader, spotLabel, useOverlay} from '../components/ui';
-import {CrashPill, FlightStrip} from '../components/SessionRow';
+import {CrashPill, FlightStrip} from '../components/SortieRow';
 import {Panel} from '../components/instruments';
-import {SessionForm} from '../components/forms/SessionForm';
+import {SortieForm} from '../components/forms/SortieForm';
 import {SpotForm} from '../components/forms/HangarForms';
 import {MiniMap} from '../components/MiniMap';
+import {SortiePhotos} from '../components/SortiePhotos';
 import {TelemetryCharts} from '../components/charts/TelemetryCharts';
 import {formatAirtime, formatDay, formatTimer, plural} from '../model/format';
-import {airtime, sortSessions} from '../model/stats';
+import {airtime, sortSorties} from '../model/stats';
 import {readTelemetry} from '../model/telemetry';
 import {packOf} from '../model/insights';
 import {parseCsv} from '../model/csv';
@@ -29,43 +30,43 @@ function linkLabel(url: string) {
   }
 }
 
-export function SessionPage() {
+export function SortiePage() {
   const {id} = useParams();
   const {doc, heli, spot, put, saveSeries} = useStore();
   const {open, toast} = useOverlay();
   const fileInput = useRef<HTMLInputElement>(null);
-  const session = doc.sessions.find(one => one.id === id);
+  const sortie = doc.sorties.find(one => one.id === id);
   const neighbours = useMemo(() => {
-    const sorted = sortSessions(doc.sessions);
+    const sorted = sortSorties(doc.sorties);
     const index = sorted.findIndex(one => one.id === id);
-    const sameHeli = sorted.filter(one => one.heliId === session?.heliId);
+    const sameHeli = sorted.filter(one => one.heliId === sortie?.heliId);
     return {
       previous: index > 0 ? sorted[index - 1] : undefined,
       next: index >= 0 && index < sorted.length - 1 ? sorted[index + 1] : undefined,
       number: sameHeli.findIndex(one => one.id === id) + 1,
       ofHeli: sameHeli.length,
     };
-  }, [doc.sessions, id, session?.heliId]);
+  }, [doc.sorties, id, sortie?.heliId]);
 
-  if (!session) {
+  if (!sortie) {
     return (
       <div className="page">
-        <PageHeader title="Session" back="/sessions" />
+        <PageHeader title="Sortie" back="/sorties" />
         <div className="panel">
-          <Empty emoji="🤷">This session is not in the log.</Empty>
+          <Empty emoji="🤷">This sortie is not in the log.</Empty>
         </div>
       </div>
     );
   }
 
-  const one = heli(session.heliId);
-  const place = spot(session.spotId);
+  const one = heli(sortie.heliId);
+  const place = spot(sortie.spotId);
   const pack = packOf(one, doc.batteries);
 
   const addLogs = async (files: FileList | null) => {
     if (!files?.length) return;
     let added = 0;
-    const logs = [...session.telemetry];
+    const logs = [...sortie.telemetry];
     for (const file of Array.from(files)) {
       const read = readTelemetry(parseCsv(await file.text()), file.name);
       if (!read) continue;
@@ -73,22 +74,22 @@ export function SessionPage() {
       logs.push(read.log);
       added += 1;
     }
-    if (added) put('sessions', {...session, telemetry: logs} satisfies Session);
+    if (added) put('sorties', {...sortie, telemetry: logs} satisfies Sortie);
     toast(added ? `${plural(added, 'log')} added` : 'No EdgeTX log found in that file');
   };
 
   const removeLog = (logId: string) => {
-    if (!window.confirm('Remove this log from the session?')) return;
-    put('sessions', {...session, telemetry: session.telemetry.filter(log => log.id !== logId)});
+    if (!window.confirm('Remove this log from the sortie?')) return;
+    put('sorties', {...sortie, telemetry: sortie.telemetry.filter(log => log.id !== logId)});
   };
 
   return (
     <div className="page">
       <PageHeader
-        title={formatDay(session.date, {year: true})}
-        back="/sessions"
+        title={formatDay(sortie.date, {year: true})}
+        back="/sorties"
         actions={
-          <button className="button" onClick={() => open(<SessionForm session={session} />)}>
+          <button className="button" onClick={() => open(<SortieForm sortie={sortie} />)}>
             <Pencil size={15} /> Edit
           </button>
         }
@@ -96,14 +97,14 @@ export function SessionPage() {
 
       <div className="bento">
         <div className="span-12">
-          <FlightStrip session={session} large />
+          <FlightStrip sortie={sortie} large />
         </div>
 
         <Panel
           label="Debrief"
           note={
             neighbours.ofHeli > 0
-              ? `Session ${neighbours.number} of ${neighbours.ofHeli} on ${one?.name ?? 'this heli'}`
+              ? `Sortie ${neighbours.number} of ${neighbours.ofHeli} on ${one?.name ?? 'this heli'}`
               : undefined
           }
           className="span-7"
@@ -112,12 +113,12 @@ export function SessionPage() {
             <div className="figures">
               <div>
                 <div className="figure-label">Air</div>
-                <div className="figure-value">{formatAirtime(airtime(session), true)}</div>
+                <div className="figure-value">{formatAirtime(airtime(sortie), true)}</div>
               </div>
               <div>
                 <div className="figure-label">Packs</div>
                 <div className="figure-value">
-                  {session.packs} × {formatTimer(session.timer)}
+                  {sortie.packs} × {formatTimer(sortie.timer)}
                 </div>
               </div>
               <div>
@@ -129,25 +130,21 @@ export function SessionPage() {
               <div>
                 <div className="figure-label">Crashes</div>
                 <div className="figure-value">
-                  <CrashPill crashes={session.crashes} />
+                  <CrashPill crashes={sortie.crashes} />
                 </div>
               </div>
             </div>
-            {session.skills.length > 0 && (
+            {sortie.skills.length > 0 && (
               <div className="chips">
-                {session.skills.map(skill => (
+                {sortie.skills.map(skill => (
                   <span key={skill} className="pill label">
                     {skill}
                   </span>
                 ))}
               </div>
             )}
-            {session.notes ? (
-              <p className="prose session-notes">{session.notes}</p>
-            ) : (
-              <p className="muted">No notes.</p>
-            )}
-            <Link to={`/helis/${session.heliId}`} className="button small ghost" style={{alignSelf: 'flex-start'}}>
+            {sortie.notes ? <p className="prose sortie-notes">{sortie.notes}</p> : <p className="muted">No notes.</p>}
+            <Link to={`/helis/${sortie.heliId}`} className="button small ghost" style={{alignSelf: 'flex-start'}}>
               <HeliName heli={one} /> <ChevronRight size={14} />
             </Link>
           </div>
@@ -164,13 +161,13 @@ export function SessionPage() {
                 </button>
               </Card>
             ))}
-          <Card title="Broken parts" sub={session.broken.length ? undefined : 'Nothing broke'}>
-            {session.broken.length > 0 && (
+          <Card title="Broken parts" sub={sortie.broken.length ? undefined : 'Nothing broke'}>
+            {sortie.broken.length > 0 && (
               <div className="bar-list">
-                {session.broken.map((part, index) => (
+                {sortie.broken.map((part, index) => (
                   <Link
                     key={`${part.part}-${index}`}
-                    to={`/sessions?part=${encodeURIComponent(part.part)}`}
+                    to={`/sorties?part=${encodeURIComponent(part.part)}`}
                     className="bar-line"
                   >
                     <span className="name">
@@ -183,10 +180,10 @@ export function SessionPage() {
               </div>
             )}
           </Card>
-          {session.links.length > 0 && (
-            <Card title="Photos and videos">
+          {sortie.links.length > 0 && (
+            <Card title="Videos and links">
               <div className="chips">
-                {session.links.map(link => (
+                {sortie.links.map(link => (
                   <a key={link} className="chip" href={link} target="_blank" rel="noreferrer">
                     <ExternalLink size={13} /> {linkLabel(link)}
                   </a>
@@ -196,12 +193,12 @@ export function SessionPage() {
           )}
         </div>
 
+        <SortiePhotos sortie={sortie} />
+
         <Card
           className="span-12"
           title="Telemetry"
-          sub={
-            session.telemetry.length ? undefined : 'Add the EdgeTX logs from your radio (LOGS folder on its SD card)'
-          }
+          sub={sortie.telemetry.length ? undefined : 'Add the EdgeTX logs from your radio (LOGS folder on its SD card)'}
           action={
             <>
               <input
@@ -221,7 +218,7 @@ export function SessionPage() {
             </>
           }
         >
-          {session.telemetry.map(log => (
+          {sortie.telemetry.map(log => (
             <div key={log.id} className="telemetry-log">
               <div className="telemetry-head">
                 <div>
@@ -275,14 +272,14 @@ export function SessionPage() {
 
       <div className="pager">
         {neighbours.previous ? (
-          <Link to={`/sessions/${neighbours.previous.id}`} className="button ghost">
+          <Link to={`/sorties/${neighbours.previous.id}`} className="button ghost">
             ← {formatDay(neighbours.previous.date, {weekday: false})}
           </Link>
         ) : (
           <span />
         )}
         {neighbours.next && (
-          <Link to={`/sessions/${neighbours.next.id}`} className="button ghost">
+          <Link to={`/sorties/${neighbours.next.id}`} className="button ghost">
             {formatDay(neighbours.next.date, {weekday: false})} <ChevronRight size={14} />
           </Link>
         )}

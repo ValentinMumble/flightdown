@@ -1,39 +1,41 @@
 import {useMemo, useState} from 'react';
 import {useNavigate} from 'react-router';
 import {Plus, Trash, X} from 'lucide-react';
-import type {BrokenPart, Session, Spot} from '../../types';
+import type {BrokenPart, Sortie, Spot} from '../../types';
 import {useStore} from '../../data/store';
 import {newId, now} from '../../model/ids';
 import {formatAirtime, formatTimer, parseTimer, today} from '../../model/format';
 import {partKey, partSuggestions} from '../../model/parts';
 import {SKILLS} from '../../model/skills';
-import {sortSessions} from '../../model/stats';
+import {sortSorties} from '../../model/stats';
 import {HeliDot, SheetHead, Stepper, useOverlay} from '../ui';
+import {PhotoPicker} from './PhotoPicker';
 
-/** Logs a session, or edits one: built to be quick at the field, on a phone, with one hand. */
-export function SessionForm({session}: {session?: Session}) {
+/** Logs a sortie, or edits one: built to be quick at the field, on a phone, with one hand. */
+export function SortieForm({sortie}: {sortie?: Sortie}) {
   const {doc, put, remove, heli: findHeli} = useStore();
   const {close, toast} = useOverlay();
   const navigate = useNavigate();
-  const sorted = useMemo(() => sortSessions(doc.sessions), [doc.sessions]);
+  const sorted = useMemo(() => sortSorties(doc.sorties), [doc.sorties]);
   const last = sorted[sorted.length - 1];
 
-  const [date, setDate] = useState(session?.date ?? today());
-  const [heliId, setHeliId] = useState(session?.heliId ?? last?.heliId ?? doc.helis[0]?.id ?? '');
-  const [spotId, setSpotId] = useState<string | undefined>(session?.spotId ?? last?.spotId);
+  const [date, setDate] = useState(sortie?.date ?? today());
+  const [heliId, setHeliId] = useState(sortie?.heliId ?? last?.heliId ?? doc.helis[0]?.id ?? '');
+  const [spotId, setSpotId] = useState<string | undefined>(sortie?.spotId ?? last?.spotId);
   const [newSpot, setNewSpot] = useState('');
-  const [packs, setPacks] = useState(session?.packs ?? last?.packs ?? 3);
+  const [packs, setPacks] = useState(sortie?.packs ?? last?.packs ?? 3);
   const [timer, setTimer] = useState(
-    formatTimer(session ? session.timer : (findHeli(heliId)?.timer ?? null)).replace('?', ''),
+    formatTimer(sortie ? sortie.timer : (findHeli(heliId)?.timer ?? null)).replace('?', ''),
   );
-  const [crashes, setCrashes] = useState<number | null>(session ? session.crashes : 0);
-  const [broken, setBroken] = useState<BrokenPart[]>(session?.broken ?? []);
+  const [crashes, setCrashes] = useState<number | null>(sortie ? sortie.crashes : 0);
+  const [broken, setBroken] = useState<BrokenPart[]>(sortie?.broken ?? []);
   const [partText, setPartText] = useState('');
-  const [skills, setSkills] = useState<string[]>(session?.skills ?? []);
-  const [notes, setNotes] = useState(session?.notes ?? '');
-  const [links, setLinks] = useState((session?.links ?? []).join('\n'));
+  const [skills, setSkills] = useState<string[]>(sortie?.skills ?? []);
+  const [notes, setNotes] = useState(sortie?.notes ?? '');
+  const [links, setLinks] = useState((sortie?.links ?? []).join('\n'));
+  const [photos, setPhotos] = useState<string[] | null>(sortie?.photos ?? null);
 
-  // Helis still flying first; sold and lost ones only when this session is theirs.
+  // Helis still flying first; sold and lost ones only when this sortie is theirs.
   const helis = doc.helis.filter(
     one => one.status === 'active' || one.status === 'grounded' || one.id === heliId || one.status === 'retired',
   );
@@ -44,16 +46,16 @@ export function SessionForm({session}: {session?: Session}) {
       (lastUse.get(right.id) ?? '').localeCompare(lastUse.get(left.id) ?? ''),
     );
   }, [doc.spots, sorted]);
-  const suggestions = partSuggestions(heliId, doc.sessions, doc.spares)
+  const suggestions = partSuggestions(heliId, doc.sorties, doc.spares)
     .filter(name => !broken.some(part => partKey(part.part) === partKey(name)))
     .slice(0, 10);
-  const otherSkills = [...new Set(doc.sessions.flatMap(one => one.skills))].filter(skill => !SKILLS.includes(skill));
+  const otherSkills = [...new Set(doc.sorties.flatMap(one => one.skills))].filter(skill => !SKILLS.includes(skill));
   const seconds = parseTimer(timer);
 
   const pickHeli = (id: string) => {
     setHeliId(id);
     const remembered = findHeli(id)?.timer;
-    if (!session && remembered) setTimer(formatTimer(remembered));
+    if (!sortie && remembered) setTimer(formatTimer(remembered));
   };
 
   const addPart = (name: string) => {
@@ -81,8 +83,8 @@ export function SessionForm({session}: {session?: Session}) {
         chosenSpot = spot.id;
       }
     }
-    const saved: Session = {
-      id: session?.id ?? newId(),
+    const saved: Sortie = {
+      id: sortie?.id ?? newId(),
       date,
       heliId,
       ...(chosenSpot && {spotId: chosenSpot}),
@@ -96,30 +98,31 @@ export function SessionForm({session}: {session?: Session}) {
         .split(/\s+/)
         .map(link => link.trim())
         .filter(link => /^https?:\/\//.test(link)),
-      telemetry: session?.telemetry ?? [],
-      loggedAt: session?.loggedAt ?? now(),
+      telemetry: sortie?.telemetry ?? [],
+      loggedAt: sortie?.loggedAt ?? now(),
+      ...(photos && {photos}),
     };
-    put('sessions', saved);
-    // The heli remembers its pack time for the next session.
+    put('sorties', saved);
+    // The heli remembers its pack time for the next sortie.
     const heli = findHeli(heliId);
-    if (heli && seconds && heli.timer !== seconds && !session) put('helis', {...heli, timer: seconds});
+    if (heli && seconds && heli.timer !== seconds && !sortie) put('helis', {...heli, timer: seconds});
     close();
-    toast(session ? 'Session saved' : `Logged: ${formatAirtime(packs * (seconds ?? 0))} in the air`);
+    toast(sortie ? 'Sortie saved' : `Logged: ${formatAirtime(packs * (seconds ?? 0))} in the air`);
   };
 
   const destroy = () => {
-    if (!session || !window.confirm('Delete this session? This cannot be undone.')) return;
-    remove('sessions', session.id);
+    if (!sortie || !window.confirm('Delete this sortie? This cannot be undone.')) return;
+    remove('sorties', sortie.id);
     close();
-    toast('Session deleted');
-    navigate('/sessions');
+    toast('Sortie deleted');
+    navigate('/sorties');
   };
 
   if (!doc.helis.length) {
     return (
       <div className="form">
-        <SheetHead title="Log a session" />
-        <p>Add a heli to your hangar first: sessions are logged against one.</p>
+        <SheetHead title="Log a sortie" />
+        <p>Add a heli to your hangar first: sorties are logged against one.</p>
         <button
           className="button solid"
           onClick={() => {
@@ -141,7 +144,7 @@ export function SessionForm({session}: {session?: Session}) {
         save();
       }}
     >
-      <SheetHead title={session ? 'Edit session' : 'Log a session'} />
+      <SheetHead title={sortie ? 'Edit sortie' : 'Log a sortie'} />
 
       <div className="field">
         <span className="field-label">Heli</span>
@@ -162,9 +165,9 @@ export function SessionForm({session}: {session?: Session}) {
 
       <div className="field-row">
         <div className="field">
-          <label htmlFor="session-date">Day</label>
+          <label htmlFor="sortie-date">Day</label>
           <input
-            id="session-date"
+            id="sortie-date"
             className="input"
             type="date"
             value={date}
@@ -174,9 +177,9 @@ export function SessionForm({session}: {session?: Session}) {
           />
         </div>
         <div className="field">
-          <label htmlFor="session-timer">Time per pack</label>
+          <label htmlFor="sortie-timer">Time per pack</label>
           <input
-            id="session-timer"
+            id="sortie-timer"
             className="input tabular"
             inputMode="numeric"
             placeholder="4:30"
@@ -311,9 +314,9 @@ export function SessionForm({session}: {session?: Session}) {
       </div>
 
       <div className="field">
-        <label htmlFor="session-notes">Notes</label>
+        <label htmlFor="sortie-notes">Notes</label>
         <textarea
-          id="session-notes"
+          id="sortie-notes"
           className="input"
           placeholder="How it went, what to work on next"
           value={notes}
@@ -321,10 +324,12 @@ export function SessionForm({session}: {session?: Session}) {
         />
       </div>
 
+      <PhotoPicker day={date} picked={photos} onChange={setPhotos} />
+
       <div className="field">
-        <label htmlFor="session-links">Photos and videos</label>
+        <label htmlFor="sortie-links">Videos and links</label>
         <textarea
-          id="session-links"
+          id="sortie-links"
           className="input"
           style={{minHeight: 56}}
           placeholder="Links, one a line"
@@ -334,7 +339,7 @@ export function SessionForm({session}: {session?: Session}) {
       </div>
 
       <div className="form-actions">
-        {session ? (
+        {sortie ? (
           <button type="button" className="button danger" onClick={destroy}>
             <Trash size={15} /> Delete
           </button>
@@ -342,7 +347,7 @@ export function SessionForm({session}: {session?: Session}) {
           <span />
         )}
         <button type="submit" className="button solid" disabled={!heliId || !date}>
-          {session ? 'Save' : 'Log session'}
+          {sortie ? 'Save' : 'Log sortie'}
         </button>
       </div>
     </form>

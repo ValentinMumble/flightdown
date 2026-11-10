@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import type {Session} from '../../types';
+import type {Sortie} from '../../types';
 import {season} from '../../model/debrief';
 import {formatAirtime} from '../../model/format';
 
@@ -23,8 +23,8 @@ const NAMES = [
  * The flying season as a rose: a petal a month of the year, all years together, its area for the airtime (so the
  * radius grows with the square root).
  */
-export function SeasonRose({sessions}: {sessions: Session[]}) {
-  const months = season(sessions);
+export function SeasonRose({sorties}: {sorties: Sortie[]}) {
+  const months = season(sorties);
   const max = Math.max(...months.map(month => month.airtime), 1);
   const [focus, setFocus] = useState<number | null>(null);
   const petal = (index: number, radius: number) => {
@@ -70,7 +70,7 @@ export function SeasonRose({sessions}: {sessions: Session[]}) {
       <div className="rose-caption">
         {shown ? (
           <>
-            <b>{NAMES[shown.month]}</b> {formatAirtime(shown.airtime)} · {shown.sessions} sessions
+            <b>{NAMES[shown.month]}</b> {formatAirtime(shown.airtime)} · {shown.sorties} sorties
           </>
         ) : (
           (() => {

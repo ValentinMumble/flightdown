@@ -47,13 +47,13 @@ function forget(key: string) {
 /** Fills fields added after a log was written, so older logs read like new ones. */
 function upgrade(doc: Partial<Doc>): Doc {
   const full = {...emptyDoc(), ...doc};
-  full.sessions = full.sessions.map(session => ({
-    ...session,
-    broken: session.broken ?? [],
-    skills: session.skills ?? [],
-    links: session.links ?? [],
-    telemetry: session.telemetry ?? [],
-    notes: session.notes ?? '',
+  full.sorties = full.sorties.map(sortie => ({
+    ...sortie,
+    broken: sortie.broken ?? [],
+    skills: sortie.skills ?? [],
+    links: sortie.links ?? [],
+    telemetry: sortie.telemetry ?? [],
+    notes: sortie.notes ?? '',
   }));
   return full;
 }

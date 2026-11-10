@@ -3,6 +3,7 @@ import {CloudOff, Download, KeyRound, LogOut} from 'lucide-react';
 import {useStore} from '../data/store';
 import {Card, PageHeader, useOverlay} from '../components/ui';
 import {plural, today} from '../model/format';
+import {AlbumSettings} from '../components/AlbumSettings';
 
 export function Settings() {
   const {mode, doc, waiting, error, signIn, signOut, resetLocal, startLocal} = useStore();
@@ -85,6 +86,8 @@ export function Settings() {
             </form>
           )}
         </Card>
+
+        {mode === 'owner' && <AlbumSettings />}
 
         <Card className="span-6" title="Backup" sub="Everything in the log, as a JSON file">
           <button className="button" onClick={exportLog}>

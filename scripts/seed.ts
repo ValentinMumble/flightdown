@@ -2,7 +2,7 @@
  * Seeds the server's log from a flight log kept in Google Sheets, once: `npm run seed`.
  *
  * Reads SEED_SHEET_ID (a sheet shared by link) or the .xlsx file given as an argument, turns it into Flightdown's log
- * (see seed/sheetImport.ts), adds the EdgeTX logs of SEED_LOGS_DIR (the radio's LOGS folder) to the sessions of
+ * (see seed/sheetImport.ts), adds the EdgeTX logs of SEED_LOGS_DIR (the radio's LOGS folder) to the sorties of
  * their day and model, and writes it all to the Upstash Redis store of .env.local, under the flightdown: keys. It
  * refuses to write over a log already there unless run with --force. --dry-run only prints what it read.
  */
@@ -13,7 +13,7 @@ import {Redis} from '@upstash/redis';
 import {KINDS} from '../src/types';
 import {formatAirtime} from '../src/model/format';
 import {airtime} from '../src/model/stats';
-import {matchSession, modelFromFileName, readTelemetry} from '../src/model/telemetry';
+import {matchSortie, modelFromFileName, readTelemetry} from '../src/model/telemetry';
 import {parseCsv} from '../src/model/csv';
 import {importSheets} from './seed/sheetImport';
 import {readXlsx} from './seed/xlsx';
@@ -36,7 +36,7 @@ async function workbook() {
 const {blob, name} = await workbook();
 const {doc, series, report} = importSheets(await readXlsx(blob), name);
 
-// EdgeTX logs from the radio's SD card, each to the session of its day on the heli named like its model.
+// EdgeTX logs from the radio's SD card, each to the sortie of its day on the heli named like its model.
 if (env.SEED_LOGS_DIR) {
   const names = (await readdir(env.SEED_LOGS_DIR)).filter(fileName => fileName.toLowerCase().endsWith('.csv')).sort();
   const heliName = (id: string) => doc.helis.find(heli => heli.id === id)?.name ?? '';
@@ -47,12 +47,12 @@ if (env.SEED_LOGS_DIR) {
       report.skipped.push(`${fileName}: too short`);
       continue;
     }
-    const session = matchSession(read.log, modelFromFileName(fileName), doc.sessions, heliName);
-    if (!session) {
-      report.skipped.push(`${fileName}: no session of its model that day`);
+    const sortie = matchSortie(read.log, modelFromFileName(fileName), doc.sorties, heliName);
+    if (!sortie) {
+      report.skipped.push(`${fileName}: no sortie of its model that day`);
       continue;
     }
-    session.telemetry.push(read.log);
+    sortie.telemetry.push(read.log);
     series.push(read.series);
     report.telemetry += 1;
   }
@@ -60,11 +60,11 @@ if (env.SEED_LOGS_DIR) {
 
 console.log(`Read ${report.sheet}`);
 console.log(
-  `  ${report.sessions} sessions, ${report.helis} helis, ${report.spots} spots, ${report.tips} notes, ${report.telemetry} telemetry logs`,
+  `  ${report.sorties} sorties, ${report.helis} helis, ${report.spots} spots, ${report.tips} notes, ${report.telemetry} telemetry logs`,
 );
 console.log(
   `  ${formatAirtime(
-    doc.sessions.reduce((sum, session) => sum + airtime(session), 0),
+    doc.sorties.reduce((sum, sortie) => sum + airtime(sortie), 0),
     true,
   )} in the air`,
 );
@@ -81,9 +81,9 @@ const token = env.KV_REST_API_TOKEN ?? env.UPSTASH_REDIS_REST_TOKEN;
 if (!url || !token) throw new Error('Set KV_REST_API_URL and KV_REST_API_TOKEN in .env.local');
 const redis = new Redis({url, token});
 
-const existing = await redis.hlen('flightdown:sessions');
+const existing = await redis.hlen('flightdown:sorties');
 if (existing && !flags.includes('--force')) {
-  throw new Error(`The store already holds ${existing} sessions: run with --force to replace them`);
+  throw new Error(`The store already holds ${existing} sorties: run with --force to replace them`);
 }
 await redis.del(...KINDS.map(kind => `flightdown:${kind}`), 'flightdown:telemetry');
 for (const kind of KINDS) {

@@ -1,61 +1,61 @@
-import type {Session} from '../types';
+import type {Sortie} from '../types';
 import {daysBetween, fromDay, pad, today} from './format';
 import {SKILLS} from './skills';
 
 /** Seconds in the air: packs times the flight time of one pack (nothing when the timer is not known). */
-export const airtime = (session: Session) => (session.timer ? session.packs * session.timer : 0);
+export const airtime = (sortie: Sortie) => (sortie.timer ? sortie.packs * sortie.timer : 0);
 
-export const byDate = (left: Session, right: Session) =>
+export const byDate = (left: Sortie, right: Sortie) =>
   left.date.localeCompare(right.date) || left.loggedAt.localeCompare(right.loggedAt);
 
-export const sortSessions = (sessions: Session[]) => [...sessions].sort(byDate);
+export const sortSorties = (sorties: Sortie[]) => [...sorties].sort(byDate);
 
 export interface Totals {
-  sessions: number;
+  sorties: number;
   packs: number;
   airtime: number;
   crashes: number;
-  /** Sessions whose crash count is known, and their packs and airtime: the rates only count those. */
-  knownSessions: number;
+  /** Sorties whose crash count is known, and their packs and airtime: the rates only count those. */
+  knownSorties: number;
   knownPacks: number;
   knownAirtime: number;
   flyingDays: number;
   crashesPerHour: number | null;
   packsPerCrash: number | null;
-  crashesPerSession: number | null;
+  crashesPerSortie: number | null;
 }
 
-export function totals(sessions: Session[]): Totals {
+export function totals(sorties: Sortie[]): Totals {
   let packs = 0;
   let time = 0;
   let crashes = 0;
-  let knownSessions = 0;
+  let knownSorties = 0;
   let knownPacks = 0;
   let knownAirtime = 0;
   const days = new Set<string>();
-  for (const session of sessions) {
-    packs += session.packs;
-    time += airtime(session);
-    days.add(session.date);
-    if (session.crashes !== null) {
-      crashes += session.crashes;
-      knownSessions += 1;
-      knownPacks += session.packs;
-      knownAirtime += airtime(session);
+  for (const sortie of sorties) {
+    packs += sortie.packs;
+    time += airtime(sortie);
+    days.add(sortie.date);
+    if (sortie.crashes !== null) {
+      crashes += sortie.crashes;
+      knownSorties += 1;
+      knownPacks += sortie.packs;
+      knownAirtime += airtime(sortie);
     }
   }
   return {
-    sessions: sessions.length,
+    sorties: sorties.length,
     packs,
     airtime: time,
     crashes,
-    knownSessions,
+    knownSorties,
     knownPacks,
     knownAirtime,
     flyingDays: days.size,
     crashesPerHour: knownAirtime > 0 ? crashes / (knownAirtime / 3600) : null,
     packsPerCrash: crashes > 0 ? knownPacks / crashes : null,
-    crashesPerSession: knownSessions > 0 ? crashes / knownSessions : null,
+    crashesPerSortie: knownSorties > 0 ? crashes / knownSorties : null,
   };
 }
 
@@ -79,7 +79,7 @@ export function monthRange(from: string, to: string) {
 
 export interface MonthTally {
   month: string;
-  sessions: number;
+  sorties: number;
   packs: number;
   airtime: number;
   crashes: number;
@@ -87,29 +87,29 @@ export interface MonthTally {
   byHeli: Record<string, number>;
 }
 
-/** One tally per month, empty months included, from the first session's month to the last's (or `until`). */
-export function monthly(sessions: Session[], until?: string): MonthTally[] {
-  if (!sessions.length) return [];
-  const sorted = sortSessions(sessions);
+/** One tally per month, empty months included, from the first sortie's month to the last's (or `until`). */
+export function monthly(sorties: Sortie[], until?: string): MonthTally[] {
+  if (!sorties.length) return [];
+  const sorted = sortSorties(sorties);
   const months = monthRange(monthOf(sorted[0].date), until ?? monthOf(sorted[sorted.length - 1].date));
   const tallies = new Map(
-    months.map(month => [month, {month, sessions: 0, packs: 0, airtime: 0, crashes: 0, byHeli: {}} as MonthTally]),
+    months.map(month => [month, {month, sorties: 0, packs: 0, airtime: 0, crashes: 0, byHeli: {}} as MonthTally]),
   );
-  for (const session of sorted) {
-    const tally = tallies.get(monthOf(session.date));
+  for (const sortie of sorted) {
+    const tally = tallies.get(monthOf(sortie.date));
     if (!tally) continue;
-    tally.sessions += 1;
-    tally.packs += session.packs;
-    tally.airtime += airtime(session);
-    tally.crashes += session.crashes ?? 0;
-    tally.byHeli[session.heliId] = (tally.byHeli[session.heliId] ?? 0) + airtime(session);
+    tally.sorties += 1;
+    tally.packs += sortie.packs;
+    tally.airtime += airtime(sortie);
+    tally.crashes += sortie.crashes ?? 0;
+    tally.byHeli[sortie.heliId] = (tally.byHeli[sortie.heliId] ?? 0) + airtime(sortie);
   }
   return [...tallies.values()];
 }
 
 export interface TrendPoint {
   date: string;
-  /** Crashes per hour over the window ending with this session. */
+  /** Crashes per hour over the window ending with this sortie. */
   rate: number;
   /** Packs flown per crash over the same window. */
   packsPerCrash: number | null;
@@ -118,17 +118,17 @@ export interface TrendPoint {
 }
 
 /**
- * The crash rate over the last few sessions, at each session: a sliding window smooths the months with one short
- * session (one crash in two minutes is not 30 crashes an hour). Sessions with an unknown crash count are skipped.
+ * The crash rate over the last few sorties, at each sortie: a sliding window smooths the months with one short
+ * sortie (one crash in two minutes is not 30 crashes an hour). Sorties with an unknown crash count are skipped.
  */
-export function crashTrend(sessions: Session[], window = 10): TrendPoint[] {
-  const known = sortSessions(sessions).filter(session => session.crashes !== null && airtime(session) > 0);
+export function crashTrend(sorties: Sortie[], window = 10): TrendPoint[] {
+  const known = sortSorties(sorties).filter(sortie => sortie.crashes !== null && airtime(sortie) > 0);
   const points: TrendPoint[] = [];
   for (let index = window - 1; index < known.length; index += 1) {
     const slice = known.slice(index - window + 1, index + 1);
-    const crashes = slice.reduce((sum, session) => sum + (session.crashes ?? 0), 0);
-    const time = slice.reduce((sum, session) => sum + airtime(session), 0);
-    const packs = slice.reduce((sum, session) => sum + session.packs, 0);
+    const crashes = slice.reduce((sum, sortie) => sum + (sortie.crashes ?? 0), 0);
+    const time = slice.reduce((sum, sortie) => sum + airtime(sortie), 0);
+    const packs = slice.reduce((sum, sortie) => sum + sortie.packs, 0);
     points.push({
       date: known[index].date,
       rate: crashes / (time / 3600),
@@ -141,7 +141,7 @@ export function crashTrend(sessions: Session[], window = 10): TrendPoint[] {
 
 export interface GroupTally {
   key: string;
-  sessions: number;
+  sorties: number;
   packs: number;
   airtime: number;
   crashes: number;
@@ -149,58 +149,58 @@ export interface GroupTally {
   last: string;
 }
 
-/** Sessions grouped (by heli, by spot), most airtime first. */
-export function groupBy(sessions: Session[], keyOf: (session: Session) => string | undefined): GroupTally[] {
+/** Sorties grouped (by heli, by spot), most airtime first. */
+export function groupBy(sorties: Sortie[], keyOf: (sortie: Sortie) => string | undefined): GroupTally[] {
   const groups = new Map<string, GroupTally>();
-  for (const session of sortSessions(sessions)) {
-    const key = keyOf(session) ?? '';
+  for (const sortie of sortSorties(sorties)) {
+    const key = keyOf(sortie) ?? '';
     const group = groups.get(key) ?? {
       key,
-      sessions: 0,
+      sorties: 0,
       packs: 0,
       airtime: 0,
       crashes: 0,
-      first: session.date,
-      last: session.date,
+      first: sortie.date,
+      last: sortie.date,
     };
-    group.sessions += 1;
-    group.packs += session.packs;
-    group.airtime += airtime(session);
-    group.crashes += session.crashes ?? 0;
-    group.last = session.date;
+    group.sorties += 1;
+    group.packs += sortie.packs;
+    group.airtime += airtime(sortie);
+    group.crashes += sortie.crashes ?? 0;
+    group.last = sortie.date;
     groups.set(key, group);
   }
-  return [...groups.values()].sort((left, right) => right.airtime - left.airtime || right.sessions - left.sessions);
+  return [...groups.values()].sort((left, right) => right.airtime - left.airtime || right.sorties - left.sorties);
 }
 
-/** Sessions and airtime by day of the week, Monday first. */
-export function weekdays(sessions: Session[]) {
+/** Sorties and airtime by day of the week, Monday first. */
+export function weekdays(sorties: Sortie[]) {
   const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const tallies = names.map(name => ({name, sessions: 0, airtime: 0}));
-  for (const session of sessions) {
-    const tally = tallies[(fromDay(session.date).getDay() + 6) % 7];
-    tally.sessions += 1;
-    tally.airtime += airtime(session);
+  const tallies = names.map(name => ({name, sorties: 0, airtime: 0}));
+  for (const sortie of sorties) {
+    const tally = tallies[(fromDay(sortie.date).getDay() + 6) % 7];
+    tally.sorties += 1;
+    tally.airtime += airtime(sortie);
   }
   return tallies;
 }
 
 /** Airtime by day. */
-export function daily(sessions: Session[]) {
+export function daily(sorties: Sortie[]) {
   const days = new Map<string, number>();
-  for (const session of sessions) days.set(session.date, (days.get(session.date) ?? 0) + airtime(session));
+  for (const sortie of sorties) days.set(sortie.date, (days.get(sortie.date) ?? 0) + airtime(sortie));
   return days;
 }
 
 /** Airtime added up through each year, by day of the year: one line per year. */
-export function cumulativeByYear(sessions: Session[]) {
+export function cumulativeByYear(sorties: Sortie[]) {
   const years = new Map<number, {day: number; hours: number}[]>();
-  for (const session of sortSessions(sessions)) {
-    const date = fromDay(session.date);
+  for (const sortie of sortSorties(sorties)) {
+    const date = fromDay(sortie.date);
     const year = date.getFullYear();
     const points = years.get(year) ?? [{day: 0, hours: 0}];
-    const day = daysBetween(`${year}-01-01`, session.date) + 1;
-    const total = points[points.length - 1].hours + airtime(session) / 3600;
+    const day = daysBetween(`${year}-01-01`, sortie.date) + 1;
+    const total = points[points.length - 1].hours + airtime(sortie) / 3600;
     if (points[points.length - 1].day === day) points[points.length - 1].hours = total;
     else points.push({day, hours: total});
     years.set(year, points);
@@ -209,31 +209,31 @@ export function cumulativeByYear(sessions: Session[]) {
 }
 
 export interface Streaks {
-  /** Sessions and packs since the last crash (sessions with an unknown count end the run). */
-  crashFreeSessions: number;
+  /** Sorties and packs since the last crash (sorties with an unknown count end the run). */
+  crashFreeSorties: number;
   crashFreePacks: number;
-  longestCrashFree: {sessions: number; packs: number; from: string; to: string} | null;
+  longestCrashFree: {sorties: number; packs: number; from: string; to: string} | null;
   daysSinceLast: number | null;
   longestBreak: {days: number; from: string; to: string} | null;
 }
 
-export function streaks(sessions: Session[], now = today()): Streaks {
-  const sorted = sortSessions(sessions);
-  let crashFreeSessions = 0;
+export function streaks(sorties: Sortie[], now = today()): Streaks {
+  const sorted = sortSorties(sorties);
+  let crashFreeSorties = 0;
   let crashFreePacks = 0;
   for (let index = sorted.length - 1; index >= 0; index -= 1) {
     if (sorted[index].crashes !== 0) break;
-    crashFreeSessions += 1;
+    crashFreeSorties += 1;
     crashFreePacks += sorted[index].packs;
   }
-  type Run = {sessions: number; packs: number; from: string; to: string};
+  type Run = {sorties: number; packs: number; from: string; to: string};
   let longestCrashFree: Run | null = null as Run | null;
   let run: Run | null = null as Run | null;
-  for (const session of sorted) {
-    if (session.crashes === 0) {
+  for (const sortie of sorted) {
+    if (sortie.crashes === 0) {
       const next: Run = run
-        ? {from: run.from, sessions: run.sessions + 1, packs: run.packs + session.packs, to: session.date}
-        : {sessions: 1, packs: session.packs, from: session.date, to: session.date};
+        ? {from: run.from, sorties: run.sorties + 1, packs: run.packs + sortie.packs, to: sortie.date}
+        : {sorties: 1, packs: sortie.packs, from: sortie.date, to: sortie.date};
       run = next;
       if (!longestCrashFree || next.packs > longestCrashFree.packs) longestCrashFree = next;
     } else {
@@ -248,7 +248,7 @@ export function streaks(sessions: Session[], now = today()): Streaks {
     }
   }
   return {
-    crashFreeSessions,
+    crashFreeSorties,
     crashFreePacks,
     longestCrashFree,
     daysSinceLast: sorted.length ? daysBetween(sorted[sorted.length - 1].date, now) : null,
@@ -257,24 +257,24 @@ export function streaks(sessions: Session[], now = today()): Streaks {
 }
 
 export interface Records {
-  longestSession: Session | null;
+  longestSortie: Sortie | null;
   mostPacksDay: {date: string; packs: number} | null;
   bestMonth: {month: string; airtime: number} | null;
   bestYear: {year: string; airtime: number} | null;
 }
 
-export function records(sessions: Session[]): Records {
-  let longestSession: Session | null = null;
-  for (const session of sessions) {
-    if (!longestSession || airtime(session) > airtime(longestSession)) longestSession = session;
+export function records(sorties: Sortie[]): Records {
+  let longestSortie: Sortie | null = null;
+  for (const sortie of sorties) {
+    if (!longestSortie || airtime(sortie) > airtime(longestSortie)) longestSortie = sortie;
   }
   const packsByDay = new Map<string, number>();
   const byMonth = new Map<string, number>();
   const byYear = new Map<string, number>();
-  for (const session of sessions) {
-    packsByDay.set(session.date, (packsByDay.get(session.date) ?? 0) + session.packs);
-    byMonth.set(monthOf(session.date), (byMonth.get(monthOf(session.date)) ?? 0) + airtime(session));
-    byYear.set(session.date.slice(0, 4), (byYear.get(session.date.slice(0, 4)) ?? 0) + airtime(session));
+  for (const sortie of sorties) {
+    packsByDay.set(sortie.date, (packsByDay.get(sortie.date) ?? 0) + sortie.packs);
+    byMonth.set(monthOf(sortie.date), (byMonth.get(monthOf(sortie.date)) ?? 0) + airtime(sortie));
+    byYear.set(sortie.date.slice(0, 4), (byYear.get(sortie.date.slice(0, 4)) ?? 0) + airtime(sortie));
   }
   const top = <T>(map: Map<string, number>, make: (key: string, value: number) => T) => {
     let best: [string, number] | null = null;
@@ -282,7 +282,7 @@ export function records(sessions: Session[]): Records {
     return best ? make(best[0], best[1]) : null;
   };
   return {
-    longestSession,
+    longestSortie,
     mostPacksDay: top(packsByDay, (date, packs) => ({date, packs})),
     bestMonth: top(byMonth, (month, time) => ({month, airtime: time})),
     bestYear: top(byYear, (year, time) => ({year, airtime: time})),
@@ -293,17 +293,17 @@ export interface SkillProgress {
   skill: string;
   first: string;
   last: string;
-  sessions: number;
+  sorties: number;
 }
 
 /** When each manoeuvre was first and last practised, in the order they are learnt. */
-export function skillProgress(sessions: Session[]): SkillProgress[] {
+export function skillProgress(sorties: Sortie[]): SkillProgress[] {
   const progress = new Map<string, SkillProgress>();
-  for (const session of sortSessions(sessions)) {
-    for (const skill of session.skills) {
-      const entry = progress.get(skill) ?? {skill, first: session.date, last: session.date, sessions: 0};
-      entry.last = session.date;
-      entry.sessions += 1;
+  for (const sortie of sortSorties(sorties)) {
+    for (const skill of sortie.skills) {
+      const entry = progress.get(skill) ?? {skill, first: sortie.date, last: sortie.date, sorties: 0};
+      entry.last = sortie.date;
+      entry.sorties += 1;
       progress.set(skill, entry);
     }
   }
@@ -317,8 +317,8 @@ export function skillProgress(sessions: Session[]): SkillProgress[] {
 }
 
 /** Packs flown since a heli's last crash, or since its first flight. */
-export function packsSinceCrash(sessions: Session[]) {
-  const sorted = sortSessions(sessions);
+export function packsSinceCrash(sorties: Sortie[]) {
+  const sorted = sortSorties(sorties);
   let packs = 0;
   for (let index = sorted.length - 1; index >= 0; index -= 1) {
     if (sorted[index].crashes) break;
@@ -327,9 +327,9 @@ export function packsSinceCrash(sessions: Session[]) {
   return packs;
 }
 
-/** Days since the last session that ended in a crash, as a workshop's "days since the last accident"; null if none. */
-export function daysSinceCrash(sessions: Session[], now = today()) {
-  const crashed = sortSessions(sessions).filter(session => session.crashes);
+/** Days since the last sortie that ended in a crash, as a workshop's "days since the last accident"; null if none. */
+export function daysSinceCrash(sorties: Sortie[], now = today()) {
+  const crashed = sortSorties(sorties).filter(sortie => sortie.crashes);
   const last = crashed[crashed.length - 1];
   return last ? daysBetween(last.date, now) : null;
 }

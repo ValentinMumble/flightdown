@@ -11,12 +11,12 @@ import {groupBy, type GroupTally} from '../model/stats';
 import {hasLocation} from '../model/geo';
 import {formatAirtime, formatDay, plural} from '../model/format';
 
-type SortKey = 'name' | 'sessions' | 'airtime' | 'last';
+type SortKey = 'name' | 'sorties' | 'airtime' | 'last';
 
 /** The table's columns: what each sorts by, and how the order reads each way (the natural one first). */
 const COLUMNS: {key: SortKey; label: string; natural: 'ascending' | 'descending'; notes: [string, string]}[] = [
   {key: 'name', label: 'Spot', natural: 'ascending', notes: ['A to Z', 'Z to A']},
-  {key: 'sessions', label: 'Sorties', natural: 'descending', notes: ['Most sorties first', 'Fewest sorties first']},
+  {key: 'sorties', label: 'Sorties', natural: 'descending', notes: ['Most sorties first', 'Fewest sorties first']},
   {key: 'airtime', label: 'Air', natural: 'descending', notes: ['Most airtime first', 'Least airtime first']},
   {key: 'last', label: 'Last flown', natural: 'descending', notes: ['Latest flown first', 'Longest ago first']},
 ];
@@ -26,11 +26,11 @@ export function Spots() {
   const {doc} = useStore();
   const {open} = useOverlay();
   const tallies = useMemo(
-    () => new Map(groupBy(doc.sessions, session => session.spotId).map(tally => [tally.key, tally])),
-    [doc.sessions],
+    () => new Map(groupBy(doc.sorties, sortie => sortie.spotId).map(tally => [tally.key, tally])),
+    [doc.sorties],
   );
-  const counts = useMemo(() => new Map([...tallies.values()].map(tally => [tally.key, tally.sessions])), [tallies]);
-  const [sort, setSort] = useState<{key: SortKey; flipped: boolean}>({key: 'sessions', flipped: false});
+  const counts = useMemo(() => new Map([...tallies.values()].map(tally => [tally.key, tally.sorties])), [tallies]);
+  const [sort, setSort] = useState<{key: SortKey; flipped: boolean}>({key: 'sorties', flipped: false});
   const column = COLUMNS.find(one => one.key === sort.key) ?? COLUMNS[0];
   const direction = (column.natural === 'ascending') !== sort.flipped ? 1 : -1;
   const spots = useMemo(() => {
@@ -75,7 +75,7 @@ export function Spots() {
           className="span-12"
         >
           {placed.length > 0 ? (
-            <SpotsMap spots={spots} sessions={counts} onSelect={edit} />
+            <SpotsMap spots={spots} sorties={counts} onSelect={edit} />
           ) : (
             <Empty emoji="📍">No spot has a location yet. Open one below and tap the map where you fly.</Empty>
           )}
@@ -116,7 +116,7 @@ function SpotRow({spot, tally, onOpen}: {spot: Spot; tally?: GroupTally; onOpen:
         {spot.name}
         {!hasLocation(spot) && <small className="muted"> · not placed</small>}
       </span>
-      <span>{tally?.sessions ?? 0}</span>
+      <span>{tally?.sorties ?? 0}</span>
       <span>{tally ? formatAirtime(tally.airtime) : '–'}</span>
       <span>{tally ? formatDay(tally.last, {weekday: false, year: true}) : '–'}</span>
     </button>

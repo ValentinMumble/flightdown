@@ -6,5 +6,15 @@
   "outputDirectory": "dist",
   "devCommand": "vite --port $PORT",
   "regions": ["fra1"],
-  "rewrites": [{"source": "/((?!api/).*)", "destination": "/index.html"}]
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/album.ts": {
+      "maxDuration": 60
+    }
+  }
 }

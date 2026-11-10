@@ -1,7 +1,8 @@
 import {Link} from 'react-router';
-import {Activity, Wrench} from 'lucide-react';
-import type {Session} from '../types';
+import {Activity, Camera, Wrench} from 'lucide-react';
+import type {Sortie} from '../types';
 import {useStore} from '../data/store';
+import {sortiePhotos, useAlbum} from '../data/album';
 import {airtime} from '../model/stats';
 import {formatAirtime, formatDay, formatTimer, fromDay} from '../model/format';
 import {useSeriesColor} from './colors';
@@ -17,23 +18,24 @@ export function CrashPill({crashes}: {crashes: number | null}) {
 }
 
 /**
- * A session as a flight strip, the paper strip air traffic controllers keep for each flight: the heli's colour on
+ * A sortie as a flight strip, the paper strip air traffic controllers keep for each flight: the heli's colour on
  * the holder, then the day, the heli and spot, the packs, the airtime and how it ended.
  */
-export function FlightStrip({session, large = false}: {session: Session; large?: boolean}) {
+export function FlightStrip({sortie, large = false}: {sortie: Sortie; large?: boolean}) {
   const {heli, spot} = useStore();
   const color = useSeriesColor();
-  const one = heli(session.heliId);
-  const place = spot(session.spotId);
-  const date = fromDay(session.date);
-  const parts = session.broken.reduce((sum, broken) => sum + broken.qty, 0);
+  const one = heli(sortie.heliId);
+  const place = spot(sortie.spotId);
+  const date = fromDay(sortie.date);
+  const parts = sortie.broken.reduce((sum, broken) => sum + broken.qty, 0);
+  const shots = sortiePhotos(sortie, useAlbum()).length;
   return (
     <Link
-      to={`/sessions/${session.id}`}
+      to={`/sorties/${sortie.id}`}
       className={`flight-strip ${large ? 'large' : ''}`}
       style={{['--strip' as string]: color(one?.color ?? -1)}}
     >
-      <span className="strip-date" title={formatDay(session.date, {year: true})}>
+      <span className="strip-date" title={formatDay(sortie.date, {year: true})}>
         <span>{WEEKDAYS[date.getDay()]}</span>
         <b>{String(date.getDate()).padStart(2, '0')}</b>
         <span>
@@ -44,28 +46,33 @@ export function FlightStrip({session, large = false}: {session: Session; large?:
         <span className="strip-heli">{one?.name ?? 'Unknown heli'}</span>
         <span className="strip-spot">
           {place ? `${place.emoji ? `${place.emoji} ` : ''}${place.name}` : 'Somewhere'}
-          {session.notes && <span className="strip-notes"> · {session.notes}</span>}
+          {sortie.notes && <span className="strip-notes"> · {sortie.notes}</span>}
         </span>
       </span>
       <span className="strip-cell strip-packs">
         <small>Packs</small>
         <b>
-          {session.packs}×{formatTimer(session.timer)}
+          {sortie.packs}×{formatTimer(sortie.timer)}
         </b>
       </span>
       <span className="strip-cell strip-time">
         <small>Air</small>
-        <b>{formatAirtime(airtime(session))}</b>
+        <b>{formatAirtime(airtime(sortie))}</b>
       </span>
       <span className="strip-cell strip-end">
-        <CrashPill crashes={session.crashes} />
+        <CrashPill crashes={sortie.crashes} />
         <span className="strip-icons">
           {parts > 0 && (
             <span className="pill caution" title={`${parts} broken parts`}>
               <Wrench size={12} /> {parts}
             </span>
           )}
-          {session.telemetry.length > 0 && (
+          {shots > 0 && (
+            <span className="pill label" title={`${shots} photos`}>
+              <Camera size={12} /> {shots}
+            </span>
+          )}
+          {sortie.telemetry.length > 0 && (
             <span className="pill label" title="Telemetry">
               <Activity size={12} /> Log
             </span>

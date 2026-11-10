@@ -3,15 +3,15 @@ import {Link} from 'react-router';
 import {ChevronRight, Settings as SettingsIcon} from 'lucide-react';
 import {useStore} from '../data/store';
 import {Empty, PageHeader, useOverlay} from '../components/ui';
-import {FlightStrip} from '../components/SessionRow';
+import {FlightStrip} from '../components/SortieRow';
 import {MinuteMeter, Panel, Rotor, RotorMark, SegmentBar, Stamp, Tape} from '../components/instruments';
-import {SessionForm} from '../components/forms/SessionForm';
+import {SortieForm} from '../components/forms/SortieForm';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {AirtimeChart} from '../components/charts/AirtimeChart';
 import {SkillLadder} from '../components/charts/SkillLadder';
 import {useSeriesColor} from '../components/colors';
 import {ago, formatAirtime, formatDay, formatRate, plural, today} from '../model/format';
-import {daysSinceCrash, groupBy, monthly, packsSinceCrash, sortSessions, streaks, totals} from '../model/stats';
+import {daysSinceCrash, groupBy, monthly, packsSinceCrash, sortSorties, streaks, totals} from '../model/stats';
 import {spareStock} from '../model/parts';
 import {HeliPhoto} from '../components/HeliPhoto';
 
@@ -20,31 +20,31 @@ export function Home() {
   const {doc} = useStore();
   const {open} = useOverlay();
   const color = useSeriesColor();
-  const sessions = useMemo(() => sortSessions(doc.sessions), [doc.sessions]);
-  const all = useMemo(() => totals(sessions), [sessions]);
-  const recent = useMemo(() => totals(sessions.slice(-20)), [sessions]);
-  const runs = useMemo(() => streaks(sessions), [sessions]);
-  const months = useMemo(() => monthly(sessions, today().slice(0, 7)).slice(-24), [sessions]);
+  const sorties = useMemo(() => sortSorties(doc.sorties), [doc.sorties]);
+  const all = useMemo(() => totals(sorties), [sorties]);
+  const recent = useMemo(() => totals(sorties.slice(-20)), [sorties]);
+  const runs = useMemo(() => streaks(sorties), [sorties]);
+  const months = useMemo(() => monthly(sorties, today().slice(0, 7)).slice(-24), [sorties]);
   const tallies = useMemo(
-    () => new Map(groupBy(sessions, session => session.heliId).map(group => [group.key, group])),
-    [sessions],
+    () => new Map(groupBy(sorties, sortie => sortie.heliId).map(group => [group.key, group])),
+    [sorties],
   );
   const flightLine = doc.helis.filter(heli => heli.status === 'active' || heli.status === 'grounded');
-  const last = sessions[sessions.length - 1];
+  const last = sorties[sorties.length - 1];
   const best = runs.longestCrashFree?.packs ?? 0;
-  const newest = [...sessions].reverse();
+  const newest = [...sorties].reverse();
   const lastThree = newest.slice(0, 3);
   const latest = newest.slice(3, 8);
-  const logSession = () => open(<SessionForm />);
+  const logSortie = () => open(<SortieForm />);
   const ppc = all.packsPerCrash;
-  const sinceCrash = daysSinceCrash(sessions);
+  const sinceCrash = daysSinceCrash(sorties);
   const tone = ppc === null ? 'good' : ppc < 2 ? 'warning' : ppc < 5 ? 'caution' : 'good';
 
   return (
     <div className="page">
       <PageHeader
         title="Flightdown"
-        sub={sessions.length ? `Flying since ${formatDay(sessions[0].date, {weekday: false, year: true})}` : undefined}
+        sub={sorties.length ? `Flying since ${formatDay(sorties[0].date, {weekday: false, year: true})}` : undefined}
         icon={<RotorMark size={20} className="accent-mark" />}
         actions={
           <Link to="/settings" className="icon-button phone-only" aria-label="Settings">
@@ -65,8 +65,8 @@ export function Home() {
           </div>
           <div className="figures">
             <div>
-              <div className="figure-label">Sessions</div>
-              <div className="figure-value">{all.sessions}</div>
+              <div className="figure-label">Sorties</div>
+              <div className="figure-value">{all.sorties}</div>
             </div>
             <div>
               <div className="figure-label">Packs</div>
@@ -89,14 +89,14 @@ export function Home() {
             value={ppc}
             max={10}
             bug={recent.packsPerCrash}
-            label={`${formatRate(ppc)} packs per crash, ${formatRate(recent.packsPerCrash)} over the last 20 sessions`}
+            label={`${formatRate(ppc)} packs per crash, ${formatRate(recent.packsPerCrash)} over the last 20 sorties`}
           />
           <div className="gauge-legend">
             <span>
               <i className="tape-key caret" /> all time
             </span>
             <span>
-              <i className="tape-key bug" /> last 20 sessions · {formatRate(recent.packsPerCrash)}
+              <i className="tape-key bug" /> last 20 sorties · {formatRate(recent.packsPerCrash)}
             </span>
           </div>
         </Panel>
@@ -128,15 +128,15 @@ export function Home() {
           note={last ? `The latest ${ago(last.date)}` : undefined}
           className="span-7"
           action={
-            <button className="button small solid" onClick={logSession}>
+            <button className="button small solid" onClick={logSortie}>
               Log the next
             </button>
           }
         >
           {last ? (
             <div className="strip-board">
-              {lastThree.map(session => (
-                <FlightStrip key={session.id} session={session} large />
+              {lastThree.map(sortie => (
+                <FlightStrip key={sortie.id} sortie={sortie} large />
               ))}
             </div>
           ) : (
@@ -149,9 +149,9 @@ export function Home() {
             <div className="stack">
               {flightLine.map(heli => {
                 const tally = tallies.get(heli.id);
-                const own = sessions.filter(session => session.heliId === heli.id);
+                const own = sorties.filter(sortie => sortie.heliId === heli.id);
                 const low = doc.spares.filter(
-                  spare => (spare.heliId === heli.id || !spare.heliId) && spareStock(spare, doc.sessions) < spare.min,
+                  spare => (spare.heliId === heli.id || !spare.heliId) && spareStock(spare, doc.sorties) < spare.min,
                 ).length;
                 return (
                   <Link
@@ -202,7 +202,7 @@ export function Home() {
             </Link>
           }
         >
-          <SkillLadder sessions={sessions} compact />
+          <SkillLadder sorties={sorties} compact />
         </Panel>
 
         {latest.length > 0 && (
@@ -210,14 +210,14 @@ export function Home() {
             label="Earlier sorties"
             className="span-12"
             action={
-              <Link to="/sessions" className="button small ghost">
-                Logbook <ChevronRight size={14} />
+              <Link to="/sorties" className="button small ghost">
+                Every sortie <ChevronRight size={14} />
               </Link>
             }
           >
             <div className="strip-board">
-              {latest.map(session => (
-                <FlightStrip key={session.id} session={session} />
+              {latest.map(sortie => (
+                <FlightStrip key={sortie.id} sortie={sortie} />
               ))}
             </div>
           </Panel>

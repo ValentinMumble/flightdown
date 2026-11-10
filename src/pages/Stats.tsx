@@ -13,35 +13,35 @@ import {SkillLadder} from '../components/charts/SkillLadder';
 import {useSeriesColor} from '../components/colors';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {ago, formatAirtime, formatDay, formatRate, plural} from '../model/format';
-import {crashTrend, groupBy, sortSessions, totals} from '../model/stats';
-import {CAUSES, crashCauses, milestones, packsPerSession} from '../model/debrief';
+import {crashTrend, groupBy, sortSorties, totals} from '../model/stats';
+import {CAUSES, crashCauses, milestones, packsPerSortie} from '../model/debrief';
 
 /** The debrief: what the log says about the flying, in the terms a heli pilot counts in. */
 export function Stats() {
   const {doc, heli, spot} = useStore();
   const color = useSeriesColor();
   const years = useMemo(
-    () => [...new Set(doc.sessions.map(session => session.date.slice(0, 4)))].sort().reverse(),
-    [doc.sessions],
+    () => [...new Set(doc.sorties.map(sortie => sortie.date.slice(0, 4)))].sort().reverse(),
+    [doc.sorties],
   );
   const [period, setPeriod] = useState('all');
   const [heliId, setHeliId] = useState('');
 
-  const sessions = useMemo(
+  const sorties = useMemo(
     () =>
-      sortSessions(doc.sessions).filter(
-        session => (period === 'all' || session.date.startsWith(period)) && (!heliId || session.heliId === heliId),
+      sortSorties(doc.sorties).filter(
+        sortie => (period === 'all' || sortie.date.startsWith(period)) && (!heliId || sortie.heliId === heliId),
       ),
-    [doc.sessions, period, heliId],
+    [doc.sorties, period, heliId],
   );
-  const all = useMemo(() => totals(sessions), [sessions]);
-  const trend = useMemo(() => crashTrend(sessions), [sessions]);
-  const causes = useMemo(() => crashCauses(sessions), [sessions]);
-  const marks = useMemo(() => milestones(sessions), [sessions]);
-  const byHeli = useMemo(() => groupBy(sessions, session => session.heliId), [sessions]);
-  const bySpot = useMemo(() => groupBy(sessions, session => session.spotId), [sessions]);
-  const packs = useMemo(() => packsPerSession(sessions), [sessions]);
-  const packsMax = Math.max(...packs.map(count => count.sessions), 1);
+  const all = useMemo(() => totals(sorties), [sorties]);
+  const trend = useMemo(() => crashTrend(sorties), [sorties]);
+  const causes = useMemo(() => crashCauses(sorties), [sorties]);
+  const marks = useMemo(() => milestones(sorties), [sorties]);
+  const byHeli = useMemo(() => groupBy(sorties, sortie => sortie.heliId), [sorties]);
+  const bySpot = useMemo(() => groupBy(sorties, sortie => sortie.spotId), [sorties]);
+  const packs = useMemo(() => packsPerSortie(sorties), [sorties]);
+  const packsMax = Math.max(...packs.map(count => count.sorties), 1);
   const fleet = heliId ? doc.helis.filter(one => one.id === heliId) : doc.helis;
 
   return (
@@ -66,15 +66,15 @@ export function Stats() {
         </select>
       </div>
 
-      {!sessions.length ? (
+      {!sorties.length ? (
         <div className="panel">
-          <Empty emoji="📭">No session in this period.</Empty>
+          <Empty emoji="📭">No sortie in this period.</Empty>
         </div>
       ) : (
         <div className="bento">
           <Panel
             label="Learning curve"
-            note="Crashes every 10 packs, over the last ten sessions: lower is better"
+            note="Crashes every 10 packs, over the last ten sorties: lower is better"
             className="span-8"
           >
             <CrashTrend points={trend} />
@@ -107,7 +107,7 @@ export function Stats() {
             note="Parts replaced, by part of the heli: hover one for the detail"
             className="span-7"
           >
-            <DamageMap sessions={sessions} />
+            <DamageMap sorties={sorties} />
           </Panel>
 
           <Panel
@@ -140,10 +140,10 @@ export function Stats() {
 
           <Panel
             label="Fleet history"
-            note="Each heli from its first session to its last: a dot a session, a red tick a crash"
+            note="Each heli from its first sortie to its last: a dot a sortie, a red tick a crash"
             className="span-12"
           >
-            <FleetTimeline helis={fleet} sessions={doc.sessions} />
+            <FleetTimeline helis={fleet} sorties={doc.sorties} />
           </Panel>
 
           <Panel
@@ -151,34 +151,34 @@ export function Stats() {
             note="Every telemetry log: volts a cell through the flight. Packs flown harder sag sooner"
             className="span-12"
           >
-            <PackCurves sessions={sessions} />
+            <PackCurves sorties={sorties} />
           </Panel>
 
           <Panel label="Skill ladder" note="Manoeuvres in the order they are learnt" className="span-4">
-            <SkillLadder sessions={sessions} />
+            <SkillLadder sorties={sorties} />
           </Panel>
 
           <Panel label="Flying season" note="Airtime by month of the year" className="span-4">
-            <SeasonRose sessions={sessions} />
+            <SeasonRose sorties={sorties} />
           </Panel>
 
-          <Panel label="Packs a sortie" note="How many packs a session flies" className="span-4">
-            <div className="columns" role="img" aria-label="Sessions by number of packs">
+          <Panel label="Packs a sortie" note="How many packs a sortie flies" className="span-4">
+            <div className="columns" role="img" aria-label="Sorties by number of packs">
               {packs.map(count => (
                 <div
                   key={count.packs}
                   className="column"
-                  title={`${plural(count.sessions, 'session')} of ${count.packs}`}
+                  title={`${plural(count.sorties, 'sortie')} of ${count.packs}`}
                 >
-                  <span className="column-value">{count.sessions || ''}</span>
-                  <div className="column-bar" style={{height: `${(count.sessions / packsMax) * 100}%`}} />
+                  <span className="column-value">{count.sorties || ''}</span>
+                  <div className="column-bar" style={{height: `${(count.sorties / packsMax) * 100}%`}} />
                   <span className="column-label">{count.packs === 6 ? '6+' : count.packs}</span>
                 </div>
               ))}
             </div>
             <p className="caption">
-              {formatRate(all.packs / all.sessions)} packs a session on average,{' '}
-              {formatAirtime(all.airtime / all.sessions)} in the air.
+              {formatRate(all.packs / all.sorties)} packs a sortie on average,{' '}
+              {formatAirtime(all.airtime / all.sorties)} in the air.
             </p>
           </Panel>
 
@@ -186,7 +186,7 @@ export function Stats() {
             <div className="spot-table">
               <div className="spot-row head">
                 <span>Spot</span>
-                <span>Sessions</span>
+                <span>Sorties</span>
                 <span>Air</span>
                 <span>💥 / 10 packs</span>
               </div>
@@ -195,7 +195,7 @@ export function Stats() {
                 return (
                   <Link
                     key={group.key || 'none'}
-                    to={group.key ? `/sessions?spot=${group.key}` : '/sessions'}
+                    to={group.key ? `/sorties?spot=${group.key}` : '/sorties'}
                     className="spot-row"
                   >
                     <span className="name">
@@ -205,7 +205,7 @@ export function Stats() {
                         · {ago(group.last)}
                       </span>
                     </span>
-                    <span>{group.sessions}</span>
+                    <span>{group.sorties}</span>
                     <span>{formatAirtime(group.airtime)}</span>
                     <span
                       style={{color: per10 >= 4 ? 'var(--warning)' : per10 >= 2 ? 'var(--caution)' : 'var(--good)'}}

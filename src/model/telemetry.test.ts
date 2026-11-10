@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
-import type {Session} from '../types';
+import type {Sortie} from '../types';
 import {parseCsv} from './csv';
-import {matchSession, modelFromFileName, readDay, readTelemetry} from './telemetry';
+import {matchSortie, modelFromFileName, readDay, readTelemetry} from './telemetry';
 import {estimateCells, packOf, telemetryInsights} from './insights';
 
 /** A made-up EdgeTX log of a 3S pack: hover, then the pack sags and the ESC cuts with the throttle up. */
@@ -39,7 +39,7 @@ describe('readTelemetry', () => {
     expect(read!.series.channels.throttle[10]).toBe(84);
   });
 
-  it('finds the session of the log, on the heli named like the model', () => {
+  it('finds the sortie of the log, on the heli named like the model', () => {
     const read = readTelemetry(parseCsv(edgeTxLog()), 'M2 EVO-2023-05-03-124800.csv')!;
     const base = {
       packs: 3,
@@ -52,14 +52,14 @@ describe('readTelemetry', () => {
       telemetry: [],
       loggedAt: '',
     };
-    const sessions: Session[] = [
+    const sorties: Sortie[] = [
       {...base, id: 'a', date: '2023-05-03', heliId: 'm1'},
       {...base, id: 'b', date: '2023-05-03', heliId: 'm2'},
     ];
     const names: Record<string, string> = {m1: 'M1', m2: 'M2 EVO 🟠'};
     expect(modelFromFileName('M2 EVO-2023-05-03-124800.csv')).toBe('M2 EVO');
-    expect(matchSession(read.log, 'M2 EVO', sessions, id => names[id])?.id).toBe('b');
-    expect(matchSession(read.log, 'M4', sessions, id => names[id])).toBeNull();
+    expect(matchSortie(read.log, 'M2 EVO', sorties, id => names[id])?.id).toBe('b');
+    expect(matchSortie(read.log, 'M4', sorties, id => names[id])).toBeNull();
   });
 });
 

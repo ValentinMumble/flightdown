@@ -38,8 +38,8 @@ export function HeliCard({heli, tally}: {heli: Heli; tally?: GroupTally}) {
   const {doc} = useStore();
   const color = useSeriesColor();
   const since = useMemo(
-    () => packsSinceCrash(doc.sessions.filter(session => session.heliId === heli.id)),
-    [doc.sessions, heli.id],
+    () => packsSinceCrash(doc.sorties.filter(sortie => sortie.heliId === heli.id)),
+    [doc.sorties, heli.id],
   );
   return (
     <Link to={`/helis/${heli.id}`} className="panel heli-card" style={{['--hue' as string]: color(heli.color)}}>
@@ -148,8 +148,8 @@ function Fleet() {
   const {open} = useOverlay();
   const color = useSeriesColor();
   const tallies = useMemo(
-    () => new Map(groupBy(doc.sessions, session => session.heliId).map(group => [group.key, group])),
-    [doc.sessions],
+    () => new Map(groupBy(doc.sorties, sortie => sortie.heliId).map(group => [group.key, group])),
+    [doc.sorties],
   );
   const byLast = (left: Heli, right: Heli) =>
     (tallies.get(right.id)?.last ?? right.createdAt).localeCompare(tallies.get(left.id)?.last ?? left.createdAt);
@@ -297,19 +297,19 @@ function Spares() {
   const rows = useMemo(
     () =>
       doc.spares
-        .map(spare => ({spare, stock: spareStock(spare, doc.sessions)}))
+        .map(spare => ({spare, stock: spareStock(spare, doc.sorties)}))
         .sort(
           (left, right) =>
             (heli(left.spare.heliId)?.name ?? '').localeCompare(heli(right.spare.heliId)?.name ?? '') ||
             left.spare.name.localeCompare(right.spare.name),
         ),
-    [doc.spares, doc.sessions, heli],
+    [doc.spares, doc.sorties, heli],
   );
   const toBuy = rows.filter(({spare, stock}) => stock < spare.min);
   const cost = toBuy.reduce((sum, {spare, stock}) => sum + (spare.price ?? 0) * (spare.min - Math.max(0, stock)), 0);
   // Parts that broke more than once and are not stocked: worth keeping a few.
   const stocked = new Set(doc.spares.map(spare => partKey(spare.name)));
-  const ideas = brokenRanking(doc.sessions.filter(session => heli(session.heliId)?.status === 'active'))
+  const ideas = brokenRanking(doc.sorties.filter(sortie => heli(sortie.heliId)?.status === 'active'))
     .filter(part => part.qty > 1 && !stocked.has(part.key))
     .slice(0, 6);
   const adjust = (spareId: string, stock: number, change: number) => {
@@ -428,9 +428,8 @@ function Batteries() {
               .filter(other => other.heliIds.some(id => battery.heliIds.includes(id)))
               .reduce((sum, other) => sum + other.count, 0);
             const flown = totals(
-              doc.sessions.filter(
-                session =>
-                  battery.heliIds.includes(session.heliId) && (!battery.bought || session.date >= battery.bought),
+              doc.sorties.filter(
+                sortie => battery.heliIds.includes(sortie.heliId) && (!battery.bought || sortie.date >= battery.bought),
               ),
             ).packs;
             const cycles = sharing ? flown / sharing : 0;

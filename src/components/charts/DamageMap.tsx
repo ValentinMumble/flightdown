@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import type {Session} from '../../types';
+import type {Sortie} from '../../types';
 import {damageByZone, ZONES, type Zone} from '../../model/debrief';
 
 /** One hue, dim to hot, for how often a part of the heli broke: amounts on the dark panel. */
@@ -42,8 +42,8 @@ const SHAPES: Record<Zone, {path: string; label: [number, number]; anchor: 'star
  * The heli drawn from the side, each part lit by how often it broke: the hotter, the more spares it ate. Hover or
  * focus a part for what broke there.
  */
-export function DamageMap({sessions}: {sessions: Session[]}) {
-  const {zones, unplaced} = useMemo(() => damageByZone(sessions), [sessions]);
+export function DamageMap({sorties}: {sorties: Sortie[]}) {
+  const {zones, unplaced} = useMemo(() => damageByZone(sorties), [sorties]);
   const [focus, setFocus] = useState<Zone | null>(null);
   const max = Math.max(...[...zones.values()].map(zone => zone.qty), 1);
   const heat = (qty: number) => (qty ? HEAT[Math.min(4, 1 + Math.floor((qty / max) * 3.999))] : HEAT[0]);

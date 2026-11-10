@@ -3,14 +3,14 @@ import {Link, useParams} from 'react-router';
 import {ChevronRight, Pencil, Plus} from 'lucide-react';
 import {useStore} from '../data/store';
 import {Empty, PageHeader, useOverlay} from '../components/ui';
-import {FlightStrip} from '../components/SessionRow';
+import {FlightStrip} from '../components/SortieRow';
 import {Panel, Stamp} from '../components/instruments';
 import {HeliForm, SpareForm} from '../components/forms/HangarForms';
 import {AirtimeChart} from '../components/charts/AirtimeChart';
 import {DamageMap} from '../components/charts/DamageMap';
 import {useSeriesColor} from '../components/colors';
 import {formatAirtime, formatDay, formatRate, formatTimer, plural} from '../model/format';
-import {daysSinceCrash, monthly, packsSinceCrash, sortSessions, totals} from '../model/stats';
+import {daysSinceCrash, monthly, packsSinceCrash, sortSorties, totals} from '../model/stats';
 import {spareStock} from '../model/parts';
 import {HeliPhoto} from '../components/HeliPhoto';
 
@@ -21,12 +21,9 @@ export function HeliPage() {
   const {open} = useOverlay();
   const color = useSeriesColor();
   const heli = findHeli(id);
-  const sessions = useMemo(
-    () => sortSessions(doc.sessions.filter(session => session.heliId === id)),
-    [doc.sessions, id],
-  );
-  const all = useMemo(() => totals(sessions), [sessions]);
-  const months = useMemo(() => monthly(sessions), [sessions]);
+  const sorties = useMemo(() => sortSorties(doc.sorties.filter(sortie => sortie.heliId === id)), [doc.sorties, id]);
+  const all = useMemo(() => totals(sorties), [sorties]);
+  const months = useMemo(() => monthly(sorties), [sorties]);
   const spares = doc.spares.filter(spare => spare.heliId === id || !spare.heliId);
   const tips = doc.tips.filter(tip => tip.heliId === id);
 
@@ -41,8 +38,8 @@ export function HeliPage() {
     );
   }
 
-  const first = sessions[0];
-  const last = sessions[sessions.length - 1];
+  const first = sorties[0];
+  const last = sorties[sorties.length - 1];
 
   return (
     <div className="page">
@@ -75,8 +72,8 @@ export function HeliPage() {
           </div>
           <div className="figures">
             <div>
-              <div className="figure-label">Sessions</div>
-              <div className="figure-value">{all.sessions}</div>
+              <div className="figure-label">Sorties</div>
+              <div className="figure-value">{all.sorties}</div>
             </div>
             <div>
               <div className="figure-label">Packs</div>
@@ -92,11 +89,11 @@ export function HeliPage() {
             </div>
             <div>
               <div className="figure-label">Clean packs</div>
-              <div className="figure-value">{packsSinceCrash(sessions)}</div>
+              <div className="figure-value">{packsSinceCrash(sorties)}</div>
             </div>
             <div>
               <div className="figure-label">Days since a crash</div>
-              <div className="figure-value">{daysSinceCrash(sessions) ?? '–'}</div>
+              <div className="figure-value">{daysSinceCrash(sorties) ?? '–'}</div>
             </div>
             <div>
               <div className="figure-label">Pack time</div>
@@ -114,7 +111,7 @@ export function HeliPage() {
 
       <div className="bento">
         <Panel label="Where it breaks" note="Parts replaced on this heli" className="span-7">
-          <DamageMap sessions={sessions} />
+          <DamageMap sorties={sorties} />
         </Panel>
 
         <Panel
@@ -129,7 +126,7 @@ export function HeliPage() {
           {spares.length ? (
             <div className="bar-list">
               {spares.map(spare => {
-                const stock = spareStock(spare, doc.sessions);
+                const stock = spareStock(spare, doc.sorties);
                 return (
                   <button
                     key={spare.id}
@@ -185,22 +182,22 @@ export function HeliPage() {
           label="Sorties"
           className="span-12"
           action={
-            <Link to={`/sessions?heli=${heli.id}`} className="button small ghost">
-              All {sessions.length} <ChevronRight size={14} />
+            <Link to={`/sorties?heli=${heli.id}`} className="button small ghost">
+              All {sorties.length} <ChevronRight size={14} />
             </Link>
           }
         >
-          {sessions.length ? (
+          {sorties.length ? (
             <div className="strip-board">
-              {[...sessions]
+              {[...sorties]
                 .reverse()
                 .slice(0, 8)
-                .map(session => (
-                  <FlightStrip key={session.id} session={session} />
+                .map(sortie => (
+                  <FlightStrip key={sortie.id} sortie={sortie} />
                 ))}
             </div>
           ) : (
-            <Empty>No session on it yet.</Empty>
+            <Empty>No sortie on it yet.</Empty>
           )}
         </Panel>
       </div>

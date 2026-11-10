@@ -1,10 +1,10 @@
-import {emptyDoc, type Doc, type Heli, type Session, type Spot, type TelemetrySeries, type Tip} from '../../src/types';
+import {emptyDoc, type Doc, type Heli, type Sortie, type Spot, type TelemetrySeries, type Tip} from '../../src/types';
 import {newId, now} from '../../src/model/ids';
 import {EMOJI_SLOTS} from '../../src/model/palette';
 import {parseBrokenParts, WHOLE_HELI} from '../../src/model/parts';
 import {inferSkills} from '../../src/model/skills';
-import {airtime, sortSessions} from '../../src/model/stats';
-import {isTelemetryHeader, matchSession, readDay, readTelemetry} from '../../src/model/telemetry';
+import {airtime, sortSorties} from '../../src/model/stats';
+import {isTelemetryHeader, matchSortie, readDay, readTelemetry} from '../../src/model/telemetry';
 import {cellKey, type Cell, type Sheet} from './xlsx';
 
 /** The log's columns, and the header words that name each (the first match wins, left to right). */
@@ -36,7 +36,7 @@ const KNOWN_MODELS: [RegExp, string, string][] = [
 
 export interface ImportReport {
   sheet: string;
-  sessions: number;
+  sorties: number;
   helis: number;
   spots: number;
   tips: number;
@@ -121,8 +121,8 @@ function sheetText(sheet: Sheet) {
 
 /**
  * Turns a spreadsheet flight log into Flightdown's: the tab with a Date and a Machine (or Heli, Model) column gives
- * the sessions, their helis and spots; a tab holding an EdgeTX log gives telemetry for the session on its day; any
- * other tab becomes a note in the hangar. Written for a log kept in Google Sheets, one session a row.
+ * the sorties, their helis and spots; a tab holding an EdgeTX log gives telemetry for the sortie on its day; any
+ * other tab becomes a note in the hangar. Written for a log kept in Google Sheets, one sortie a row.
  */
 export function importSheets(sheets: Sheet[], fileName = 'sheet'): Imported {
   const doc = emptyDoc();
@@ -147,7 +147,7 @@ export function importSheets(sheets: Sheet[], fileName = 'sheet'): Imported {
     const date = readDay(cell('date'));
     if (!heliName && !date) continue;
     if (!heliName || !date) {
-      // A year written alone on a row heads the sessions under it: nothing to skip.
+      // A year written alone on a row heads the sorties under it: nothing to skip.
       if (!/^\d{4}(\.0)?$/.test(text(cell('date')))) skipped.push(`Row ${index + 1}: no ${date ? 'heli' : 'day'}`);
       continue;
     }
@@ -187,7 +187,7 @@ export function importSheets(sheets: Sheet[], fileName = 'sheet'): Imported {
       for (const url of text(cell(field)).match(URL_PATTERN) ?? []) links.add(url);
     }
 
-    const session: Session = {
+    const sortie: Sortie = {
       id: newId(),
       date,
       heliId: heli.id,
@@ -202,16 +202,16 @@ export function importSheets(sheets: Sheet[], fileName = 'sheet'): Imported {
       telemetry: [],
       loggedAt: `${date}T23:59:00`,
     };
-    doc.sessions.push(session);
+    doc.sorties.push(sortie);
   }
 
-  const sessions = sortSessions(doc.sessions);
+  const sorties = sortSorties(doc.sorties);
   doc.helis = [...helis.values()];
   doc.spots = [...spots.values()];
 
-  // Each heli: its maker when the name says it, the timer of its latest session, and lost or sold when the log says so.
+  // Each heli: its maker when the name says it, the timer of its latest sortie, and lost or sold when the log says so.
   for (const heli of doc.helis) {
-    const own = sessions.filter(session => session.heliId === heli.id);
+    const own = sorties.filter(sortie => sortie.heliId === heli.id);
     const latest = own[own.length - 1];
     if (latest?.timer) heli.timer = latest.timer;
     heli.acquired = own[0]?.date;
@@ -223,13 +223,13 @@ export function importSheets(sheets: Sheet[], fileName = 'sheet'): Imported {
       heli.model = model ? plain.replace(pattern, model).trim() : plain;
       break;
     }
-    if (own.some(session => session.broken.some(broken => broken.part === WHOLE_HELI))) heli.status = 'lost';
+    if (own.some(sortie => sortie.broken.some(broken => broken.part === WHOLE_HELI))) heli.status = 'lost';
     else if (latest && /\b(sell|sold|selling)\b/i.test(latest.notes)) heli.status = 'sold';
   }
 
   // Colours: one hinted by a colour emoji in the name first, then the others by airtime, most flown first.
   const airtimeOf = (heli: Heli) =>
-    sessions.filter(session => session.heliId === heli.id).reduce((sum, session) => sum + airtime(session), 0);
+    sorties.filter(sortie => sortie.heliId === heli.id).reduce((sum, sortie) => sum + airtime(sortie), 0);
   const taken = new Set<number>();
   for (const heli of doc.helis) {
     const hint = Object.keys(EMOJI_SLOTS).find(emoji => heli.name.includes(emoji));
@@ -247,7 +247,7 @@ export function importSheets(sheets: Sheet[], fileName = 'sheet'): Imported {
     next += 1;
   }
 
-  // The other tabs: an EdgeTX log goes to the session of its day, anything else becomes a note.
+  // The other tabs: an EdgeTX log goes to the sortie of its day, anything else becomes a note.
   let telemetry = 0;
   for (const sheet of sheets) {
     if (sheet === logSheet) continue;
@@ -255,12 +255,12 @@ export function importSheets(sheets: Sheet[], fileName = 'sheet'): Imported {
     if (headerRow && isTelemetryHeader(headerRow)) {
       const read = readTelemetry(sheet.rows, sheet.name);
       if (!read) continue;
-      const session = matchSession(read.log, null, doc.sessions, () => '');
-      if (!session) {
-        skipped.push(`${sheet.name}: no session on ${read.log.start?.slice(0, 10) ?? 'its day'}`);
+      const sortie = matchSortie(read.log, null, doc.sorties, () => '');
+      if (!sortie) {
+        skipped.push(`${sheet.name}: no sortie on ${read.log.start?.slice(0, 10) ?? 'its day'}`);
         continue;
       }
-      session.telemetry.push(read.log);
+      sortie.telemetry.push(read.log);
       series.push(read.series);
       telemetry += 1;
       continue;
@@ -274,7 +274,7 @@ export function importSheets(sheets: Sheet[], fileName = 'sheet'): Imported {
     series,
     report: {
       sheet: `${fileName} (${logSheet.name})`,
-      sessions: doc.sessions.length,
+      sorties: doc.sorties.length,
       helis: doc.helis.length,
       spots: doc.spots.length,
       tips: doc.tips.length,
