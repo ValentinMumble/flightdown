@@ -326,3 +326,10 @@ export function packsSinceCrash(sessions: Session[]) {
   }
   return packs;
 }
+
+/** Days since the last session that ended in a crash, as a workshop's "days since the last accident"; null if none. */
+export function daysSinceCrash(sessions: Session[], now = today()) {
+  const crashed = sortSessions(sessions).filter(session => session.crashes);
+  const last = crashed[crashed.length - 1];
+  return last ? daysBetween(last.date, now) : null;
+}

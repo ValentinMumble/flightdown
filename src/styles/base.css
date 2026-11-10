@@ -1,31 +1,37 @@
 /*
- * Flightdown looks like a helicopter's glass cockpit at night: instruments on a dark panel, labels in cyan, readouts
- * in a squared display face, green, amber and red as the avionics use them. Dark only. Every colour comes from here.
+ * Flightdown looks like a helicopter's glass cockpit seen through a head-up display: the cockpit's layout, a HUD's
+ * restraint. Near-black page, frames marked by corner brackets, labels in small monospace, one soft green for anything
+ * live or good, amber and red only for trouble. Dark only. Every colour comes from here (see hud.css for the type).
  */
 :root {
   color-scheme: dark;
-  --page: #05070b;
-  --panel: #0c1118;
-  --panel-2: #111823;
-  --panel-3: #18212e;
-  --bezel: rgba(150, 180, 210, 0.11);
-  --bezel-strong: rgba(150, 180, 210, 0.2);
-  --ink: #e8eef5;
-  --ink-2: #a8b3c1;
-  --muted: #6c7787;
-  --label: #49cfe6;
-  --label-soft: rgba(73, 207, 230, 0.1);
-  --accent: #ff7a1a;
-  --accent-ink: #120800;
-  --accent-soft: rgba(255, 122, 26, 0.14);
-  --good: #3ddc84;
-  --good-soft: rgba(61, 220, 132, 0.12);
-  --caution: #ffb020;
-  --caution-soft: rgba(255, 176, 32, 0.13);
-  --warning: #ff4d4f;
-  --warning-soft: rgba(255, 77, 79, 0.13);
-  --grid: rgba(73, 207, 230, 0.08);
-  --axis: rgba(150, 180, 210, 0.22);
+  --page: #07090b;
+  --panel: #0a0d0f;
+  --panel-2: #0d1113;
+  --panel-3: #141a1d;
+  --bezel: rgba(130, 190, 160, 0.1);
+  --bezel-strong: rgba(130, 190, 160, 0.19);
+  /* The two corner brackets that mark a frame. */
+  --bracket: #3d6e54;
+  --ink: #edf5f0;
+  --ink-2: #a9b8b0;
+  --muted: #6f7f78;
+  --label: #6d9a82;
+  --label-soft: rgba(124, 255, 178, 0.08);
+  /* HUD green: the tab in use, a choice made, anything live or good. */
+  --accent: #7cffb2;
+  --accent-ink: #04140b;
+  --accent-soft: rgba(124, 255, 178, 0.1);
+  /* The rotor and the app's mark keep their orange. */
+  --brand: #ff7a1a;
+  --good: #7cffb2;
+  --good-soft: rgba(124, 255, 178, 0.1);
+  --caution: #ffb35c;
+  --caution-soft: rgba(255, 179, 92, 0.12);
+  --warning: #ff6b6b;
+  --warning-soft: rgba(255, 107, 107, 0.12);
+  --grid: rgba(124, 255, 178, 0.06);
+  --axis: rgba(150, 200, 175, 0.2);
   --backdrop: rgba(0, 0, 0, 0.6);
 
   /* Liquid glass (papyrus/design/liquid-glass.md), dark values only, as Chords and hk. */
@@ -42,8 +48,8 @@
   --font: -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif;
   --display: 'Oxanium', var(--font);
   --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
-  --radius: 18px;
-  --radius-small: 11px;
+  --radius: 10px;
+  --radius-small: 8px;
   --dock-height: 62px;
   --dock-gap: 8px;
   --dock-side: 14px;
@@ -69,12 +75,7 @@ body {
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
-  /* A faint glow from the top, and the dot grid of a display panel. */
-  background:
-    radial-gradient(120% 60% at 50% -10%, rgba(73, 207, 230, 0.09), transparent 60%),
-    radial-gradient(circle at 1px 1px, rgba(150, 180, 210, 0.07) 1px, transparent 0) 0 0 / 22px 22px,
-    var(--page);
-  background-attachment: fixed;
+  background: var(--page);
 }
 
 a {

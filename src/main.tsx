@@ -9,6 +9,7 @@ import './styles/base.css';
 import './styles/shell.css';
 import './styles/ui.css';
 import './styles/instruments.css';
+import './styles/hud.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -1,4 +1,4 @@
-import {useId, type ReactNode} from 'react';
+import {useEffect, useId, useState, type ReactNode} from 'react';
 import type {HeliStatus} from '../types';
 import {formatAirtime} from '../model/format';
 
@@ -32,89 +32,95 @@ export function Panel({
   );
 }
 
-export interface Band {
-  to: number;
-  tone: 'warning' | 'caution' | 'good';
-}
-
-const TONES = {warning: 'var(--warning)', caution: 'var(--caution)', good: 'var(--good)'};
-const SWEEP = 240;
-
-function polar(radius: number, angle: number) {
-  const radians = ((angle - 90) * Math.PI) / 180;
-  return {x: 100 + radius * Math.cos(radians), y: 100 + radius * Math.sin(radians)};
-}
-
-function arc(radius: number, from: number, to: number) {
-  const start = polar(radius, from);
-  const end = polar(radius, to);
-  return `M${start.x},${start.y} A${radius},${radius} 0 ${to - from > 180 ? 1 : 0} 1 ${end.x},${end.y}`;
-}
-
 /**
- * A round gauge, as on an instrument panel: coloured bands, ticks, a needle on the value and a magenta bug on a
- * second value (the recent one, against all time).
+ * A head-up display's tape: a ruler from 0 to max, a white caret on the value and a green one on a second value (the
+ * recent one, against all time). Values past the end sit on it.
  */
-export function Gauge({
+export function Tape({
   value,
   max,
-  bands,
   bug,
   label,
 }: {
   value: number | null;
   max: number;
-  bands: Band[];
   bug?: number | null;
   label: string;
 }) {
-  const angleOf = (number: number) => -SWEEP / 2 + (Math.min(max, Math.max(0, number)) / max) * SWEEP;
-  let from = 0;
-  const needle = value === null ? null : polar(70, angleOf(value));
+  const at = (number: number) => `${(Math.min(max, Math.max(0, number)) / max) * 100}%`;
   return (
-    <svg viewBox="0 0 200 150" className="gauge" role="img" aria-label={label}>
-      <path d={arc(82, -SWEEP / 2, SWEEP / 2)} className="gauge-track" />
-      {bands.map(band => {
-        const path = arc(82, angleOf(from), angleOf(band.to));
-        from = band.to;
-        return <path key={band.to} d={path} className="gauge-band" stroke={TONES[band.tone]} />;
-      })}
-      {Array.from({length: max + 1}, (_, tick) => {
-        const outer = polar(74, angleOf(tick));
-        const inner = polar(tick % 5 === 0 ? 64 : 68, angleOf(tick));
-        const text = polar(54, angleOf(tick));
-        return (
-          <g key={tick}>
-            <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} className="gauge-tick" />
-            {tick % 5 === 0 && (
-              <text x={text.x} y={text.y + 4} className="gauge-number" textAnchor="middle">
-                {tick}
-              </text>
-            )}
-          </g>
-        );
-      })}
-      {bug !== undefined && bug !== null && (
-        <path
-          d={`M${polar(90, angleOf(bug) - 4).x},${polar(90, angleOf(bug) - 4).y} L${polar(80, angleOf(bug)).x},${polar(80, angleOf(bug)).y} L${polar(90, angleOf(bug) + 4).x},${polar(90, angleOf(bug) + 4).y} Z`}
-          className="gauge-bug"
-        />
-      )}
-      {needle && <line x1={100} y1={100} x2={needle.x} y2={needle.y} className="gauge-needle" />}
-      <circle cx={100} cy={100} r={7} className="gauge-cap" />
-    </svg>
+    <div className="tape" role="img" aria-label={label}>
+      <div className="tape-track">
+        {Array.from({length: max + 1}, (_, tick) => (
+          <i key={tick} className={tick % 5 === 0 ? 'major' : ''} style={{left: at(tick)}} />
+        ))}
+        {bug !== undefined && bug !== null && <b className="tape-bug" style={{left: at(bug)}} />}
+        {value !== null && <b className="tape-caret" style={{left: at(value)}} />}
+      </div>
+      <div className="tape-scale">
+        <span>0</span>
+        <span>{max / 2}</span>
+        <span>{max}</span>
+      </div>
+    </div>
+  );
+}
+
+/** The counters roll up once, when the app first opens; later they just show their number. */
+let rolledOnce = false;
+/** Full turns a reel makes at most before it settles: enough to read as rolling, short enough to wait for. */
+const MAX_TURNS = 3;
+
+type RollPhase = 'ready' | 'rolling' | 'still';
+
+/**
+ * One digit as a reel: the digits from 0 up to its own, after as many full turns as an odometer counting up from zero
+ * would make (capped), scrolled from the first to the last.
+ */
+function Reel({digit, turns, phase}: {digit: number; turns: number; phase: RollPhase}) {
+  const strip = Array.from({length: turns * 10 + digit + 1}, (_, index) => index % 10);
+  return (
+    <span
+      className="hobbs-reel"
+      style={{
+        transform: `translateY(${phase === 'rolling' ? -(strip.length - 1) * 1.25 : 0}em)`,
+        transitionDuration: `${900 + turns * 300}ms`,
+      }}
+    >
+      {strip.map((value, index) => (
+        <span key={index}>{value}</span>
+      ))}
+    </span>
   );
 }
 
 /**
  * The airtime counter: rolling digits of whole minutes in the air, the last one lit as it turns, like the hour meter
- * of a real aircraft but counting minutes.
+ * of a real aircraft but counting minutes. On the app's first load the digits roll up from zero.
  */
 export function MinuteMeter({seconds, size = 'large'}: {seconds: number; size?: 'large' | 'small'}) {
   const minutes = Math.floor(seconds / 60);
   const digits = String(minutes)
     .padStart(size === 'large' ? 5 : 4, '0')
     .split('');
+  const [phase, setPhase] = useState<RollPhase>(() =>
+    rolledOnce || minutes === 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'still' : 'ready',
+  );
+
+  useEffect(() => {
+    rolledOnce = true;
+    if (phase !== 'ready') return;
+    let frame = requestAnimationFrame(() => {
+      // A frame at zero first, so the move to the number is a transition.
+      frame = requestAnimationFrame(() => setPhase('rolling'));
+    });
+    const done = window.setTimeout(() => setPhase('still'), 900 + MAX_TURNS * 300 + 100);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(done);
+    };
+  }, [phase]);
+
   return (
     <span
       className={`hobbs ${size}`}
@@ -122,11 +128,15 @@ export function MinuteMeter({seconds, size = 'large'}: {seconds: number; size?: 
       aria-label={`${minutes.toLocaleString('en-GB')} minutes in the air`}
       title={formatAirtime(seconds, true)}
     >
-      {digits.map((digit, index) => (
-        <span key={index} className={`hobbs-digit ${index === digits.length - 1 ? 'tenth' : ''}`}>
-          {digit}
-        </span>
-      ))}
+      {digits.map((digit, index) => {
+        const place = digits.length - 1 - index;
+        const turns = Math.min(MAX_TURNS, Math.floor(minutes / 10 ** (place + 1)));
+        return (
+          <span key={index} className={`hobbs-digit ${index === digits.length - 1 ? 'tenth' : ''}`}>
+            {phase === 'still' ? digit : <Reel digit={Number(digit)} turns={turns} phase={phase} />}
+          </span>
+        );
+      })}
       <span className="hobbs-unit">min</span>
     </span>
   );

@@ -4,14 +4,14 @@ import {ChevronRight, Settings as SettingsIcon} from 'lucide-react';
 import {useStore} from '../data/store';
 import {Empty, PageHeader, useOverlay} from '../components/ui';
 import {FlightStrip} from '../components/SessionRow';
-import {Gauge, MinuteMeter, Panel, Rotor, RotorMark, SegmentBar, Stamp} from '../components/instruments';
+import {MinuteMeter, Panel, Rotor, RotorMark, SegmentBar, Stamp, Tape} from '../components/instruments';
 import {SessionForm} from '../components/forms/SessionForm';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {AirtimeChart} from '../components/charts/AirtimeChart';
 import {SkillLadder} from '../components/charts/SkillLadder';
 import {useSeriesColor} from '../components/colors';
 import {ago, formatAirtime, formatDay, formatRate, plural, today} from '../model/format';
-import {groupBy, monthly, packsSinceCrash, sortSessions, streaks, totals} from '../model/stats';
+import {daysSinceCrash, groupBy, monthly, packsSinceCrash, sortSessions, streaks, totals} from '../model/stats';
 import {spareStock} from '../model/parts';
 import {HeliPhoto} from '../components/HeliPhoto';
 
@@ -37,6 +37,7 @@ export function Home() {
   const latest = newest.slice(3, 8);
   const logSession = () => open(<SessionForm />);
   const ppc = all.packsPerCrash;
+  const sinceCrash = daysSinceCrash(sessions);
   const tone = ppc === null ? 'good' : ppc < 2 ? 'warning' : ppc < 5 ? 'caution' : 'good';
 
   return (
@@ -83,34 +84,35 @@ export function Home() {
         </Panel>
 
         <Panel label="Packs per crash" note="Higher is better" className="span-4">
-          <Gauge
+          <div className={`readout ${tone}`}>{formatRate(ppc)}</div>
+          <Tape
             value={ppc}
             max={10}
             bug={recent.packsPerCrash}
             label={`${formatRate(ppc)} packs per crash, ${formatRate(recent.packsPerCrash)} over the last 20 sessions`}
-            bands={[
-              {to: 2, tone: 'warning'},
-              {to: 5, tone: 'caution'},
-              {to: 10, tone: 'good'},
-            ]}
           />
-          <div className="gauge-readout">
-            <div className={`readout ${tone}`}>{formatRate(ppc)}</div>
-          </div>
           <div className="gauge-legend">
             <span>
-              <i style={{background: 'var(--ink)'}} /> All time
+              <i className="tape-key caret" /> all time
             </span>
             <span>
-              <i style={{background: '#e45bff'}} /> Last 20 sessions: {formatRate(recent.packsPerCrash)}
+              <i className="tape-key bug" /> last 20 sessions · {formatRate(recent.packsPerCrash)}
             </span>
           </div>
         </Panel>
 
-        <Panel label="Crash-free run" note="Packs since the last crash" className="span-3">
-          <div className={`readout ${runs.crashFreePacks >= best && best > 0 ? 'good' : ''}`}>
-            {runs.crashFreePacks}
-            <small>packs</small>
+        <Panel label="Crash-free run" note="Since the last crash" className="span-3">
+          <div className="run-readouts">
+            <div className={`readout ${runs.crashFreePacks >= best && best > 0 ? 'good' : ''}`}>
+              {runs.crashFreePacks}
+              <small>{runs.crashFreePacks === 1 ? 'pack' : 'packs'}</small>
+            </div>
+            {sinceCrash !== null && (
+              <div className="readout">
+                {sinceCrash}
+                <small>{sinceCrash === 1 ? 'day' : 'days'}</small>
+              </div>
+            )}
           </div>
           <div style={{margin: '16px 0 10px'}}>
             <SegmentBar value={runs.crashFreePacks} best={best} />

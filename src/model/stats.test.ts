@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {Session} from '../types';
-import {crashTrend, monthly, monthRange, streaks, totals} from './stats';
+import {crashTrend, daysSinceCrash, monthly, monthRange, streaks, totals} from './stats';
 
 let count = 0;
 const session = (date: string, packs: number, crashes: number | null, timer: number | null = 300): Session => ({
@@ -69,5 +69,16 @@ describe('crashTrend', () => {
     expect(trend).toHaveLength(3);
     expect(trend[0].rate).toBeCloseTo(6 / ((20 * 300) / 3600));
     expect(trend[2].rate).toBeCloseTo(4 / ((20 * 300) / 3600));
+  });
+});
+
+describe('daysSinceCrash', () => {
+  it('counts the days from the last crash, whatever came after it', () => {
+    const log = [session('2025-07-01', 3, 1), session('2025-07-20', 2, 2), session('2025-08-10', 3, 0)];
+    expect(daysSinceCrash(log, '2025-08-20')).toBe(31);
+  });
+
+  it('is null with no crash at all', () => {
+    expect(daysSinceCrash([session('2025-08-10', 3, 0), session('2025-08-11', 2, null)], '2025-08-20')).toBeNull();
   });
 });

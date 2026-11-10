@@ -10,7 +10,7 @@ import {AirtimeChart} from '../components/charts/AirtimeChart';
 import {DamageMap} from '../components/charts/DamageMap';
 import {useSeriesColor} from '../components/colors';
 import {formatAirtime, formatDay, formatRate, formatTimer, plural} from '../model/format';
-import {monthly, packsSinceCrash, sortSessions, totals} from '../model/stats';
+import {daysSinceCrash, monthly, packsSinceCrash, sortSessions, totals} from '../model/stats';
 import {spareStock} from '../model/parts';
 import {HeliPhoto} from '../components/HeliPhoto';
 
@@ -93,6 +93,10 @@ export function HeliPage() {
             <div>
               <div className="figure-label">Clean packs</div>
               <div className="figure-value">{packsSinceCrash(sessions)}</div>
+            </div>
+            <div>
+              <div className="figure-label">Days since a crash</div>
+              <div className="figure-value">{daysSinceCrash(sessions) ?? '–'}</div>
             </div>
             <div>
               <div className="figure-label">Pack time</div>

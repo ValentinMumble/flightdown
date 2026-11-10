@@ -4,12 +4,12 @@ A flight log for RC helicopters: every session, nice stats, the fleet, and what 
 
 ## What it does
 
-It looks like a helicopter's glass cockpit at night: instruments on a dark panel, a counter of minutes in the air, the logbook as
-air traffic flight strips.
+It looks like a helicopter's cockpit seen through a head-up display: near-black, frames marked by corner brackets,
+small monospace labels, one soft green for anything good, a rolling counter of minutes in the air.
 
-- **Cockpit:** the minute counter beside a rotor that spools up, a packs-per-crash gauge (all time, and a bug for the
-  last 20 sessions), the crash-free run as an LED bar, the last three sorties, the helis on the flight line, airtime
-  and the next rung of the skill ladder.
+- **Cockpit:** the minute counter (it rolls up when the app opens) beside a rotor that spools up, packs per crash on
+  a tape (all time, and the last 20 sessions), the crash-free run in packs and days, the last three sorties, the helis
+  on the flight line, airtime and the next rung of the skill ladder.
 - **Logbook:** every session as a flight strip, a month at a time. Search notes, parts, places and days; filter by
   heli, spot, crashes or a broken part.
 - **Log a session:** heli, day, packs and time per pack, crashes, broken parts, manoeuvres practised, notes and links.

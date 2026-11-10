@@ -48,7 +48,7 @@
 }
 
 .logotype svg {
-  color: var(--accent);
+  color: var(--brand);
 }
 
 .soft-keys {
@@ -87,8 +87,8 @@
 /* The key in use lights up, with a bar under it like a selected page on an MFD. */
 .soft-key[aria-current='page'] {
   color: var(--ink);
-  background: linear-gradient(to bottom, rgba(73, 207, 230, 0.16), rgba(73, 207, 230, 0.04));
-  box-shadow: inset 0 0 0 1px rgba(73, 207, 230, 0.35);
+  background: linear-gradient(to bottom, rgba(124, 255, 178, 0.16), rgba(124, 255, 178, 0.04));
+  box-shadow: inset 0 0 0 1px rgba(124, 255, 178, 0.35);
 }
 
 .soft-key[aria-current='page']::after {

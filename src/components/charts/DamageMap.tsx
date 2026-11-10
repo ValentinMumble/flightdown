@@ -3,7 +3,7 @@ import type {Session} from '../../types';
 import {damageByZone, ZONES, type Zone} from '../../model/debrief';
 
 /** One hue, dim to hot, for how often a part of the heli broke: amounts on the dark panel. */
-const HEAT = ['#18212e', '#3a2717', '#6e3613', '#b84d12', '#ff7a1a'];
+const HEAT = ['#141a1d', '#3a2717', '#6e3613', '#b84d12', '#ff7a1a'];
 
 /** Where each zone sits on the drawing, and where its label goes. */
 const SHAPES: Record<Zone, {path: string; label: [number, number]; anchor: 'start' | 'end' | 'middle'}> = {

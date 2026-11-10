@@ -1,0 +1,332 @@
+/*
+ * The HUD layer: the cockpit's layout with a head-up display's restraint. It comes last, so it settles the frames and
+ * the type of every component in one place:
+ * - frames are near-empty, a hairline marked by two corner brackets (top left, bottom right);
+ * - labels are small lowercase monospace, in a muted green;
+ * - headings and numbers are the system's type, white, tabular;
+ * - one soft green marks the tab in use, a choice made and anything good; no glows anywhere.
+ * The minute counter keeps its own face (instruments.css).
+ */
+
+/* Frames */
+.panel,
+.card {
+  border-radius: 8px;
+  border: 1px solid var(--bezel);
+  background: rgba(255, 255, 255, 0.012);
+  box-shadow: none;
+}
+
+.panel::before,
+.panel::after,
+.card::before,
+.card::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--bracket);
+  border-style: solid;
+  pointer-events: none;
+  /* Above a photo band or a map that fills the frame's corner. */
+  z-index: 2;
+}
+
+/* Drawn just inside the hairline, so frames that clip their content (heli cards, the data plate) show them too. */
+.panel::before,
+.card::before {
+  top: 0;
+  left: 0;
+  border-width: 1px 0 0 1px;
+  border-top-left-radius: 7px;
+}
+
+.panel::after,
+.card::after {
+  right: 0;
+  bottom: 0;
+  border-width: 0 1px 1px 0;
+  border-bottom-right-radius: 7px;
+}
+
+.panel-label::before,
+.card-title::before {
+  display: none;
+}
+
+/* Labels: small lowercase monospace. */
+.panel-label,
+.card-title,
+.field-label,
+.figure-label,
+.section-title,
+.column-label,
+.telemetry-label,
+.spot-row.head,
+.strip-cell small,
+.month-head span,
+.ladder-when,
+.milestone .when,
+.timeline-end,
+.tooltip-title,
+.segmented button,
+.soft-key,
+.gauge-legend,
+.hobbs-unit,
+.stick figcaption b,
+.rose-letter,
+.stamp {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: lowercase;
+}
+
+.panel-label,
+.card-title,
+.field-label,
+.figure-label,
+.column-label,
+.telemetry-label,
+.spot-row.head,
+.strip-cell small {
+  color: var(--label);
+}
+
+.section-title {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* Headings and numbers: the system's type, white, tabular. */
+.page-title,
+.topbar-title,
+.sheet-title,
+.logotype,
+.readout,
+.figure-value,
+.column-value,
+.heli-name,
+.strip-heli,
+.strip-cell b,
+.strip-date b,
+.month-head h3,
+.meter-hours,
+.split div,
+.bar-line .value,
+.stepper output,
+.damage-count,
+.damage-title,
+.heli-table-row .tabular,
+.mini-map-label,
+.leaflet-tooltip.map-label,
+.spot-row > :not(:first-child),
+.button.solid,
+.chart text {
+  font-family: var(--font);
+  letter-spacing: normal;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.page-title {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sheet-title {
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.topbar-title {
+  font-weight: 600;
+}
+
+.logotype {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.readout {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.readout.good,
+.readout.caution,
+.readout.warning,
+.readout.accent {
+  text-shadow: none;
+}
+
+.chart text {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+/* Controls: outlines, no fills, the choice made in green. */
+.button {
+  background: transparent;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.button.solid {
+  border-color: rgba(124, 255, 178, 0.45);
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: none;
+}
+
+.chip {
+  background: transparent;
+  border-radius: 8px;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: rgba(124, 255, 178, 0.45);
+  background: var(--accent-soft);
+  box-shadow: none;
+}
+
+.segmented {
+  background: transparent;
+  border-radius: 9px;
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px rgba(124, 255, 178, 0.4);
+  color: var(--ink);
+}
+
+.input {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: var(--bezel-strong);
+}
+
+.input:focus {
+  border-color: rgba(124, 255, 178, 0.5);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.pill {
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 500;
+}
+
+/* The top bar's tabs: lowercase words, the one in use underlined in green. */
+.soft-keys {
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.soft-key {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+
+.soft-key:hover {
+  background: none;
+}
+
+.soft-key[aria-current='page'] {
+  background: none;
+  box-shadow: none;
+}
+
+.soft-key[aria-current='page']::after {
+  left: 12px;
+  right: 12px;
+  bottom: 4px;
+  height: 1px;
+  background: var(--accent);
+  box-shadow: none;
+}
+
+.soft-key[aria-current='page'] svg {
+  color: var(--accent);
+}
+
+/* Status: a small light and a lowercase word. */
+.stamp {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 11.5px;
+}
+
+.stamp::before {
+  width: 6px;
+  height: 6px;
+  box-shadow: none;
+}
+
+.heli-band .stamp,
+.data-plate-photo .stamp {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(7, 9, 11, 0.7);
+}
+
+/* The crash-free run: a row of ticks, lit up to the run, the best one ringed. */
+.segments {
+  grid-auto-columns: 4px;
+  justify-content: start;
+  gap: 3px;
+  height: 14px;
+}
+
+.segments i {
+  border-radius: 1px;
+  background: rgba(124, 255, 178, 0.1);
+}
+
+.segments i.good,
+.segments i.caution,
+.segments i.warning {
+  box-shadow: none;
+}
+
+.segments i.best {
+  outline: 1px solid var(--ink-2);
+}
+
+/* Flight strips: rows, the heli's colour as a thin mark, dashed between them. */
+.strip-board {
+  gap: 0;
+}
+
+.flight-strip {
+  border: 0;
+  border-left: 2px solid var(--strip);
+  border-bottom: 1px dashed var(--bezel);
+  border-radius: 0;
+  background: none;
+}
+
+.flight-strip:hover {
+  border-color: var(--bezel);
+  border-left-color: var(--strip);
+  background: rgba(255, 255, 255, 0.02);
+  transform: none;
+}
+
+.flight-strip > span {
+  border-left: 0;
+}
+
+.flight-strip.large .strip-time b {
+  color: var(--ink);
+}
+
+/* The dock's log button: the glass of the dock, a green plus. */
+.dock-plus {
+  color: var(--accent);
+}
