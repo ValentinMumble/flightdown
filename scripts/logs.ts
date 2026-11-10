@@ -48,7 +48,10 @@ async function logsFolder() {
   return found[0];
 }
 
-const folder = await logsFolder();
+const folder = await logsFolder().catch((failure: Error) => {
+  console.error(failure.message);
+  process.exit(1);
+});
 const files = (await readdir(folder)).filter(name => name.toLowerCase().endsWith('.csv')).sort();
 console.log(`${files.length} logs on ${folder}`);
 

@@ -5,10 +5,11 @@ import {parseLocation, type LatLng} from '../src/model/geo.js';
 const MAPS = /^(maps\.app\.goo\.gl|goo\.gl|g\.co|maps\.apple|maps\.apple\.com|((www|maps|consent)\.)?google\.[a-z.]+)$/;
 const HOPS = 6;
 
-/** Where a Maps page centres: Google's start-up state ([zoom, lng, lat]), a static map, or Apple's place tags. */
+/**
+ * Where a Maps page puts its place: its preview map, Apple's place tags, or a link to it. Not the map's starting view,
+ * which Google sets from where the request comes from (this server), not from the place.
+ */
 export function placeInPage(page: string): LatLng | null {
-  const state = /APP_INITIALIZATION_STATE=\[\[\[(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)\]/.exec(page);
-  if (state) return parseLocation(`${state[3]},${state[2]}`);
   const center = /center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)/.exec(page);
   if (center) return parseLocation(`${center[1]},${center[2]}`);
   const latitude = /place:location:latitude"\s+content="(-?\d+\.\d+)"/.exec(page);
