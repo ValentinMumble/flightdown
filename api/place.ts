@@ -6,16 +6,14 @@ const MAPS = /^(maps\.app\.goo\.gl|goo\.gl|g\.co|maps\.apple|maps\.apple\.com|((
 const HOPS = 6;
 
 /**
- * Where a Maps page puts its place: its preview map, Apple's place tags, or a link to it. Not the map's starting view,
- * which Google sets from where the request comes from (this server), not from the place.
+ * Where a Maps page pins its place: Apple's place tags, or Google's pin (`!3d<lat>!4d<lng>`). Never a map's view:
+ * Google sets views from where the request comes from (this server), not from the place.
  */
 export function placeInPage(page: string): LatLng | null {
-  const center = /center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)/.exec(page);
-  if (center) return parseLocation(`${center[1]},${center[2]}`);
   const latitude = /place:location:latitude"\s+content="(-?\d+\.\d+)"/.exec(page);
   const longitude = /place:location:longitude"\s+content="(-?\d+\.\d+)"/.exec(page);
   if (latitude && longitude) return parseLocation(`${latitude[1]},${longitude[1]}`);
-  const pinned = /\/@(-?\d+\.\d+),(-?\d+\.\d+)/.exec(page);
+  const pinned = /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/.exec(page);
   return pinned ? parseLocation(`${pinned[1]},${pinned[2]}`) : null;
 }
 
