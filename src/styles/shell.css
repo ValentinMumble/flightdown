@@ -251,7 +251,8 @@
     right: max(var(--dock-side), env(safe-area-inset-right));
     display: flex;
     gap: 8px;
-    max-width: 520px;
+    /* The capsule at most 448px wide, as the guideline has it, and the log button beside it. */
+    max-width: calc(448px + 8px + var(--dock-height));
     margin: 0 auto;
   }
 

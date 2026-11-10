@@ -10,6 +10,9 @@ export function CrashTrend({points}: {points: TrendPoint[]}) {
   const rows = points.map(point => ({...point, time: fromDay(point.date).getTime()}));
   if (rows.length < 2) return <div className="muted">Ten sorties with a crash count are needed for this.</div>;
   const latest = rows[rows.length - 1];
+  // One label a year, on New Year's Day: dates within one year would print the same year again and again.
+  const years = [...new Set(rows.map(row => new Date(row.time).getFullYear()))];
+  const ticks = years.map(year => new Date(year, 0, 1).getTime()).filter(time => time >= rows[0].time);
   return (
     <div className="chart">
       <ResponsiveContainer>
@@ -20,10 +23,11 @@ export function CrashTrend({points}: {points: TrendPoint[]}) {
             type="number"
             scale="time"
             domain={['dataMin', 'dataMax']}
+            ticks={ticks}
             tickFormatter={(time: number) => String(new Date(time).getFullYear())}
             tickLine={false}
             axisLine={{stroke: ink.axis}}
-            minTickGap={40}
+            minTickGap={24}
           />
           <YAxis tickLine={false} axisLine={false} width={46} allowDecimals={false} />
           <Tooltip

@@ -11,6 +11,11 @@ import './styles/ui.css';
 import './styles/instruments.css';
 import './styles/hud.css';
 
+// The app opens offline at the field: the service worker keeps its last version (built sites only).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => void navigator.serviceWorker.register('/sw.js'));
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

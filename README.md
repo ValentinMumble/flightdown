@@ -29,7 +29,8 @@ small monospace labels, one soft green for anything good, a rolling counter of m
   the page).
 - **Spots:** every flying spot on a satellite map. Set a spot's GPS point by tapping the map, pasting coordinates or a
   Maps link, or from the phone's position; each sortie then shows its spot from above.
-- **Phones:** a liquid glass dock with a round log button. Add it to the home screen to open it like an app.
+- **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`) with a round log button; swipe sideways to
+  change tab. Add it to the home screen: it opens like an app, with the 🚁 icon, and offline at the field.
 
 Visitors see a made-up log, or keep their own in their browser.
 
@@ -58,6 +59,8 @@ only prints what it would do.
 
 **Heli photos:** `npm run cutouts` lifts every heli photo out of its background with Apple's Vision framework (macOS
 14 or later) and keeps the PNGs in Redis; run it after setting a new photo. `--force` lifts them all again.
+
+**App icons:** `swift scripts/icons.swift` draws them into `public/` from the 🚁 emoji.
 
 ## Stack
 
