@@ -1,0 +1,13 @@
+{
+  "name": "Flightdown",
+  "short_name": "Flightdown",
+  "description": "A flight log for RC helicopters",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#05070b",
+  "theme_color": "#05070b",
+  "icons": [
+    {"src": "/icon.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png"}
+  ]
+}

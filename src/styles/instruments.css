@@ -1,0 +1,1645 @@
+/* The instruments' own drawings: gauge, minute counter, LED bar, flight strips, damage map, ladder, timeline, rose. */
+
+/* Gauge */
+.gauge {
+  width: 100%;
+  max-width: 230px;
+  display: block;
+  margin: 0 auto;
+}
+
+.gauge-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 10;
+}
+
+.gauge-band {
+  fill: none;
+  stroke-width: 8;
+  opacity: 0.85;
+}
+
+.gauge-tick {
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+}
+
+.gauge-number {
+  fill: var(--muted);
+  font-family: var(--display);
+  font-size: 11px;
+}
+
+.gauge-needle {
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+}
+
+.gauge-cap {
+  fill: var(--panel-3);
+  stroke: var(--ink-2);
+  stroke-width: 2;
+}
+
+.gauge-bug {
+  fill: #e45bff;
+  filter: drop-shadow(0 0 4px #e45bff);
+}
+
+.gauge-readout {
+  margin-top: -18px;
+  text-align: center;
+}
+
+.gauge-legend {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.gauge-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gauge-legend i {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+}
+
+/* Minute counter */
+.hobbs {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 3px;
+  padding: 6px;
+  border-radius: 10px;
+  background: #000;
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.9),
+    0 0 0 1px var(--bezel-strong);
+}
+
+.hobbs-digit {
+  display: grid;
+  place-items: center;
+  width: 0.72em;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #1d232c, #0d1015 48%, #05070a 52%, #161b22);
+  color: #f4f6f8;
+  font-family: var(--display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+
+.hobbs-digit.tenth {
+  background: linear-gradient(to bottom, #f4f6f8, #d9dde2 48%, #c4c9cf 52%, #eef1f4);
+  color: #0a0c0f;
+}
+
+.hobbs-point {
+  align-self: flex-end;
+  color: var(--ink-2);
+  font-family: var(--display);
+  line-height: 1;
+}
+
+.hobbs-unit {
+  align-self: center;
+  margin: 0 4px 0 2px;
+  color: var(--label);
+  font-family: var(--display);
+  font-size: 0.4em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hobbs.large {
+  font-size: 54px;
+}
+
+.hobbs.small {
+  font-size: 20px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.hobbs.small .hobbs-digit {
+  border-radius: 3px;
+}
+
+@media (max-width: 860px) {
+  .hobbs.large {
+    font-size: 40px;
+  }
+}
+
+.hobbs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.hobbs-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+/*
+ * The airtime rotor. It spools up with constant acceleration (the cubic-bezier is exactly y = x²), so it ends the
+ * spool-up at three turns, at the speed the steady spin then keeps: 1080° over 2.4 s ends at 900°/s, one turn every
+ * 0.4 s. The blur trailing each blade and the disc of the tip path fade in with the speed.
+ */
+.rotor {
+  --spool: 2.4s;
+  position: relative;
+  flex: none;
+  width: 84px;
+  height: 84px;
+  color: var(--accent);
+}
+
+.rotor svg,
+.rotor-spin,
+.rotor-blur {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.rotor-disc {
+  animation: rotor-fade var(--spool) ease-in both;
+}
+
+.rotor-disc-fill {
+  fill: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.rotor-disc-ring {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 40%, transparent);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 3;
+}
+
+.rotor-spin {
+  will-change: transform;
+  animation:
+    rotor-spool var(--spool) cubic-bezier(0.3333, 0, 0.6667, 0.3333) both,
+    rotor-turn 0.4s linear var(--spool) infinite;
+}
+
+.rotor-blur {
+  border-radius: 50%;
+  background: conic-gradient(
+    transparent 0deg 100deg,
+    color-mix(in srgb, var(--accent) 10%, transparent) 150deg,
+    color-mix(in srgb, var(--accent) 55%, transparent) 180deg,
+    transparent 180deg 280deg,
+    color-mix(in srgb, var(--accent) 10%, transparent) 330deg,
+    color-mix(in srgb, var(--accent) 55%, transparent) 360deg
+  );
+  -webkit-mask: radial-gradient(circle closest-side, transparent 18%, #000 30%, #000 92%, transparent 95%);
+  mask: radial-gradient(circle closest-side, transparent 18%, #000 30%, #000 92%, transparent 95%);
+  animation: rotor-fade var(--spool) ease-in both;
+}
+
+.rotor-parts {
+  filter: drop-shadow(0 0 6px rgba(255, 122, 26, 0.45));
+}
+
+.rotor-blade {
+  fill: var(--accent);
+}
+
+.rotor-edge {
+  fill: rgba(255, 255, 255, 0.35);
+}
+
+.rotor-stripe {
+  fill: var(--ink);
+}
+
+.rotor-metal {
+  fill: #c7d0da;
+}
+
+.rotor-metal-dark {
+  fill: #5d6978;
+}
+
+.rotor-ball {
+  fill: #e9eef4;
+}
+
+.rotor-bolt {
+  fill: var(--panel);
+}
+
+@keyframes rotor-spool {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(1080deg);
+  }
+}
+
+@keyframes rotor-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotor-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Reduced motion: the rotor stands still, its blur and disc shown as a still picture of it turning. */
+@media (prefers-reduced-motion: reduce) {
+  .rotor-spin,
+  .rotor-disc,
+  .rotor-blur {
+    animation: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .rotor {
+    width: 68px;
+    height: 68px;
+  }
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 10px 16px;
+}
+
+.figure-label {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.figure-value {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* LED segments */
+.segments {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 3px;
+  height: 22px;
+}
+
+.segments i {
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.segments i.good {
+  background: var(--good);
+  box-shadow: 0 0 6px rgba(61, 220, 132, 0.6);
+}
+
+.segments i.caution {
+  background: var(--caution);
+  box-shadow: 0 0 6px rgba(255, 176, 32, 0.5);
+}
+
+.segments i.warning {
+  background: var(--warning);
+  box-shadow: 0 0 6px rgba(255, 77, 79, 0.5);
+}
+
+.segments i.best {
+  outline: 2px solid #e45bff;
+  outline-offset: 1px;
+}
+
+/* Flight strips */
+.strip-board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.flight-strip {
+  --strip: var(--muted);
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 96px 86px 112px;
+  align-items: stretch;
+  min-height: 58px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(to right, color-mix(in srgb, var(--strip) 14%, var(--panel-2)), var(--panel-2) 40%);
+  border: 1px solid var(--bezel);
+  border-left: 5px solid var(--strip);
+  transition:
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.flight-strip:hover {
+  border-color: var(--bezel-strong);
+  border-left-color: var(--strip);
+  transform: translateX(2px);
+}
+
+.flight-strip > span {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 7px 12px;
+  min-width: 0;
+  border-left: 1px dashed var(--bezel-strong);
+}
+
+.flight-strip > span:first-child {
+  border-left: 0;
+}
+
+/* A calendar page: the weekday, the day, then the month and its year (which wraps under it on a phone). */
+.flight-strip > .strip-date {
+  align-items: center;
+  padding-left: 8px;
+  padding-right: 8px;
+  font-family: var(--mono);
+  line-height: 1.15;
+  text-align: center;
+}
+
+.strip-date b {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.strip-date span {
+  font-size: 10px;
+  color: var(--ink-2);
+  letter-spacing: 0.06em;
+}
+
+.strip-heli {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.strip-spot {
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.strip-notes {
+  color: var(--muted);
+}
+
+.strip-cell small {
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.strip-cell b {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.strip-time b {
+  color: var(--ink);
+}
+
+.strip-end {
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.strip-icons {
+  display: flex;
+  gap: 4px;
+}
+
+.flight-strip.large {
+  min-height: 76px;
+  grid-template-columns: 86px minmax(0, 1fr) 110px 100px 120px;
+}
+
+.flight-strip.large .strip-heli {
+  font-size: 19px;
+}
+
+.flight-strip.large .strip-time b {
+  font-size: 22px;
+  color: var(--accent);
+}
+
+@media (max-width: 860px) {
+  .flight-strip,
+  .flight-strip.large {
+    grid-template-columns: 58px minmax(0, 1fr) 78px;
+    grid-template-rows: auto auto;
+  }
+
+  .flight-strip > span {
+    padding: 6px 10px;
+  }
+
+  .strip-date {
+    grid-row: span 2;
+  }
+
+  .strip-main {
+    grid-column: 2;
+  }
+
+  .strip-packs {
+    display: none !important;
+  }
+
+  .strip-time {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .strip-end {
+    grid-column: 2 / span 2;
+    grid-row: 2;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    border-left: 0 !important;
+    padding-top: 0 !important;
+  }
+}
+
+.month-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 2px 8px;
+}
+
+.month-head h3 {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.month-head span {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--display);
+  letter-spacing: 0.06em;
+}
+
+/* Damage map */
+.damage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(180px, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+@media (max-width: 860px) {
+  .damage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.damage-map {
+  width: 100%;
+  display: block;
+}
+
+.damage-zone {
+  cursor: pointer;
+  outline: none;
+}
+
+.damage-zone path {
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 1;
+  transition: filter 140ms ease;
+}
+
+.damage-zone.focus path,
+.damage-zone:focus-visible path {
+  stroke: var(--ink);
+  filter: drop-shadow(0 0 8px rgba(255, 122, 26, 0.7));
+}
+
+.damage-count {
+  fill: var(--ink);
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.damage-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.damage-title {
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* Skill ladder */
+.ladder {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ladder li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 14px;
+}
+
+.ladder li::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.ladder-rung {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: var(--panel);
+}
+
+.ladder li.reached .ladder-rung {
+  border-color: var(--good);
+  background: var(--good-soft);
+  box-shadow: 0 0 8px rgba(61, 220, 132, 0.4);
+}
+
+.ladder li.next .ladder-rung {
+  border-color: #e45bff;
+  border-style: dashed;
+}
+
+.ladder li.locked {
+  color: var(--muted);
+}
+
+.ladder-skill {
+  font-weight: 600;
+}
+
+.ladder li.next .ladder-skill {
+  color: #f0a6ff;
+}
+
+.ladder-when {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--display);
+  letter-spacing: 0.04em;
+}
+
+/* Fleet timeline */
+.timeline-scroll {
+  position: relative;
+  overflow-x: auto;
+}
+
+.fleet-timeline {
+  width: 100%;
+  min-width: 720px;
+  display: block;
+}
+
+.timeline-grid {
+  stroke: var(--grid);
+}
+
+.timeline-year,
+.timeline-name,
+.timeline-end {
+  font-family: var(--display);
+  font-size: 13px;
+}
+
+.timeline-year {
+  fill: var(--muted);
+}
+
+.timeline-name {
+  fill: var(--ink);
+  font-weight: 600;
+}
+
+.timeline-row {
+  cursor: pointer;
+}
+
+.timeline-crash {
+  stroke: var(--warning);
+  stroke-width: 2;
+}
+
+.timeline-end {
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.timeline-end.active {
+  fill: var(--good);
+}
+
+.timeline-end.sold,
+.timeline-end.grounded {
+  fill: var(--caution);
+}
+
+.timeline-end.lost {
+  fill: var(--warning);
+}
+
+.timeline-end.retired {
+  fill: var(--muted);
+}
+
+/* Season rose */
+.rose {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.rose svg {
+  width: 100%;
+  max-width: 240px;
+}
+
+.rose-ring {
+  fill: none;
+  stroke: var(--grid);
+}
+
+.rose-petal {
+  fill: rgba(73, 207, 230, 0.55);
+  stroke: var(--label);
+  stroke-width: 1;
+  transition: fill 140ms ease;
+}
+
+.rose-petal.focus {
+  fill: var(--label);
+}
+
+.rose-letter {
+  fill: var(--muted);
+  font-family: var(--display);
+  font-size: 11px;
+}
+
+.rose-caption {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* Small columns: one series, the value on each cap. */
+.columns {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  height: 160px;
+  align-items: end;
+}
+
+.column {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+}
+
+.column-bar {
+  width: min(24px, 100%);
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--label);
+  box-shadow: 0 0 10px rgba(73, 207, 230, 0.35);
+}
+
+.column-value {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.column-label {
+  font-family: var(--display);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Milestones */
+.milestones {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.milestone {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.milestone .when {
+  font-family: var(--display);
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.milestone-next {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed rgba(228, 91, 255, 0.45);
+  background: rgba(228, 91, 255, 0.06);
+}
+
+.milestone-next .bar-fill {
+  background: #e45bff;
+}
+
+/* Spots table */
+.spot-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.spot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(64px, 0.6fr));
+  gap: 12px;
+  align-items: center;
+  padding: 9px 0;
+  border-top: 1px solid var(--bezel);
+  font-size: 14px;
+}
+
+.spot-row.head {
+  border-top: 0;
+  padding-top: 0;
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.spot-row > :not(:first-child) {
+  text-align: right;
+  font-family: var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+.spot-row .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* Telemetry */
+.insights {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.insight {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--bezel);
+  background: var(--panel-2);
+  font-size: 14px;
+}
+
+.insight.caution,
+.insight.warning {
+  border-color: rgba(255, 176, 32, 0.35);
+  background: var(--caution-soft);
+}
+
+.insight.critical {
+  border-color: rgba(255, 77, 79, 0.4);
+  background: var(--warning-soft);
+}
+
+.insight.good {
+  border-color: rgba(61, 220, 132, 0.3);
+  background: var(--good-soft);
+}
+
+.insight-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.telemetry-log + .telemetry-log {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--bezel);
+}
+
+.telemetry-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.telemetry-figures {
+  margin-bottom: 14px;
+}
+
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+@media (max-width: 860px) {
+  .telemetry-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.telemetry-chart {
+  padding: 10px 10px 4px;
+  border-radius: 10px;
+  background: #020305;
+  border: 1px solid var(--bezel);
+}
+
+.telemetry-label {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--label);
+  margin-bottom: 4px;
+}
+
+/* Helis and gear in the hangar */
+.heli-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.heli-card.compact .heli-band {
+  height: 120px;
+}
+
+.heli-band {
+  position: relative;
+  height: 170px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background:
+    radial-gradient(80% 90% at 70% 40%, color-mix(in srgb, var(--hue) 45%, transparent), transparent 70%),
+    linear-gradient(to bottom, #0f151d, #070a0e);
+}
+
+.heli-band img {
+  position: absolute;
+  inset: 8px 8px 8px 8px;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.6));
+}
+
+.heli-band .heli-glyph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 64px;
+  opacity: 0.9;
+}
+
+.heli-band .stamp {
+  position: relative;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.heli-body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.heli-name {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.heli-model {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.gone-row {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 14px;
+  border-top: 1px solid var(--bezel);
+}
+
+.gone-row:first-child {
+  border-top: 0;
+}
+
+.gone-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.gone-thumb {
+  width: 54px;
+  height: 38px;
+  border-radius: 6px;
+  background: #070a0e;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-left: 3px solid var(--hue);
+}
+
+.gone-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(0.6);
+}
+
+.gear-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.gear-icon {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--label);
+  background: var(--label-soft);
+  border: 1px solid rgba(73, 207, 230, 0.3);
+}
+
+.notes {
+  columns: 2 320px;
+  column-gap: 14px;
+}
+
+.note-card {
+  width: 100%;
+  break-inside: avoid;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-body {
+  font-size: 14px;
+  color: var(--ink-2);
+  max-height: 360px;
+  overflow: hidden;
+}
+
+.battery-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 8px;
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+/* Heli page header: a data plate. */
+.data-plate {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 18px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.data-plate-photo {
+  position: relative;
+  min-height: 240px;
+  background:
+    radial-gradient(70% 80% at 50% 50%, color-mix(in srgb, var(--hue) 40%, transparent), transparent 70%), #05070b;
+  display: grid;
+  place-items: center;
+  font-size: 90px;
+}
+
+.data-plate-photo img {
+  position: absolute;
+  inset: 14px;
+  width: calc(100% - 28px);
+  height: calc(100% - 28px);
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.7));
+}
+
+.data-plate-info {
+  padding: 20px 20px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 860px) {
+  .data-plate {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .data-plate-info {
+    padding: 0 16px 18px;
+  }
+}
+
+.session-notes {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.accent-mark {
+  color: var(--accent);
+}
+
+/* A heli on the flight line: its picture on its colour, its numbers beside. */
+.flight-line {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--bezel);
+  background: var(--panel);
+}
+
+.flight-line:hover {
+  border-color: var(--bezel-strong);
+}
+
+.flight-line-photo {
+  position: relative;
+  height: 96px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 44px;
+  background:
+    radial-gradient(70% 80% at 50% 50%, color-mix(in srgb, var(--hue) 45%, transparent), transparent 75%), #05070b;
+  overflow: hidden;
+}
+
+.flight-line-photo img {
+  position: absolute;
+  inset: 6px;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  object-fit: contain;
+}
+
+.flight-line-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.flight-line-info .figures {
+  width: 100%;
+}
+
+.flight-line-info .figures > span {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hours by heli: one whole split by heli, then a row each. */
+.split {
+  display: flex;
+  gap: 2px;
+  height: 28px;
+}
+
+.split div {
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 0 7px;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.heli-table {
+  display: flex;
+  flex-direction: column;
+  margin-top: 14px;
+}
+
+.heli-table-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--bezel);
+  font-size: 14px;
+}
+
+.heli-table-row .name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.heli-table-row .tabular {
+  font-family: var(--display);
+}
+
+.meter-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.meter-hours {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+}
+
+/*
+ * Heli photos are product shots on white, cut out of it in the page (HeliPhoto) so the heli stands on the panel's
+ * glow. One that cannot be cut out keeps a lit plate behind it, its white blending into it.
+ */
+.heli-photo.cut {
+  animation: photo-in 240ms ease-out both;
+}
+
+.heli-band .heli-photo.cut,
+.data-plate-photo .heli-photo.cut,
+.flight-line-photo .heli-photo.cut {
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.55));
+}
+
+.gone-thumb .heli-photo.cut {
+  filter: grayscale(0.6) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes photo-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heli-photo.cut {
+    animation: none;
+  }
+}
+
+.heli-band:has(.plain),
+.data-plate-photo:has(.plain),
+.flight-line-photo:has(.plain),
+.gone-thumb:has(.plain) {
+  background: radial-gradient(90% 90% at 50% 45%, #ffffff, #d9e0e8);
+}
+
+.heli-photo.plain {
+  mix-blend-mode: multiply;
+  filter: none;
+}
+
+.heli-band:has(.plain) {
+  box-shadow: inset 0 -4px 0 var(--hue);
+}
+
+/* Stick map: the two gimbals seen from above. */
+.stick-map {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--bezel);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stick-pair {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.stick {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stick svg {
+  width: 170px;
+  height: 170px;
+}
+
+.stick-gate {
+  fill: #020305;
+  stroke: var(--bezel-strong);
+}
+
+.stick-ring {
+  fill: none;
+  stroke: var(--grid);
+}
+
+.stick-cross {
+  stroke: rgba(150, 180, 210, 0.15);
+}
+
+.stick figcaption {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stick figcaption b {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--label);
+}
+
+/* Spots: the satellite map of every spot, the location picker in a spot's sheet, a sortie's mini map. */
+/* Leaflet stacks its layers up to z-index 1000: kept inside the map, so sheets and the dock stay above it. */
+.spots-map,
+.location-picker,
+.mini-map {
+  isolation: isolate;
+}
+
+.spots-map {
+  height: min(460px, 62vh);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--bezel);
+  background: var(--page);
+}
+
+.location-picker {
+  height: 240px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--bezel);
+  background: var(--page);
+}
+
+.location-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.location-row .input {
+  flex: 1;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.spots-list .spot-row {
+  width: 100%;
+  background: none;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spots-list .spot-row:not(.head):hover .name {
+  color: var(--accent);
+}
+
+.sort-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sort-head:hover {
+  color: var(--ink);
+}
+
+.sort-head.active {
+  color: var(--label);
+}
+
+.spots-list .name svg {
+  vertical-align: -2px;
+  margin-right: 6px;
+}
+
+.spots-list .placed {
+  color: var(--label);
+}
+
+.spots-list .unplaced {
+  color: var(--muted);
+}
+
+.mini-map {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--bezel);
+  background: var(--panel);
+}
+
+.mini-map-tiles {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+
+.mini-map-tiles img {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  max-width: none;
+}
+
+/* A dimmed edge so the label and pin read on any field. */
+.mini-map::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 50%, transparent 45%, rgba(5, 7, 11, 0.55));
+  pointer-events: none;
+}
+
+.mini-map-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  box-shadow:
+    0 0 0 6px rgba(255, 122, 26, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.mini-map-label {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  z-index: 1;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: var(--glass-regular);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.mini-map-credit {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  z-index: 1;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Leaflet, in the cockpit's colours. */
+.leaflet-container {
+  background: var(--page);
+  font-family: var(--font);
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--panel-2);
+  color: var(--ink);
+  border-bottom-color: var(--bezel);
+}
+
+.leaflet-bar {
+  border: 1px solid var(--bezel-strong) !important;
+  box-shadow: none !important;
+}
+
+.leaflet-control-layers {
+  background: var(--glass-thick);
+  color: var(--ink);
+  border: 1px solid var(--bezel-strong) !important;
+  border-radius: 10px !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+.leaflet-control-layers-toggle {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.leaflet-control-attribution {
+  background: rgba(5, 7, 11, 0.6) !important;
+  color: var(--muted);
+}
+
+.leaflet-control-attribution a {
+  color: var(--ink-2);
+}
+
+.map-pin {
+  background: none;
+  border: 0;
+}
+
+.map-pin-mark {
+  display: grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: rgba(5, 7, 11, 0.55);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 12px rgba(255, 122, 26, 0.55);
+  font-size: calc(var(--size) * 0.5);
+  line-height: 1;
+}
+
+.map-pin-mark.faint {
+  border-color: var(--label);
+  box-shadow: none;
+  opacity: 0.75;
+}
+
+.leaflet-tooltip.map-label {
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--bezel-strong);
+  background: rgba(5, 7, 11, 0.78);
+  box-shadow: none;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.leaflet-tooltip.map-label.faint {
+  color: var(--ink-2);
+}
+
+.leaflet-tooltip.map-label::before {
+  display: none;
+}

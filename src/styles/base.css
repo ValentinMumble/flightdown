@@ -1,0 +1,123 @@
+/*
+ * Flightdown looks like a helicopter's glass cockpit at night: instruments on a dark panel, labels in cyan, readouts
+ * in a squared display face, green, amber and red as the avionics use them. Dark only. Every colour comes from here.
+ */
+:root {
+  color-scheme: dark;
+  --page: #05070b;
+  --panel: #0c1118;
+  --panel-2: #111823;
+  --panel-3: #18212e;
+  --bezel: rgba(150, 180, 210, 0.11);
+  --bezel-strong: rgba(150, 180, 210, 0.2);
+  --ink: #e8eef5;
+  --ink-2: #a8b3c1;
+  --muted: #6c7787;
+  --label: #49cfe6;
+  --label-soft: rgba(73, 207, 230, 0.1);
+  --accent: #ff7a1a;
+  --accent-ink: #120800;
+  --accent-soft: rgba(255, 122, 26, 0.14);
+  --good: #3ddc84;
+  --good-soft: rgba(61, 220, 132, 0.12);
+  --caution: #ffb020;
+  --caution-soft: rgba(255, 176, 32, 0.13);
+  --warning: #ff4d4f;
+  --warning-soft: rgba(255, 77, 79, 0.13);
+  --grid: rgba(73, 207, 230, 0.08);
+  --axis: rgba(150, 180, 210, 0.22);
+  --backdrop: rgba(0, 0, 0, 0.6);
+
+  /* Liquid glass (papyrus/design/liquid-glass.md), dark values only, as Chords and hk. */
+  --glass-clear: rgba(28, 28, 32, 0.3);
+  --glass-regular: rgba(10, 14, 20, 0.78);
+  --glass-thick: rgba(14, 19, 27, 0.86);
+  --glass-sheen: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 55%);
+  --glass-edge:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 10px 30px rgba(0, 0, 0, 0.45);
+  --lens: rgba(118, 118, 128, 0.24);
+  --lens-edge: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  --font: -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif;
+  --display: 'Oxanium', var(--font);
+  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+  --radius: 18px;
+  --radius-small: 11px;
+  --dock-height: 62px;
+  --dock-gap: 8px;
+  --dock-side: 14px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--page);
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  /* A faint glow from the top, and the dot grid of a display panel. */
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(73, 207, 230, 0.09), transparent 60%),
+    radial-gradient(circle at 1px 1px, rgba(150, 180, 210, 0.07) 1px, transparent 0) 0 0 / 22px 22px,
+    var(--page);
+  background-attachment: fixed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--label);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.display {
+  font-family: var(--display);
+}

@@ -1,0 +1,64 @@
+# Flightdown 🚁
+
+A flight log for RC helicopters: every session, nice stats, the fleet, and what keeps it flying.
+
+## What it does
+
+It looks like a helicopter's glass cockpit at night: instruments on a dark panel, a counter of minutes in the air, the logbook as
+air traffic flight strips.
+
+- **Cockpit:** the minute counter beside a rotor that spools up, a packs-per-crash gauge (all time, and a bug for the
+  last 20 sessions), the crash-free run as an LED bar, the last three sorties, the helis on the flight line, airtime
+  and the next rung of the skill ladder.
+- **Logbook:** every session as a flight strip, a month at a time. Search notes, parts, places and days; filter by
+  heli, spot, crashes or a broken part.
+- **Log a session:** heli, day, packs and time per pack, crashes, broken parts, manoeuvres practised, notes and links.
+  Quick with one hand at the field; changes made without signal wait and sync later.
+- **Telemetry:** add EdgeTX logs (the radio's `LOGS` folder) to a session for voltage, current, signal and throttle
+  traces, a map of the sticks, and what the log says: the pack ran flat, how much of it was used, sag per cell, when
+  80 % was used (a timer that fits), pack resistance, the radio link. `npm run logs` brings them from the plugged-in
+  radio. Debrief compares every pack's voltage under load.
+- **Debrief:** the learning curve (crashes every 10 packs), milestones, where the heli breaks (a damage map on a heli
+  drawing), what brings it down (crash causes read from the notes), the fleet's history, the skill ladder, the flying
+  season, packs a sortie, spots and hours by heli.
+- **Hangar:** the flight line, the radio and other gear, the helis that left (stamped sold or lost), spare parts whose
+  stock goes down as you log broken parts, packs and their cycles, notes. Each heli has a data plate page and its own chart
+  colour, picked in the Hangar; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac; others are cut out in
+  the page).
+- **Spots:** every flying spot on a satellite map. Set a spot's GPS point by tapping the map, pasting coordinates or a
+  Maps link, or from the phone's position; each sortie then shows its spot from above.
+- **Phones:** a liquid glass dock with a round log button. Add it to the home screen to open it like an app.
+
+Visitors see a made-up log, or keep their own in their browser.
+
+## Run it
+
+```sh
+npm install
+npm run dev
+```
+
+It opens on http://127.0.0.1:5194 and serves `/api/*` itself, with the variables of `.env.local` (see
+[.env.example](.env.example)). Without them it shows the made-up log.
+
+**Owner mode** keeps the log in Upstash Redis, under `flightdown:*` keys. Set `OWNER_KEY` and the store's
+`KV_REST_API_URL` and `KV_REST_API_TOKEN`, then open `/#owner=<OWNER_KEY>` once (or type the key in Settings).
+
+**Seed** the store once from a Google Sheets log and the radio's logs: `npm run seed` reads `SEED_SHEET_ID` and
+`SEED_LOGS_DIR`. `--dry-run` only prints what it read; `--force` replaces a log already there.
+
+**Radio logs:** on the radio, give each heli a special function "SD Logs" on the switch `Telem` (telemetry
+streaming) at 0.2 s: it then logs every pack, one file each, from plug-in to unplug. Plug the radio in as USB storage
+and run `npm run logs`. It backs up new CSV files to
+`SEED_LOGS_DIR` and adds each new flight log to the sortie of its day on the heli named like the radio's model.
+`--create` makes a sortie for logs with none; `--clean` then removes the backed-up logs from the radio; `--dry-run`
+only prints what it would do.
+
+**Heli photos:** `npm run cutouts` lifts every heli photo out of its background with Apple's Vision framework (macOS
+14 or later) and keeps the PNGs in Redis; run it after setting a new photo. `--force` lifts them all again.
+
+## Stack
+
+Vite, React, TypeScript, Recharts and Leaflet; six Vercel functions in `api/`; Upstash Redis. Satellite tiles from
+Esri, the street map from CARTO and OpenStreetMap. `npm test` runs the Vitest
+tests, `npm run format` runs Prettier.

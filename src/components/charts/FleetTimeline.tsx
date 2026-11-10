@@ -1,0 +1,116 @@
+import {useMemo, useState} from 'react';
+import {useNavigate} from 'react-router';
+import type {Heli, Session} from '../../types';
+import {fleetLives} from '../../model/debrief';
+import {daysBetween, formatAirtime, formatDay, today} from '../../model/format';
+import {useSeriesColor} from '../colors';
+
+const ROW = 38;
+const LEFT = 128;
+const RIGHT = 70;
+const WIDTH = 1000;
+
+const END: Record<Heli['status'], string> = {
+  active: 'Flying',
+  grounded: 'Grounded',
+  retired: 'Retired',
+  sold: 'Sold',
+  lost: 'Lost',
+};
+
+/**
+ * Every heli's life on one time line: a bar from its first session to its last, a dot a session (bigger for more
+ * packs), a red tick a crash, and how it left the hangar at the end.
+ */
+export function FleetTimeline({helis, sessions}: {helis: Heli[]; sessions: Session[]}) {
+  const color = useSeriesColor();
+  const navigate = useNavigate();
+  const lives = useMemo(() => fleetLives(helis, sessions), [helis, sessions]);
+  const [hover, setHover] = useState<{x: number; y: number; text: string} | null>(null);
+  if (!lives.length) return <div className="muted">No session yet.</div>;
+
+  const start = lives[0].first;
+  const end = today();
+  const span = Math.max(1, daysBetween(start, end));
+  const x = (day: string) => LEFT + (daysBetween(start, day) / span) * (WIDTH - LEFT - RIGHT);
+  const height = lives.length * ROW + 30;
+  const years: number[] = [];
+  for (let year = Number(start.slice(0, 4)) + 1; year <= Number(end.slice(0, 4)); year += 1) years.push(year);
+
+  return (
+    <div className="timeline-scroll" onMouseLeave={() => setHover(null)}>
+      <svg viewBox={`0 0 ${WIDTH} ${height}`} className="fleet-timeline" role="img" aria-label="Each heli's life">
+        {years.map(year => (
+          <g key={year}>
+            <line x1={x(`${year}-01-01`)} x2={x(`${year}-01-01`)} y1={0} y2={height - 22} className="timeline-grid" />
+            <text x={x(`${year}-01-01`)} y={height - 6} textAnchor="middle" className="timeline-year">
+              {year}
+            </text>
+          </g>
+        ))}
+        {lives.map((life, index) => {
+          const y = index * ROW + 20;
+          const hue = color(life.heli.color);
+          const gone = life.heli.status !== 'active' && life.heli.status !== 'grounded';
+          return (
+            <g key={life.heli.id} className="timeline-row" onClick={() => navigate(`/helis/${life.heli.id}`)}>
+              <text x={0} y={y + 4} className="timeline-name">
+                {life.heli.name}
+              </text>
+              <rect
+                x={x(life.first)}
+                y={y - 3}
+                width={Math.max(2, x(gone ? life.last : end) - x(life.first))}
+                height={6}
+                rx={3}
+                fill={hue}
+                opacity={0.35}
+              />
+              {life.sessions.map(session => (
+                <g key={session.id}>
+                  <circle
+                    cx={x(session.date)}
+                    cy={y}
+                    r={2.5 + Math.min(4, session.packs * 0.6)}
+                    fill={hue}
+                    stroke="var(--panel)"
+                    strokeWidth={1.5}
+                    onMouseEnter={() =>
+                      setHover({
+                        x: x(session.date),
+                        y,
+                        text: `${life.heli.name} · ${formatDay(session.date, {year: true})} · ${session.packs} packs${session.crashes ? ` · 💥 ${session.crashes}` : ''}`,
+                      })
+                    }
+                  />
+                  {session.crashes > 0 && (
+                    <line x1={x(session.date)} x2={x(session.date)} y1={y - 15} y2={y - 9} className="timeline-crash" />
+                  )}
+                </g>
+              ))}
+              <text x={WIDTH - RIGHT + 10} y={y + 4} className={`timeline-end ${life.heli.status}`}>
+                {END[life.heli.status]}
+              </text>
+              <title>{`${life.heli.name}: ${formatAirtime(life.airtime)} from ${formatDay(life.first, {year: true})} to ${formatDay(life.last, {year: true})}`}</title>
+            </g>
+          );
+        })}
+      </svg>
+      {hover && (
+        <div
+          className="tooltip"
+          style={{
+            position: 'absolute',
+            left: `${(hover.x / WIDTH) * 100}%`,
+            top: hover.y + 18,
+            transform: 'translateX(-50%)',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {hover.text}
+        </div>
+      )}
+    </div>
+  );
+}
