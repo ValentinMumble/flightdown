@@ -14,8 +14,19 @@ const IDLE_AMPS = 2;
 export const estimateCells = (maxVoltage: number) => Math.max(1, Math.ceil(maxVoltage / 4.25));
 
 /** The pack a heli flies on: from its packs in the hangar, else from its "3S 750 mAh" line. */
+/**
+ * A heli's pack: the kind it has most live packs of in the Hangar (the bigger one on a tie), or what its battery note
+ * says.
+ */
 export function packOf(heli: Heli | undefined, batteries: Battery[]): {cells?: number; capacity?: number} {
-  const battery = heli ? batteries.find(one => one.heliIds.includes(heli.id)) : undefined;
+  const battery = heli
+    ? batteries
+        .filter(one => one.heliIds.includes(heli.id))
+        .sort(
+          (left, right) =>
+            right.count - (right.dead ?? 0) - (left.count - (left.dead ?? 0)) || right.capacity - left.capacity,
+        )[0]
+    : undefined;
   if (battery) return {cells: battery.cells, capacity: battery.capacity};
   const text = heli?.battery ?? '';
   const cells = /(\d{1,2})\s*S\b/i.exec(text)?.[1];

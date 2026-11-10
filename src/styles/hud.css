@@ -481,3 +481,57 @@
 .replay-readout {
   margin-top: 8px;
 }
+
+/* The replay's throttle and current: narrow vertical gauges beside the sticks. */
+/* As tall as the gimbals beside it. */
+.gauge-bar svg {
+  width: 53px;
+  height: 170px;
+}
+
+.gauge-bar-track {
+  fill: rgba(255, 255, 255, 0.05);
+}
+
+.gauge-bar figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gauge-bar-value {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.gauge-bar-detail {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.replay-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.replay-footer .replay-readout {
+  margin-top: 0;
+}
+
+/* Units keep their capitals (mAh). */
+.segmented.keep-case button {
+  text-transform: none;
+}
+
+.battery-dead {
+  color: var(--warning);
+}

@@ -360,6 +360,7 @@ export function BatteryForm({battery}: {battery?: Battery}) {
   const [cells, setCells] = useState(battery?.cells ?? 3);
   const [capacity, setCapacity] = useState(battery ? String(battery.capacity) : '');
   const [count, setCount] = useState(battery?.count ?? 4);
+  const [dead, setDead] = useState(battery?.dead ?? 0);
   const [heliIds, setHeliIds] = useState<string[]>(battery?.heliIds ?? []);
   const [bought, setBought] = useState(battery?.bought ?? '');
   const [notes, setNotes] = useState(battery?.notes ?? '');
@@ -371,6 +372,7 @@ export function BatteryForm({battery}: {battery?: Battery}) {
       cells,
       capacity: Number(capacity) || 0,
       count,
+      ...(dead > 0 && {dead: Math.min(dead, count)}),
       heliIds,
       ...(bought && {bought}),
       ...(notes.trim() && {notes: notes.trim()}),
@@ -421,6 +423,10 @@ export function BatteryForm({battery}: {battery?: Battery}) {
         <div className="field">
           <span className="field-label">How many</span>
           <Stepper value={count} onChange={setCount} min={1} label="pack" />
+        </div>
+        <div className="field">
+          <span className="field-label">Dead</span>
+          <Stepper value={dead} onChange={setDead} min={0} max={count} label="pack" />
         </div>
         <div className="field">
           <label htmlFor="battery-bought">Bought</label>

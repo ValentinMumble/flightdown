@@ -24,7 +24,16 @@ const ORDER: Channel[] = ['voltage', 'current', 'capacity', 'rssi', 'throttle'];
  * One EdgeTX log as small multiples: one chart a sensor, all on the same time axis, the hover shared between them
  * (never two scales on one chart).
  */
-export function TelemetryCharts({log, pack}: {log: TelemetryLog; pack?: {cells?: number; capacity?: number}}) {
+export function TelemetryCharts({
+  log,
+  pack,
+  packs = [],
+}: {
+  log: TelemetryLog;
+  pack?: {cells?: number; capacity?: number};
+  /** Every pack size the heli flies (mAh). */
+  packs?: number[];
+}) {
   const {loadSeries} = useStore();
   const ink = useChartInk();
   const [series, setSeries] = useState<TelemetrySeries | null | undefined>(undefined);
@@ -148,7 +157,7 @@ export function TelemetryCharts({log, pack}: {log: TelemetryLog; pack?: {cells?:
         })}
       </div>
       <StickMap series={series} />
-      <StickReplay series={series} onTime={setCursor} />
+      <StickReplay series={series} pack={pack} packs={packs} onTime={setCursor} />
     </>
   );
 }

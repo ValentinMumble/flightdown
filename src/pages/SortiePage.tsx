@@ -62,6 +62,12 @@ export function SortiePage() {
   const one = heli(sortie.heliId);
   const place = spot(sortie.spotId);
   const pack = packOf(one, doc.batteries);
+  // Every size of pack this heli flies, to pick from in a replay.
+  const packs = [
+    ...new Set(
+      doc.batteries.filter(battery => battery.heliIds.includes(sortie.heliId)).map(battery => battery.capacity),
+    ),
+  ];
 
   const addLogs = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -264,7 +270,7 @@ export function SortiePage() {
                   </div>
                 )}
               </div>
-              <TelemetryCharts log={log} pack={pack} />
+              <TelemetryCharts log={log} pack={pack} packs={packs} />
             </div>
           ))}
         </Card>

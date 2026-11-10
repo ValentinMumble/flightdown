@@ -115,6 +115,8 @@ export interface Battery {
   capacity: number;
   /** How many packs of this kind. */
   count: number;
+  /** Of those, how many no longer hold a charge: still counted, no longer flown. */
+  dead?: number;
   heliIds: string[];
   /** YYYY-MM-DD */
   bought?: string;

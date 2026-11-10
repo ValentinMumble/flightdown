@@ -1,7 +1,8 @@
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {Pause, Play, RotateCcw} from 'lucide-react';
 import type {TelemetrySeries} from '../../types';
 import {sampleAt} from '../../model/telemetry';
+import {batteryAt, usedMah} from '../../model/battery';
 import {formatNumber, formatTimer} from '../../model/format';
 
 const SIZE = 150;
@@ -50,14 +51,86 @@ function Gimbal({points, color, label}: {points: {x: number; y: number}[]; color
 }
 
 /**
+ * A vertical gauge the height of a gimbal: ticks every quarter, filled from the bottom to the value, the value above.
+ * Throttle in white and current in amber, as their traces.
+ */
+function Gauge({
+  value,
+  max,
+  unit,
+  color,
+  label,
+  detail,
+}: {
+  value: number;
+  max: number;
+  unit: string;
+  color: string;
+  label: string;
+  detail?: string;
+}) {
+  const height = SIZE;
+  const share = Math.max(0, Math.min(1, max > 0 ? value / max : 0));
+  return (
+    <figure className="stick gauge-bar">
+      <svg viewBox={`-2 -2 48 ${height + 4}`} role="img" aria-label={`${label}: ${formatNumber(value)} ${unit}`}>
+        <rect x={0} y={0} width={44} height={height} rx={10} className="stick-gate" />
+        {[0.25, 0.5, 0.75].map(tick => (
+          <line
+            key={tick}
+            x1={6}
+            x2={14}
+            y1={height - tick * height}
+            y2={height - tick * height}
+            className="stick-cross"
+          />
+        ))}
+        <rect x={18} y={6} width={14} height={height - 12} rx={4} className="gauge-bar-track" />
+        <rect
+          x={18}
+          y={6 + (height - 12) * (1 - share)}
+          width={14}
+          height={(height - 12) * share}
+          rx={4}
+          fill={color}
+          opacity={0.9}
+        />
+      </svg>
+      <figcaption>
+        <b>{label}</b>
+        <span className="gauge-bar-value">
+          {formatNumber(value, unit === 'A' ? 1 : 0)} {unit}
+        </span>
+        {detail && <span className="gauge-bar-detail">{detail}</span>}
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
  * The flight played back: the two sticks moving as they did, from the radio's log (mode 2: throttle and rudder on the
  * left, elevator and aileron on the right), with a short trail. Between samples the sticks move in a straight line, so
  * a log taken once a second still plays smoothly. The time is shared with the charts, which show it as a cursor.
  */
-export function StickReplay({series, onTime}: {series: TelemetrySeries; onTime: (second: number | null) => void}) {
+export function StickReplay({
+  series,
+  pack = {},
+  packs = [],
+  onTime,
+}: {
+  series: TelemetrySeries;
+  pack?: {cells?: number; capacity?: number};
+  /** The pack sizes the heli flies (mAh): the log does not say which one this flight used, so it can be picked. */
+  packs?: number[];
+  onTime: (second: number | null) => void;
+}) {
   const {time, channels} = series;
   const end = time[time.length - 1] ?? 0;
   const [second, setSecond] = useState(0);
+  // The current gauge reaches its top at the flight's highest draw.
+  const peakCurrent = useMemo(() => Math.max(1, ...(series.channels.current ?? [0])), [series]);
+  const used = useMemo(() => usedMah(series), [series]);
+  const [capacity, setCapacity] = useState(pack.capacity);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(2);
   const reported = useRef(0);
@@ -101,10 +174,11 @@ export function StickReplay({series, onTime}: {series: TelemetrySeries; onTime: 
     return points;
   };
   const hasLeft = Boolean(channels.rudder?.length && channels.throttle?.length);
+  const battery = batteryAt(series, used, second, {...pack, capacity});
+  const spent = used ? sampleAt(time, used, second) : null;
   const readout = [
-    channels.throttle?.length && `throttle ${formatNumber(at('throttle', second))} %`,
     channels.voltage?.length && `${formatNumber(at('voltage', second), 2)} V`,
-    channels.current?.length && `${formatNumber(at('current', second), 1)} A`,
+    spent !== null && `${formatNumber(spent)} mAh used`,
   ].filter(Boolean);
 
   const seek = (to: number) => {
@@ -118,6 +192,22 @@ export function StickReplay({series, onTime}: {series: TelemetrySeries; onTime: 
       <div className="stick-pair">
         {hasLeft && <Gimbal points={trail('rudder', 'throttle', true)} color="#ffb020" label="Left stick" />}
         <Gimbal points={trail('aileron', 'elevator')} color="#49cfe6" label="Right stick" />
+        {channels.throttle?.length ? (
+          <Gauge value={at('throttle', second)} max={100} unit="%" color="#e8eef5" label="Throttle" />
+        ) : null}
+        {channels.current?.length ? (
+          <Gauge value={at('current', second)} max={peakCurrent} unit="A" color="#ffb020" label="Current" />
+        ) : null}
+        {battery && (
+          <Gauge
+            value={battery.left}
+            max={100}
+            unit="%"
+            color={battery.left < 20 ? '#ff6b6b' : battery.left < 40 ? '#ffb35c' : '#7cffb2'}
+            label="Battery"
+            detail={battery.source === 'capacity' ? `${formatNumber(battery.mahLeft ?? 0)} mAh left` : 'from voltage'}
+          />
+        )}
       </div>
       <div className="replay-controls">
         <button
@@ -152,7 +242,20 @@ export function StickReplay({series, onTime}: {series: TelemetrySeries; onTime: 
           ))}
         </div>
       </div>
-      {readout.length > 0 && <div className="replay-readout">{readout.join(' · ')}</div>}
+      <div className="replay-footer">
+        {readout.length > 0 && <div className="replay-readout">{readout.join(' · ')}</div>}
+        {packs.length > 1 && (
+          <div className="segmented keep-case" aria-label="Pack flown">
+            {[...packs]
+              .sort((left, right) => left - right)
+              .map(size => (
+                <button key={size} type="button" aria-pressed={size === capacity} onClick={() => setCapacity(size)}>
+                  {size} mAh
+                </button>
+              ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

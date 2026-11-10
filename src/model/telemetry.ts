@@ -9,7 +9,7 @@ export type Cell = string | number | null;
 export const CHANNELS = {
   voltage: {label: 'Pack voltage', unit: 'V', columns: ['VFAS', 'Bat', 'BtRx', 'RxBt']},
   current: {label: 'Current', unit: 'A', columns: ['Curr']},
-  capacity: {label: 'Capacity used', unit: 'mAh', columns: ['Capa', 'Fuel']},
+  capacity: {label: 'Capacity used', unit: 'mAh', columns: ['Capa', 'Fuel', 'mAh']},
   rssi: {label: 'Signal', unit: 'dB', columns: ['RSSI', '1RSS', 'TRSS', 'RQly']},
   throttle: {label: 'Throttle stick', unit: '%', columns: ['Thr']},
   aileron: {label: 'Aileron stick', unit: '%', columns: ['Ail']},

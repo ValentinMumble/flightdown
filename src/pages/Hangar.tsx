@@ -452,6 +452,7 @@ function Batteries() {
                 <div className="heli-name">{battery.name}</div>
                 <div className="muted" style={{fontSize: 13}}>
                   {battery.count} × {battery.cells}S {formatNumber(battery.capacity)} mAh
+                  {battery.dead ? <span className="battery-dead"> · {battery.dead} dead</span> : null}
                 </div>
                 <div className="figures" style={{marginTop: 10}}>
                   <div>

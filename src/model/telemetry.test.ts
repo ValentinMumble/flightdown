@@ -101,3 +101,17 @@ describe('sampleAt', () => {
     expect(sampleAt(time, undefined, 1)).toBeNull();
   });
 });
+
+describe('packOf with several kinds of packs', () => {
+  const heli = {id: 'h', name: 'M2 EVO', color: 1, status: 'active' as const, createdAt: '2023-01-01'};
+  const packs = [
+    {id: 'a', name: 'OMPHobby 700', cells: 3, capacity: 700, count: 4, dead: 2, heliIds: ['h']},
+    {id: 'b', name: 'Gens Ace 750', cells: 3, capacity: 750, count: 2, heliIds: ['h']},
+    {id: 'c', name: 'Eachine 500', cells: 3, capacity: 500, count: 1, heliIds: ['h']},
+  ];
+
+  it('takes the kind with most live packs, the bigger one on a tie', () => {
+    expect(packOf(heli, packs)).toEqual({cells: 3, capacity: 750});
+    expect(packOf(heli, [{...packs[0], dead: 0}, packs[1]])).toEqual({cells: 3, capacity: 700});
+  });
+});
