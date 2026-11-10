@@ -38,14 +38,16 @@ export function Home() {
   const logSortie = () => open(<SortieForm />);
   const ppc = all.packsPerCrash;
   const sinceCrash = daysSinceCrash(sorties);
+  const lastCrash = [...sorties].reverse().find(sortie => sortie.crashes);
+  const heliName = (id: string) => doc.helis.find(heli => heli.id === id)?.name ?? 'a heli';
   const tone = ppc === null ? 'good' : ppc < 2 ? 'warning' : ppc < 5 ? 'caution' : 'good';
 
   return (
     <div className="page">
       <PageHeader
-        title="Flightdown"
+        title="Cockpit"
+        phone={{title: 'Flightdown', icon: <RotorMark size={20} className="accent-mark" />}}
         sub={sorties.length ? `Flying since ${formatDay(sorties[0].date, {weekday: false, year: true})}` : undefined}
-        icon={<RotorMark size={20} className="accent-mark" />}
         actions={
           <Link to="/settings" className="icon-button phone-only" aria-label="Settings">
             <SettingsIcon size={18} />
@@ -101,16 +103,26 @@ export function Home() {
           </div>
         </Panel>
 
-        <Panel label="Crash-free run" note="Since the last crash" className="span-3">
+        <Panel
+          label="Since the last crash"
+          note={
+            lastCrash
+              ? `${formatDay(lastCrash.date, {weekday: false, year: true})}, on ${heliName(lastCrash.heliId)}`
+              : 'No crash yet'
+          }
+          className="span-3"
+        >
           <div className="run-readouts">
-            <div className={`readout ${runs.crashFreePacks >= best && best > 0 ? 'good' : ''}`}>
-              {runs.crashFreePacks}
-              <small>{runs.crashFreePacks === 1 ? 'pack' : 'packs'}</small>
+            <div>
+              <div className="figure-label">packs flown</div>
+              <div className={`readout ${runs.crashFreePacks >= best && best > 0 ? 'good' : ''}`}>
+                {runs.crashFreePacks}
+              </div>
             </div>
             {sinceCrash !== null && (
-              <div className="readout">
-                {sinceCrash}
-                <small>{sinceCrash === 1 ? 'day' : 'days'}</small>
+              <div>
+                <div className="figure-label">days</div>
+                <div className="readout">{sinceCrash}</div>
               </div>
             )}
           </div>
@@ -118,8 +130,8 @@ export function Home() {
             <SegmentBar value={runs.crashFreePacks} best={best} />
           </div>
           <div className="caption">
-            Best run {plural(best, 'pack')}
-            {runs.longestCrashFree && `, to ${formatDay(runs.longestCrashFree.to, {weekday: false, year: true})}`}
+            Your best: {plural(best, 'pack')} in a row
+            {runs.longestCrashFree && `, until ${formatDay(runs.longestCrashFree.to, {weekday: false, year: true})}`}
           </div>
         </Panel>
 

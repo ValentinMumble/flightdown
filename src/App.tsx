@@ -1,11 +1,10 @@
-import {useEffect, useMemo} from 'react';
+import {useEffect} from 'react';
 import {Link, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType} from 'react-router';
 import {BookOpen, CloudOff, Gauge, MapPin, Plus, Radar, Settings as SettingsIcon, Warehouse} from 'lucide-react';
 import {useStore, type Mode} from './data/store';
 import {OverlayProvider, useOverlay} from './components/ui';
-import {MinuteMeter, RotorMark} from './components/instruments';
+import {RotorMark} from './components/instruments';
 import {SortieForm} from './components/forms/SortieForm';
-import {airtime} from './model/stats';
 import {Home} from './pages/Home';
 import {Sorties} from './pages/Sorties';
 import {SortiePage} from './pages/SortiePage';
@@ -45,9 +44,8 @@ function useLogSortie() {
 /** Wide screens: one bar along the top, the soft keys in the middle, the minute counter and the log button at the end. */
 function CockpitBar() {
   const {pathname} = useLocation();
-  const {mode, waiting, doc} = useStore();
+  const {mode, waiting} = useStore();
   const logSortie = useLogSortie();
-  const total = useMemo(() => doc.sorties.reduce((sum, sortie) => sum + airtime(sortie), 0), [doc.sorties]);
   return (
     <header className="cockpit-bar">
       <Link to="/" className="logotype">
@@ -67,7 +65,6 @@ function CockpitBar() {
           {waiting > 0 && <CloudOff size={14} />}
           {waiting > 0 ? `${waiting} waiting` : MODE_LABEL[mode]}
         </span>
-        <MinuteMeter seconds={total} size="small" />
         <Link
           to="/settings"
           className="icon-button"

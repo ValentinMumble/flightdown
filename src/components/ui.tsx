@@ -77,12 +77,15 @@ export function PageHeader({
   title,
   sub,
   icon,
+  phone,
   back,
   actions,
 }: {
   title: ReactNode;
   sub?: ReactNode;
   icon?: ReactNode;
+  /** A phone has no top bar with the app's name: a page can say something else there (the Cockpit says Flightdown). */
+  phone?: {title: ReactNode; icon?: ReactNode};
   back?: string;
   actions?: ReactNode;
 }) {
@@ -97,8 +100,8 @@ export function PageHeader({
               <ArrowLeft size={18} />
             </button>
           )}
-          {icon}
-          <span>{title}</span>
+          {phone ? phone.icon : icon}
+          <span>{phone ? phone.title : title}</span>
         </div>
         <div className="toolbar">{actions}</div>
       </header>

@@ -430,3 +430,9 @@
     display: none;
   }
 }
+
+/* Gear that left the hangar (sold, lost, stolen): after the rest, dimmed. */
+.gear-card.gone .gear-icon,
+.gear-card.gone .heli-name {
+  opacity: 0.6;
+}

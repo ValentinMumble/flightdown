@@ -1,7 +1,8 @@
 /**
- * Sortie photos live in Apple Photos, in a shared album with its public website turned on. Its link
- * (https://www.icloud.com/sharedalbum/#B0…) is all Flightdown keeps; the photos are read from the same feed the
- * album's web page uses.
+ * Sortie photos live in Apple Photos, in a shared album with its public website turned on. Its link is all Flightdown
+ * keeps; the photos are read the way the album's web page reads them. Albums shared since 2025 have links like
+ * https://photos.icloud.com/shared/album/006LQ… (read through CloudKit); older ones https://www.icloud.com/sharedalbum/#B0…
+ * (read through Apple's shared streams).
  */
 
 /** A photo of the album, as the page shows it. Apple's addresses expire after a while: they are fetched again. */
@@ -18,13 +19,24 @@ export interface AlbumPhoto {
   caption?: string;
 }
 
-/** The token of a shared album's link ("B0aGWZuqDGKQQ5L"), or null when the text is not one. */
-export function albumToken(link: string): string | null {
+export type AlbumLink = {kind: 'cloudkit' | 'stream'; token: string};
+
+/** Which kind of shared album a link is, and its token; null when the text is not one. */
+export function albumLink(link: string): AlbumLink | null {
   const text = link.trim();
-  const fromLink = /icloud\.com\/sharedalbum\/(?:[a-z-]+\/)?#([A-Za-z0-9]+)/.exec(text);
-  if (fromLink) return fromLink[1];
-  return /^[AB][A-Za-z0-9]{10,}$/.test(text) ? text : null;
+  const shared = /icloud\.com\/shared\/album\/([A-Za-z0-9_-]{10,})/.exec(text);
+  if (shared) return {kind: 'cloudkit', token: shared[1]};
+  const stream = /icloud\.com\/sharedalbum\/(?:[a-z-]+\/)?#([A-Za-z0-9]+)/.exec(text);
+  if (stream) return {kind: 'stream', token: stream[1]};
+  if (/^0[A-Za-z0-9_-]{15,}$/.test(text)) return {kind: 'cloudkit', token: text};
+  return /^[AB][A-Za-z0-9]{10,}$/.test(text) ? {kind: 'stream', token: text} : null;
 }
+
+/** The link kept for an album: its page, in the form Apple gave it. */
+export const albumPage = ({kind, token}: AlbumLink) =>
+  kind === 'cloudkit'
+    ? `https://photos.icloud.com/shared/album/${token}`
+    : `https://www.icloud.com/sharedalbum/#${token}`;
 
 interface StreamDerivative {
   checksum: string;
@@ -80,6 +92,48 @@ export function readAlbum(photos: StreamPhoto[], urls: AssetUrls): AlbumPhoto[] 
       thumb: address(small.checksum)!,
       full: address(largest.checksum)!,
       ...(photo.caption && {caption: photo.caption}),
+    });
+  }
+  return read.sort((left, right) => left.takenAt.localeCompare(right.takenAt));
+}
+
+/** A CloudKit record, as its web services answer. */
+export interface CloudRecord {
+  recordName: string;
+  recordType: string;
+  fields: Record<string, {value: unknown; type?: string} | undefined>;
+}
+
+interface CloudAsset {
+  downloadURL?: string;
+}
+
+/**
+ * The album's photos from its CloudKit records: each photo (CPLAsset: when it was taken) points to its file
+ * (CPLMaster: a thumbnail and a medium JPEG, with addresses that expire). Videos are left out.
+ */
+export function readCloudAlbum(records: CloudRecord[]): AlbumPhoto[] {
+  const masters = new Map(
+    records.filter(record => record.recordType === 'CPLMaster').map(record => [record.recordName, record]),
+  );
+  // Apple's addresses end with a slot for the file's name.
+  const address = (asset: unknown) => (asset as CloudAsset | undefined)?.downloadURL?.replace('${f}', 'photo.jpg');
+  const read: AlbumPhoto[] = [];
+  for (const asset of records.filter(record => record.recordType === 'CPLAsset')) {
+    const reference = asset.fields.masterRef?.value as {recordName?: string} | undefined;
+    const master = reference?.recordName ? masters.get(reference.recordName) : undefined;
+    if (!master || String(master.fields.itemType?.value ?? '').includes('movie')) continue;
+    const thumb = address(master.fields.resJPEGThumbRes?.value);
+    const full = address(master.fields.resJPEGMedRes?.value) ?? thumb;
+    const taken = Number(asset.fields.assetDate?.value ?? master.fields.originalCreationDate?.value);
+    if (!thumb || !full || !taken) continue;
+    read.push({
+      id: asset.recordName,
+      takenAt: new Date(taken).toISOString(),
+      width: Number(master.fields.resJPEGMedWidth?.value) || 0,
+      height: Number(master.fields.resJPEGMedHeight?.value) || 0,
+      thumb,
+      full,
     });
   }
   return read.sort((left, right) => left.takenAt.localeCompare(right.takenAt));

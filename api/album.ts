@@ -1,4 +1,13 @@
-import {albumToken, readAlbum, type AssetUrls, type StreamPhoto} from '../src/model/album.js';
+import {
+  albumLink,
+  albumPage,
+  readAlbum,
+  readCloudAlbum,
+  type AlbumLink,
+  type AssetUrls,
+  type CloudRecord,
+  type StreamPhoto,
+} from '../src/model/album.js';
 import {handle, HttpError, json, readJson} from './_lib/http.js';
 import {requireOwner} from './_lib/owner.js';
 import {putAlbumCopy, putAlbumLink, readAlbumCopy, readAlbumLink} from './_lib/store.js';
@@ -6,8 +15,12 @@ import {putAlbumCopy, putAlbumLink, readAlbumCopy, readAlbumLink} from './_lib/s
 const DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 /** Apple answers the addresses of 25 photos at a time. */
 const BATCH = 25;
-/** How long a read of the album is used before Apple is asked again (its photo addresses last a few hours). */
-const FRESH = 45 * 60 * 1000;
+/** How long a read of the album is used before Apple is asked again (its photo addresses do not last long). */
+const FRESH = 15 * 60 * 1000;
+const CLOUDKIT = 'https://ckdatabasews.icloud.com/database/1/com.apple.photos.cloud/production';
+/** CloudKit answers 200 records a time at most; an album of thousands of photos is a few pages. */
+const PAGE = 200;
+const MAX_PAGES = 30;
 const HEADERS = {
   'Content-Type': 'text/plain',
   Accept: '*/*',
@@ -32,8 +45,63 @@ async function ask(host: string, token: string, endpoint: string, body: unknown)
   });
 }
 
+/** An album shared since 2025: its code resolves to a CloudKit zone, read with the anonymous token it comes with. */
+async function readCloud(token: string) {
+  const headers = {...HEADERS, Origin: 'https://photos.icloud.com', Referer: 'https://photos.icloud.com/'};
+  const resolved = await fetch(`${CLOUDKIT}/public/records/resolve`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({shortGUIDs: [{value: token}]}),
+  });
+  const result = resolved.ok
+    ? (
+        (await resolved.json()) as {
+          results?: {
+            zoneID: unknown;
+            share?: {fields?: Record<string, {value?: string}>};
+            anonymousPublicAccess?: {token: string; databasePartition: string};
+          }[];
+        }
+      ).results?.[0]
+    : undefined;
+  if (!result?.anonymousPublicAccess) {
+    throw new HttpError(404, 'Apple did not share this album: turn on its public website in Photos');
+  }
+  const {token: access, databasePartition} = result.anonymousPublicAccess;
+  const records: CloudRecord[] = [];
+  let marker: string | undefined;
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const query = new URLSearchParams({remapEnums: 'true', getCurrentSyncToken: 'true', publicAccessAuthToken: access});
+    const answer = await fetch(
+      `${databasePartition}/database/1/com.apple.photos.cloud/production/shared/records/query?${query}`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query: {
+            recordType: 'CPLAssetAndMasterByAssetDateWithoutHiddenOrDeleted',
+            filterBy: [
+              {fieldName: 'direction', comparator: 'EQUALS', fieldValue: {value: 'ASCENDING', type: 'STRING'}},
+            ],
+          },
+          zoneID: result.zoneID,
+          resultsLimit: PAGE,
+          ...(marker && {continuationMarker: marker}),
+        }),
+      },
+    );
+    if (!answer.ok) throw new HttpError(502, 'Apple did not list the album’s photos');
+    const batch = (await answer.json()) as {records?: CloudRecord[]; continuationMarker?: string};
+    records.push(...(batch.records ?? []));
+    marker = batch.continuationMarker;
+    if (!marker) break;
+  }
+  return {name: result.share?.fields?.['cloudkit.title']?.value ?? 'Shared album', photos: readCloudAlbum(records)};
+}
+
 /** The album's name and photos, read like its public web page does. */
-async function readShared(token: string) {
+async function readShared({kind, token}: AlbumLink) {
+  if (kind === 'cloudkit') return readCloud(token);
   let host = hostOf(token);
   let answer = await ask(host, token, 'webstream', {streamCtag: null});
   if (answer.status === 330) {
@@ -59,20 +127,20 @@ async function readShared(token: string) {
 }
 
 /**
- * GET /api/album: the shared album's name, link and photos (their addresses expire after a few hours). A read of the
- * last 45 minutes is used as it is; an older one is used when Apple does not answer.
+ * GET /api/album: the shared album's name, link and photos (their addresses expire). A read of the last 15 minutes
+ * is used as it is; an older one is used when Apple does not answer.
  */
 export function GET(request: Request) {
   return handle(async () => {
     requireOwner(request);
     const link = await readAlbumLink();
     if (!link) throw new HttpError(404, 'No shared album yet: add its link in Settings');
-    const token = albumToken(link);
-    if (!token) throw new HttpError(500, 'The saved album link is not one');
+    const parsed = albumLink(link);
+    if (!parsed) throw new HttpError(500, 'The saved album link is not one');
     const copy = await readAlbumCopy<{link: string}>();
     if (copy && copy.album.link === link && Date.now() - copy.at < FRESH) return json(copy.album);
     try {
-      const album = {link, ...(await readShared(token))};
+      const album = {link, ...(await readShared(parsed))};
       await putAlbumCopy(album);
       return json(album);
     } catch (failure) {
@@ -91,10 +159,10 @@ export function PUT(request: Request) {
       await putAlbumLink(null);
       return json({ok: true});
     }
-    const token = typeof link === 'string' ? albumToken(link) : null;
-    if (!token) throw new HttpError(400, 'Paste the link of a shared album (icloud.com/sharedalbum/#…)');
-    const album = await readShared(token);
-    const kept = `https://www.icloud.com/sharedalbum/#${token}`;
+    const parsed = typeof link === 'string' ? albumLink(link) : null;
+    if (!parsed) throw new HttpError(400, 'Paste the link of a shared album (photos.icloud.com/shared/album/…)');
+    const album = await readShared(parsed);
+    const kept = albumPage(parsed);
     await putAlbumLink(kept);
     await putAlbumCopy({link: kept, ...album});
     return json({link: kept, name: album.name, count: album.photos.length});

@@ -1,16 +1,92 @@
 import {describe, expect, it} from 'vitest';
-import {albumToken, readAlbum, type AssetUrls, type StreamPhoto} from './album';
+import {albumLink, readAlbum, readCloudAlbum, type AssetUrls, type CloudRecord, type StreamPhoto} from './album';
 
-describe('albumToken', () => {
-  it('reads the token of a shared album link', () => {
-    expect(albumToken('https://www.icloud.com/sharedalbum/#B0aGWZuqDGKQQ5L')).toBe('B0aGWZuqDGKQQ5L');
-    expect(albumToken('https://www.icloud.com/sharedalbum/fr-fr/#B0aGWZuqDGKQQ5L')).toBe('B0aGWZuqDGKQQ5L');
-    expect(albumToken(' B0aGWZuqDGKQQ5L ')).toBe('B0aGWZuqDGKQQ5L');
+describe('albumLink', () => {
+  it('reads the links of albums shared since 2025', () => {
+    expect(albumLink('https://photos.icloud.com/shared/album/006LQqDlNZv0QAHFC2VpA0xQg')).toEqual({
+      kind: 'cloudkit',
+      token: '006LQqDlNZv0QAHFC2VpA0xQg',
+    });
+  });
+
+  it('reads the older links', () => {
+    expect(albumLink('https://www.icloud.com/sharedalbum/#B0aGWZuqDGKQQ5L')).toEqual({
+      kind: 'stream',
+      token: 'B0aGWZuqDGKQQ5L',
+    });
+    expect(albumLink('https://www.icloud.com/sharedalbum/fr-fr/#B0aGWZuqDGKQQ5L')?.token).toBe('B0aGWZuqDGKQQ5L');
+    expect(albumLink(' B0aGWZuqDGKQQ5L ')?.kind).toBe('stream');
   });
 
   it('refuses what is not one', () => {
-    expect(albumToken('https://www.icloud.com/photos/#0abc')).toBeNull();
-    expect(albumToken('Flightdown')).toBeNull();
+    expect(albumLink('https://www.icloud.com/photos/#0abc')).toBeNull();
+    expect(albumLink('Flightdown')).toBeNull();
+  });
+});
+
+describe('readCloudAlbum', () => {
+  const zone = {zoneName: 'SharedCollection-1'};
+  const records: CloudRecord[] = [
+    {
+      recordName: 'asset-later',
+      recordType: 'CPLAsset',
+      fields: {assetDate: {value: 1754834400000}, masterRef: {value: {recordName: 'master-later', zoneID: zone}}},
+    },
+    {
+      recordName: 'master-later',
+      recordType: 'CPLMaster',
+      fields: {
+        itemType: {value: 'public.heic'},
+        resJPEGThumbRes: {value: {downloadURL: 'https://cvws.icloud-content.com/B/thumb/${f}?o=1'}},
+        resJPEGMedRes: {value: {downloadURL: 'https://cvws.icloud-content.com/B/medium/${f}?o=1'}},
+        resJPEGMedWidth: {value: 2048},
+        resJPEGMedHeight: {value: 1536},
+      },
+    },
+    {
+      recordName: 'asset-clip',
+      recordType: 'CPLAsset',
+      fields: {assetDate: {value: 1754830000000}, masterRef: {value: {recordName: 'master-clip'}}},
+    },
+    {
+      recordName: 'master-clip',
+      recordType: 'CPLMaster',
+      fields: {
+        itemType: {value: 'com.apple.quicktime-movie'},
+        resJPEGThumbRes: {value: {downloadURL: 'https://x/${f}'}},
+      },
+    },
+    {
+      recordName: 'asset-earlier',
+      recordType: 'CPLAsset',
+      fields: {assetDate: {value: 1754820000000}, masterRef: {value: {recordName: 'master-earlier'}}},
+    },
+    {
+      recordName: 'master-earlier',
+      recordType: 'CPLMaster',
+      fields: {itemType: {value: 'public.jpeg'}, resJPEGThumbRes: {value: {downloadURL: 'https://x/thumb/${f}'}}},
+    },
+  ];
+
+  it('pairs each photo with its file, oldest first, and leaves videos out', () => {
+    expect(readCloudAlbum(records)).toEqual([
+      {
+        id: 'asset-earlier',
+        takenAt: '2025-08-10T10:00:00.000Z',
+        width: 0,
+        height: 0,
+        thumb: 'https://x/thumb/photo.jpg',
+        full: 'https://x/thumb/photo.jpg',
+      },
+      {
+        id: 'asset-later',
+        takenAt: '2025-08-10T14:00:00.000Z',
+        width: 2048,
+        height: 1536,
+        thumb: 'https://cvws.icloud-content.com/B/thumb/photo.jpg?o=1',
+        full: 'https://cvws.icloud-content.com/B/medium/photo.jpg?o=1',
+      },
+    ]);
   });
 });
 

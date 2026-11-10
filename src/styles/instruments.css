@@ -151,22 +151,12 @@
   text-transform: uppercase;
 }
 
-.hobbs.large {
+.hobbs {
   font-size: 54px;
 }
 
-.hobbs.small {
-  font-size: 20px;
-  padding: 3px;
-  gap: 2px;
-}
-
-.hobbs.small .hobbs-digit {
-  border-radius: 3px;
-}
-
 @media (max-width: 860px) {
-  .hobbs.large {
+  .hobbs {
     font-size: 40px;
   }
 }

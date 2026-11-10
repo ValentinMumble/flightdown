@@ -95,44 +95,51 @@ function Gear() {
       </div>
       {doc.gear.length ? (
         <div className="grid grid-auto">
-          {doc.gear.map(item => {
-            const Icon = GEAR_ICONS[item.category] ?? Cable;
-            const keys = codes(`${item.name} ${item.details ?? ''}`);
-            const related = doc.tips.filter(tip => keys.some(key => `${tip.title}\n${tip.body}`.includes(key)));
-            return (
-              <button key={item.id} className="panel gear-card" onClick={() => open(<GearForm gear={item} />)}>
-                <span className="gear-icon">
-                  <Icon size={22} />
-                </span>
-                <span className="stack" style={{gap: 6}}>
-                  <span className="heli-name" style={{fontSize: 17}}>
-                    {item.name}
+          {[...doc.gear]
+            .sort((left, right) => Number(Boolean(left.gone)) - Number(Boolean(right.gone)))
+            .map(item => {
+              const Icon = GEAR_ICONS[item.category] ?? Cable;
+              const keys = codes(`${item.name} ${item.details ?? ''}`);
+              const related = doc.tips.filter(tip => keys.some(key => `${tip.title}\n${tip.body}`.includes(key)));
+              return (
+                <button
+                  key={item.id}
+                  className={`panel gear-card ${item.gone ? 'gone' : ''}`}
+                  onClick={() => open(<GearForm gear={item} />)}
+                >
+                  <span className="gear-icon">
+                    <Icon size={22} />
                   </span>
-                  {item.details && <span className="muted">{item.details}</span>}
-                  {item.since && (
-                    <span className="pill label" style={{alignSelf: 'flex-start'}}>
-                      Since {formatDay(item.since, {weekday: false, year: true})}
+                  <span className="stack" style={{gap: 6}}>
+                    <span className="heli-name" style={{fontSize: 17}}>
+                      {item.name}
                     </span>
-                  )}
-                  {item.notes && <span className="caption">{item.notes}</span>}
-                  {related.length > 0 && (
-                    <span className="chips">
-                      {related.map(tip => (
-                        <Link
-                          key={tip.id}
-                          to="/hangar/notes"
-                          className="chip"
-                          onClick={event => event.stopPropagation()}
-                        >
-                          📒 {tip.title}
-                        </Link>
-                      ))}
-                    </span>
-                  )}
-                </span>
-              </button>
-            );
-          })}
+                    {item.gone && <Stamp status={item.gone} />}
+                    {item.details && <span className="muted">{item.details}</span>}
+                    {item.since && (
+                      <span className="pill label" style={{alignSelf: 'flex-start'}}>
+                        Since {formatDay(item.since, {weekday: false, year: true})}
+                      </span>
+                    )}
+                    {item.notes && <span className="caption">{item.notes}</span>}
+                    {related.length > 0 && (
+                      <span className="chips">
+                        {related.map(tip => (
+                          <Link
+                            key={tip.id}
+                            to="/hangar/notes"
+                            className="chip"
+                            onClick={event => event.stopPropagation()}
+                          >
+                            📒 {tip.title}
+                          </Link>
+                        ))}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
         </div>
       ) : (
         <div className="panel">

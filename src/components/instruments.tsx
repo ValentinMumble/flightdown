@@ -1,5 +1,5 @@
 import {useEffect, useId, useState, type ReactNode} from 'react';
-import type {HeliStatus} from '../types';
+import type {GearGone, HeliStatus} from '../types';
 import {formatAirtime} from '../model/format';
 
 /** An instrument on the panel: a bezel with its name along the top. */
@@ -66,12 +66,13 @@ export function Tape({
   );
 }
 
-/** The counters roll up once, when the app first opens; later they just show their number. */
-let rolledOnce = false;
+/** Rolling up from zero, unless motion is to be reduced. */
+const firstPhase = (): RollPhase => (window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'still' : 'ready');
 /** Full turns a reel makes at most before it settles: enough to read as rolling, short enough to wait for. */
 const MAX_TURNS = 3;
 
-type RollPhase = 'ready' | 'rolling' | 'still';
+/** Waiting: the log is not loaded yet (zero minutes), so the roll waits for the real number. */
+type RollPhase = 'waiting' | 'ready' | 'rolling' | 'still';
 
 /**
  * One digit as a reel: the digits from 0 up to its own, after as many full turns as an odometer counting up from zero
@@ -96,34 +97,35 @@ function Reel({digit, turns, phase}: {digit: number; turns: number; phase: RollP
 
 /**
  * The airtime counter: rolling digits of whole minutes in the air, the last one lit as it turns, like the hour meter
- * of a real aircraft but counting minutes. On the app's first load the digits roll up from zero.
+ * of a real aircraft but counting minutes. Each time it appears (a change of tab) the digits roll up from zero.
  */
-export function MinuteMeter({seconds, size = 'large'}: {seconds: number; size?: 'large' | 'small'}) {
+export function MinuteMeter({seconds}: {seconds: number}) {
   const minutes = Math.floor(seconds / 60);
-  const digits = String(minutes)
-    .padStart(size === 'large' ? 5 : 4, '0')
-    .split('');
-  const [phase, setPhase] = useState<RollPhase>(() =>
-    rolledOnce || minutes === 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'still' : 'ready',
-  );
+  const digits = String(minutes).padStart(5, '0').split('');
+  const [phase, setPhase] = useState<RollPhase>(() => (minutes === 0 ? 'waiting' : firstPhase()));
 
   useEffect(() => {
-    rolledOnce = true;
-    if (phase !== 'ready') return;
-    let frame = requestAnimationFrame(() => {
-      // A frame at zero first, so the move to the number is a transition.
-      frame = requestAnimationFrame(() => setPhase('rolling'));
-    });
-    const done = window.setTimeout(() => setPhase('still'), 900 + MAX_TURNS * 300 + 100);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.clearTimeout(done);
-    };
-  }, [phase]);
+    if (phase === 'waiting') {
+      if (minutes > 0) setPhase(firstPhase());
+      return;
+    }
+    if (phase === 'ready') {
+      let frame = requestAnimationFrame(() => {
+        // A frame at zero first, so the move to the number is a transition.
+        frame = requestAnimationFrame(() => setPhase('rolling'));
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+    if (phase === 'rolling') {
+      // Once the reels have settled, plain digits again.
+      const done = window.setTimeout(() => setPhase('still'), 900 + MAX_TURNS * 300 + 100);
+      return () => window.clearTimeout(done);
+    }
+  }, [phase, minutes]);
 
   return (
     <span
-      className={`hobbs ${size}`}
+      className="hobbs"
       role="img"
       aria-label={`${minutes.toLocaleString('en-GB')} minutes in the air`}
       title={formatAirtime(seconds, true)}
@@ -133,7 +135,11 @@ export function MinuteMeter({seconds, size = 'large'}: {seconds: number; size?: 
         const turns = Math.min(MAX_TURNS, Math.floor(minutes / 10 ** (place + 1)));
         return (
           <span key={index} className={`hobbs-digit ${index === digits.length - 1 ? 'tenth' : ''}`}>
-            {phase === 'still' ? digit : <Reel digit={Number(digit)} turns={turns} phase={phase} />}
+            {phase === 'ready' || phase === 'rolling' ? (
+              <Reel digit={Number(digit)} turns={turns} phase={phase} />
+            ) : (
+              digit
+            )}
           </span>
         );
       })}
@@ -159,15 +165,17 @@ export function SegmentBar({value, best, segments = 24}: {value: number; best: n
   );
 }
 
-const STAMP_LABEL: Record<HeliStatus, string> = {
+const STAMP_LABEL: Record<HeliStatus | GearGone, string> = {
   active: 'Flying',
   grounded: 'Grounded',
   retired: 'Retired',
   sold: 'Sold',
   lost: 'Lost',
+  stolen: 'Stolen',
 };
 
-export function Stamp({status}: {status: HeliStatus}) {
+/** A heli's status, or how a piece of gear left the hangar: a small light and a word. */
+export function Stamp({status}: {status: HeliStatus | GearGone}) {
   return <span className={`stamp ${status}`}>{STAMP_LABEL[status]}</span>;
 }
 

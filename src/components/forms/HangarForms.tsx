@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {Link, useNavigate} from 'react-router';
 import {ChevronRight, LocateFixed, Trash, X} from 'lucide-react';
-import type {Battery, Gear, Heli, HeliStatus, Spare, Spot, Tip} from '../../types';
+import type {Battery, Gear, GearGone, Heli, HeliStatus, Spare, Spot, Tip} from '../../types';
 import {useStore} from '../../data/store';
 import {newId, now} from '../../model/ids';
 import {formatTimer, parseTimer, plural} from '../../model/format';
@@ -753,6 +753,13 @@ const GEAR_CATEGORIES: {value: Gear['category']; label: string}[] = [
   {value: 'other', label: 'Other'},
 ];
 
+const GEAR_GONE: {value: GearGone | undefined; label: string}[] = [
+  {value: undefined, label: 'In use'},
+  {value: 'sold', label: 'Sold'},
+  {value: 'lost', label: 'Lost'},
+  {value: 'stolen', label: 'Stolen'},
+];
+
 /** The radio, the charger, a simulator: the rest of the hangar. */
 export function GearForm({gear}: {gear?: Gear}) {
   const {put, remove} = useStore();
@@ -762,6 +769,7 @@ export function GearForm({gear}: {gear?: Gear}) {
   const [details, setDetails] = useState(gear?.details ?? '');
   const [since, setSince] = useState(gear?.since ?? '');
   const [notes, setNotes] = useState(gear?.notes ?? '');
+  const [gone, setGone] = useState<GearGone | undefined>(gear?.gone);
 
   return (
     <form
@@ -773,6 +781,7 @@ export function GearForm({gear}: {gear?: Gear}) {
           id: gear?.id ?? newId(),
           name: name.trim(),
           category,
+          ...(gone && {gone}),
           ...(details.trim() && {details: details.trim()}),
           ...(since && {since}),
           ...(notes.trim() && {notes: notes.trim()}),
@@ -803,6 +812,22 @@ export function GearForm({gear}: {gear?: Gear}) {
               className="chip"
               aria-pressed={option.value === category}
               onClick={() => setCategory(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="field">
+        <span className="field-label">Still here?</span>
+        <div className="chips">
+          {GEAR_GONE.map(option => (
+            <button
+              key={option.label}
+              type="button"
+              className="chip"
+              aria-pressed={option.value === gone}
+              onClick={() => setGone(option.value)}
             >
               {option.label}
             </button>

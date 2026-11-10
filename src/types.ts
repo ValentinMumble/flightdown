@@ -129,10 +129,15 @@ export interface Tip {
 }
 
 /** Everything else in the hangar: the radio, a charger, a simulator. */
+/** How a piece of gear left the hangar. */
+export type GearGone = 'sold' | 'lost' | 'stolen';
+
 export interface Gear {
   id: string;
   name: string;
   category: 'radio' | 'charger' | 'simulator' | 'other';
+  /** Left out while it is still here. */
+  gone?: GearGone;
   /** "4-in-1 module, AG01 Hall CNC gimbals". */
   details?: string;
   /** YYYY-MM-DD */
