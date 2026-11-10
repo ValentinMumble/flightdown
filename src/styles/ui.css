@@ -332,6 +332,11 @@
   flex-wrap: wrap;
 }
 
+/* A toggle chip in the toolbar: as tall as the fields beside it. */
+.toolbar > .chip {
+  align-self: stretch;
+}
+
 /* A page's filters: the toolbar, then the chips under it. */
 .filters {
   display: flex;
@@ -679,6 +684,35 @@ input[type='date'].input {
   font-family: var(--display);
   font-size: 20px;
   font-weight: 700;
+}
+
+/* A stepper whose value can also be typed (the pack time): the field looks like the stepper's number. */
+.stepper-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: center;
+  font-family: var(--font);
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper-input:focus {
+  outline: none;
+}
+
+.stepper:focus-within {
+  border-color: rgba(124, 255, 178, 0.45);
+}
+
+/* The chip that shows the rest of a list. */
+.chip.more {
+  color: var(--muted);
+  border-style: dashed;
 }
 
 .form-actions {

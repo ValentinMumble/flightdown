@@ -7,17 +7,18 @@ A flight log for RC helicopters: every sortie, nice stats, the fleet, and what k
 It looks like a helicopter's cockpit seen through a head-up display: near-black, frames marked by corner brackets,
 small monospace labels, one soft green for anything good, a rolling counter of minutes in the air.
 
-- **Cockpit:** the minute counter (it rolls up at each change of tab) beside a rotor that spools up, packs per crash on
-  a tape (all time, and the last 20 sorties), the crash-free run in packs and days, the last three sorties, the helis
-  on the flight line, airtime and the next rung of the skill ladder.
+- **Cockpit:** the minute counter on 3D drums (they roll up at each change of tab) beside a rotor that spools up,
+  packs per crash on a tape (all time, and the last 20 sorties), the crash-free run in packs and days, the last three
+  sorties, the helis on the flight line, airtime and the next rung of the skill ladder.
 - **Sorties:** every sortie as a flight strip, a month at a time. Search notes, parts, places and days; filter by
-  heli, spot, crashes or a broken part.
+  heli, spot, crashes, a broken part or sorties with a radio log.
 - **Photos:** they stay in Apple Photos, in an iCloud shared album with its public website on (its link goes in
   Settings). A sortie shows the album's photos taken that day, or the ones picked in its form.
-- **Log a sortie:** heli, day, packs and time per pack, crashes, broken parts, manoeuvres practised, notes and links.
-  Quick with one hand at the field; changes made without signal wait and sync later.
+- **Log a sortie:** heli, day, packs and time per pack (minus and plus, or typed), crashes, the last flown spots (the
+  rest one tap away), broken parts, manoeuvres practised, notes and links. Quick with one hand at the field; changes
+  made without signal wait and sync later.
 - **Telemetry:** add EdgeTX logs (the radio's `LOGS` folder) to a sortie for voltage, current, signal and throttle
-  traces, a map of the sticks and a replay of them with throttle, current and battery left (with a cursor on the traces), and what the log says: the pack ran flat, how much of it was used, sag per cell, when
+  traces, a map of the sticks and a replay of them with round throttle, current and battery dials (with a cursor on the traces), and what the log says: the pack ran flat, how much of it was used, sag per cell, when
   80 % was used (a timer that fits), pack resistance, the radio link. `npm run logs` brings them from the plugged-in
   radio. Debrief compares every pack's voltage under load.
 - **Debrief:** the learning curve (crashes every 10 packs), milestones, where the heli breaks (a damage map on a heli

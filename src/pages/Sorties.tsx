@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useSearchParams} from 'react-router';
-import {Plus, Search} from 'lucide-react';
+import {Activity, Plus, Search} from 'lucide-react';
 import {useStore} from '../data/store';
 import {Empty, HeliDot, PageHeader, Segmented, useOverlay} from '../components/ui';
 import {FlightStrip} from '../components/SortieRow';
@@ -21,7 +21,7 @@ const plain = (text: string) =>
     .toLowerCase();
 
 /** The pickers of the filter bar, remembered in this browser so the page opens as it was left. */
-const REMEMBERED = ['spot', 'heli', 'crashes'];
+const REMEMBERED = ['spot', 'heli', 'crashes', 'log'];
 const FILTERS_KEY = 'flightdown.sorties.filters';
 /** Any of these in the address: the page was opened on purpose with its own filter, which wins. */
 const FILTERS = [...REMEMBERED, 'part', 'q'];
@@ -53,6 +53,7 @@ export function Sorties() {
   const spotId = params.get('spot') ?? '';
   const part = params.get('part') ?? '';
   const crashes = (params.get('crashes') as CrashFilter | null) ?? 'all';
+  const withLog = params.get('log') === '1';
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -70,6 +71,7 @@ export function Sorties() {
       spot: !saved.spot || doc.spots.some(one => one.id === saved.spot),
       heli: !saved.heli || doc.helis.some(one => one.id === saved.heli),
       crashes: ['crashed', 'clean'].includes(saved.crashes ?? 'crashed'),
+      log: true,
     };
     const next = new URLSearchParams(params);
     for (const key of REMEMBERED) if (saved[key] && known[key]) next.set(key, saved[key]);
@@ -87,6 +89,7 @@ export function Sorties() {
         if (part && !sortie.broken.some(broken => partKey(broken.part) === partKey(part))) return false;
         if (crashes === 'crashed' && !sortie.crashes) return false;
         if (crashes === 'clean' && sortie.crashes !== 0) return false;
+        if (withLog && !sortie.telemetry.length) return false;
         if (!words.length) return true;
         const haystack = plain(
           [
@@ -101,7 +104,7 @@ export function Sorties() {
         );
         return words.every(word => haystack.includes(word));
       });
-  }, [doc.sorties, query, heliId, spotId, part, crashes, heli, spot]);
+  }, [doc.sorties, query, heliId, spotId, part, crashes, withLog, heli, spot]);
 
   const months = useMemo(() => {
     const groups: {month: string; sorties: typeof filtered}[] = [];
@@ -162,6 +165,9 @@ export function Sorties() {
               {value: 'clean', label: 'Clean'},
             ]}
           />
+          <button className="chip" aria-pressed={withLog} onClick={() => setParam('log', withLog ? '' : '1')}>
+            <Activity size={14} /> With log
+          </button>
         </div>
         <div className="chips scroll">
           <button className="chip" aria-pressed={!heliId} onClick={() => setParam('heli', '')}>

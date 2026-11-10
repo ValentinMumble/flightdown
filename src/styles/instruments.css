@@ -96,41 +96,71 @@
     0 0 0 1px var(--bezel-strong);
 }
 
+/*
+ * A digit's window onto its drum: a little taller than a digit, so the faces before and after show as they curve away,
+ * shaded dark towards the top and bottom as a cylinder is. The drum itself is ten faces in 3D (MinuteMeter), each face
+ * a hair taller than the geometry needs (1.1em) so the facets meet with no seam.
+ */
 .hobbs-digit {
-  display: grid;
-  place-items: center;
-  width: 0.72em;
-  border-radius: 4px;
-  background: linear-gradient(to bottom, #1d232c, #0d1015 48%, #05070a 52%, #161b22);
+  position: relative;
+  width: 0.7em;
+  height: 1.45em;
+  overflow: hidden;
+  perspective: 7em;
+  border-radius: 3px;
+  background: #050608;
   color: #f4f6f8;
   font-family: var(--display);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 1.25;
 }
 
-/* A digit's window holds one line; on the first load a reel of digits scrolls through it. */
-.hobbs-digit {
-  height: 1.25em;
-  overflow: hidden;
+.hobbs-digit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.92),
+    rgba(0, 0, 0, 0.35) 24%,
+    rgba(255, 255, 255, 0.05) 46%,
+    rgba(0, 0, 0, 0) 54%,
+    rgba(0, 0, 0, 0.35) 76%,
+    rgba(0, 0, 0, 0.92)
+  );
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.07),
+    inset -1px 0 0 rgba(0, 0, 0, 0.7);
 }
 
-.hobbs-reel {
-  align-self: start;
-  display: flex;
-  flex-direction: column;
+.hobbs-drum {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
   transition-property: transform;
   transition-timing-function: cubic-bezier(0.15, 0.6, 0.2, 1);
 }
 
-.hobbs-reel > span {
-  height: 1.25em;
+.hobbs-drum > span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1.12em;
+  margin-top: -0.56em;
+  line-height: 1.12em;
   text-align: center;
+  background: #171b21;
+  backface-visibility: hidden;
 }
 
 .hobbs-digit.tenth {
-  background: linear-gradient(to bottom, #f4f6f8, #d9dde2 48%, #c4c9cf 52%, #eef1f4);
   color: #0a0c0f;
+}
+
+.hobbs-digit.tenth .hobbs-drum > span {
+  background: #e6e9ed;
 }
 
 .hobbs-point {

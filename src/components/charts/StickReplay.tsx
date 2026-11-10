@@ -4,6 +4,7 @@ import type {TelemetrySeries} from '../../types';
 import {sampleAt} from '../../model/telemetry';
 import {batteryAt, usedMah} from '../../model/battery';
 import {formatNumber, formatTimer} from '../../model/format';
+import {Dial, type DialBand} from '../instruments';
 
 const SIZE = 150;
 /** The trail behind each stick: this many seconds, a point every tenth of one. */
@@ -50,62 +51,19 @@ function Gimbal({points, color, label}: {points: {x: number; y: number}[]; color
   );
 }
 
-/**
- * A vertical gauge the height of a gimbal: ticks every quarter, filled from the bottom to the value, the value above.
- * Throttle in white and current in amber, as their traces.
- */
-function Gauge({
-  value,
-  max,
-  unit,
-  color,
-  label,
-  detail,
-}: {
-  value: number;
-  max: number;
-  unit: string;
-  color: string;
-  label: string;
-  detail?: string;
-}) {
-  const height = SIZE;
-  const share = Math.max(0, Math.min(1, max > 0 ? value / max : 0));
-  return (
-    <figure className="stick gauge-bar">
-      <svg viewBox={`-2 -2 48 ${height + 4}`} role="img" aria-label={`${label}: ${formatNumber(value)} ${unit}`}>
-        <rect x={0} y={0} width={44} height={height} rx={10} className="stick-gate" />
-        {[0.25, 0.5, 0.75].map(tick => (
-          <line
-            key={tick}
-            x1={6}
-            x2={14}
-            y1={height - tick * height}
-            y2={height - tick * height}
-            className="stick-cross"
-          />
-        ))}
-        <rect x={18} y={6} width={14} height={height - 12} rx={4} className="gauge-bar-track" />
-        <rect
-          x={18}
-          y={6 + (height - 12) * (1 - share)}
-          width={14}
-          height={(height - 12) * share}
-          rx={4}
-          fill={color}
-          opacity={0.9}
-        />
-      </svg>
-      <figcaption>
-        <b>{label}</b>
-        <span className="gauge-bar-value">
-          {formatNumber(value, unit === 'A' ? 1 : 0)} {unit}
-        </span>
-        {detail && <span className="gauge-bar-detail">{detail}</span>}
-      </figcaption>
-    </figure>
-  );
+/** A round top for the current dial just above the flight's peak, in at most six steps of 1, 2, 5, 10, 20 or 50 A. */
+function currentScale(peak: number) {
+  const step = [1, 2, 5, 10, 20, 50].find(size => Math.ceil(peak / size) <= 6) ?? 100;
+  return {step, max: Math.max(1, Math.ceil(peak / step)) * step};
 }
+
+/** The battery dial reads like a fuel gauge: empty, half, full. */
+const FUEL: Record<number, string> = {0: 'E', 50: '½', 100: 'F'};
+const BATTERY_BANDS: DialBand[] = [
+  {to: 20, tone: 'warning'},
+  {to: 40, tone: 'caution'},
+  {to: 100, tone: 'good'},
+];
 
 /**
  * The flight played back: the two sticks moving as they did, from the radio's log (mode 2: throttle and rudder on the
@@ -127,8 +85,9 @@ export function StickReplay({
   const {time, channels} = series;
   const end = time[time.length - 1] ?? 0;
   const [second, setSecond] = useState(0);
-  // The current gauge reaches its top at the flight's highest draw.
-  const peakCurrent = useMemo(() => Math.max(1, ...(series.channels.current ?? [0])), [series]);
+  // The current dial ends just past the flight's highest draw, which a bug marks.
+  const peakCurrent = useMemo(() => Math.max(0, ...(series.channels.current ?? [0])), [series]);
+  const amps = currentScale(peakCurrent);
   const used = useMemo(() => usedMah(series), [series]);
   const [capacity, setCapacity] = useState(pack.capacity);
   const [playing, setPlaying] = useState(false);
@@ -192,22 +151,60 @@ export function StickReplay({
       <div className="stick-pair">
         {hasLeft && <Gimbal points={trail('rudder', 'throttle', true)} color="#ffb020" label="Left stick" />}
         <Gimbal points={trail('aileron', 'elevator')} color="#49cfe6" label="Right stick" />
-        {channels.throttle?.length ? (
-          <Gauge value={at('throttle', second)} max={100} unit="%" color="#e8eef5" label="Throttle" />
-        ) : null}
-        {channels.current?.length ? (
-          <Gauge value={at('current', second)} max={peakCurrent} unit="A" color="#ffb020" label="Current" />
-        ) : null}
-        {battery && (
-          <Gauge
-            value={battery.left}
-            max={100}
-            unit="%"
-            color={battery.left < 20 ? '#ff6b6b' : battery.left < 40 ? '#ffb35c' : '#7cffb2'}
-            label="Battery"
-            detail={battery.source === 'capacity' ? `${formatNumber(battery.mahLeft ?? 0)} mAh left` : 'from voltage'}
-          />
-        )}
+        <div className="dial-row">
+          {channels.throttle?.length ? (
+            <figure className="stick dial">
+              <Dial
+                value={at('throttle', second)}
+                max={100}
+                step={20}
+                color="#e8eef5"
+                readout={`${formatNumber(at('throttle', second))} %`}
+                label="Throttle"
+              />
+              <figcaption>
+                <b>Throttle</b>
+              </figcaption>
+            </figure>
+          ) : null}
+          {channels.current?.length ? (
+            <figure className="stick dial">
+              <Dial
+                value={at('current', second)}
+                max={amps.max}
+                step={amps.step}
+                color="#ffb020"
+                readout={`${formatNumber(at('current', second), 1)} A`}
+                label="Current"
+                bug={peakCurrent}
+              />
+              <figcaption>
+                <b>Current</b>
+                <span>peak {formatNumber(peakCurrent, 1)} A</span>
+              </figcaption>
+            </figure>
+          ) : null}
+          {battery && (
+            <figure className="stick dial">
+              <Dial
+                value={battery.left}
+                max={100}
+                step={25}
+                color={battery.left < 20 ? '#ff6b6b' : battery.left < 40 ? '#ffb35c' : '#7cffb2'}
+                readout={`${formatNumber(battery.left)} %`}
+                label="Battery"
+                number={at => FUEL[at] ?? null}
+                bands={BATTERY_BANDS}
+              />
+              <figcaption>
+                <b>Battery</b>
+                <span>
+                  {battery.source === 'capacity' ? `${formatNumber(battery.mahLeft ?? 0)} mAh left` : 'from voltage'}
+                </span>
+              </figcaption>
+            </figure>
+          )}
+        </div>
       </div>
       <div className="replay-controls">
         <button

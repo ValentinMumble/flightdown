@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import {useNavigate} from 'react-router';
-import {Plus, Trash, X} from 'lucide-react';
+import {ChevronDown, ChevronUp, Minus, Plus, Trash, X} from 'lucide-react';
 import type {BrokenPart, Sortie, Spot} from '../../types';
 import {useStore} from '../../data/store';
 import {newId, now} from '../../model/ids';
@@ -10,6 +10,11 @@ import {SKILLS} from '../../model/skills';
 import {sortSorties} from '../../model/stats';
 import {HeliDot, SheetHead, Stepper, useOverlay} from '../ui';
 import {PhotoPicker} from './PhotoPicker';
+
+/** The spots shown before "more": the ones flown last. */
+const SPOTS_SHOWN = 6;
+/** The minus and plus of the pack time move it this many seconds. */
+const TIMER_STEP = 15;
 
 /** Logs a sortie, or edits one: built to be quick at the field, on a phone, with one hand. */
 export function SortieForm({sortie}: {sortie?: Sortie}) {
@@ -23,6 +28,7 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
   const [heliId, setHeliId] = useState(sortie?.heliId ?? last?.heliId ?? doc.helis[0]?.id ?? '');
   const [spotId, setSpotId] = useState<string | undefined>(sortie?.spotId ?? last?.spotId);
   const [newSpot, setNewSpot] = useState('');
+  const [everySpot, setEverySpot] = useState(false);
   const [packs, setPacks] = useState(sortie?.packs ?? last?.packs ?? 3);
   const [timer, setTimer] = useState(
     formatTimer(sortie ? sortie.timer : (findHeli(heliId)?.timer ?? null)).replace('?', ''),
@@ -39,18 +45,20 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
   const helis = doc.helis.filter(
     one => one.status === 'active' || one.status === 'grounded' || one.id === heliId || one.status === 'retired',
   );
+  // Spots flown last first (by their place in the log, so two sorties on one day keep their order), never flown last.
   const spots = useMemo(() => {
-    const lastUse = new Map<string, string>();
-    for (const one of sorted) if (one.spotId) lastUse.set(one.spotId, one.date);
-    return [...doc.spots].sort((left, right) =>
-      (lastUse.get(right.id) ?? '').localeCompare(lastUse.get(left.id) ?? ''),
-    );
+    const lastUse = new Map<string, number>();
+    for (const [index, one] of sorted.entries()) if (one.spotId) lastUse.set(one.spotId, index);
+    return [...doc.spots].sort((left, right) => (lastUse.get(right.id) ?? -1) - (lastUse.get(left.id) ?? -1));
   }, [doc.spots, sorted]);
+  // The chosen spot always shows, even when it is not one of the last flown.
+  const shownSpots = everySpot ? spots : spots.filter((spot, index) => index < SPOTS_SHOWN || spot.id === spotId);
   const suggestions = partSuggestions(heliId, doc.sorties, doc.spares)
     .filter(name => !broken.some(part => partKey(part.part) === partKey(name)))
     .slice(0, 10);
   const otherSkills = [...new Set(doc.sorties.flatMap(one => one.skills))].filter(skill => !SKILLS.includes(skill));
   const seconds = parseTimer(timer);
+  const nudgeTimer = (by: number) => setTimer(formatTimer(Math.max(TIMER_STEP, (seconds ?? 0) + by)));
 
   const pickHeli = (id: string) => {
     setHeliId(id);
@@ -178,14 +186,22 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
         </div>
         <div className="field">
           <label htmlFor="sortie-timer">Time per pack</label>
-          <input
-            id="sortie-timer"
-            className="input tabular"
-            inputMode="numeric"
-            placeholder="4:30"
-            value={timer}
-            onChange={event => setTimer(event.target.value)}
-          />
+          <div className="stepper">
+            <button type="button" aria-label={`${TIMER_STEP} seconds less`} onClick={() => nudgeTimer(-TIMER_STEP)}>
+              <Minus size={16} />
+            </button>
+            <input
+              id="sortie-timer"
+              className="stepper-input"
+              inputMode="numeric"
+              placeholder="4:30"
+              value={timer}
+              onChange={event => setTimer(event.target.value)}
+            />
+            <button type="button" aria-label={`${TIMER_STEP} seconds more`} onClick={() => nudgeTimer(TIMER_STEP)}>
+              <Plus size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -210,7 +226,7 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
       <div className="field">
         <span className="field-label">Spot</span>
         <div className="chips">
-          {spots.map(spot => (
+          {shownSpots.map(spot => (
             <button
               key={spot.id}
               type="button"
@@ -224,6 +240,12 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
               {spot.emoji} {spot.name}
             </button>
           ))}
+          {spots.length > SPOTS_SHOWN && (
+            <button type="button" className="chip more" onClick={() => setEverySpot(!everySpot)}>
+              {everySpot ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              {everySpot ? 'Fewer' : `${spots.length - shownSpots.length} more`}
+            </button>
+          )}
         </div>
         <input
           className="input"

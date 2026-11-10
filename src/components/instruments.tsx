@@ -74,34 +74,57 @@ const MAX_TURNS = 3;
 /** Waiting: the log is not loaded yet (zero minutes), so the roll waits for the real number. */
 type RollPhase = 'waiting' | 'ready' | 'rolling' | 'still';
 
+/** A drum's ten faces make a decagon, each face one digit high (em): this far from its axle. */
+const FACE = 1.1;
+const AXLE = FACE / (2 * Math.tan(Math.PI / 10));
+
 /**
- * One digit as a reel: the digits from 0 up to its own, after as many full turns as an odometer counting up from zero
- * would make (capped), scrolled from the first to the last.
+ * Where each drum stands, left to right, in digits turned. The last one creeps on with the seconds, and a drum moves
+ * the one on its left only while it turns from 9 to 0, as the gears of a real counter carry.
  */
-function Reel({digit, turns, phase}: {digit: number; turns: number; phase: RollPhase}) {
-  const strip = Array.from({length: turns * 10 + digit + 1}, (_, index) => index % 10);
+function drumPositions(seconds: number, places: number) {
+  const exact = seconds / 60;
+  let lower = exact % 10;
+  const positions = [lower];
+  for (let place = 1; place < places; place++) {
+    lower = (Math.floor(exact / 10 ** place) % 10) + Math.max(0, lower - 9);
+    positions.unshift(lower);
+  }
+  return positions;
+}
+
+/**
+ * One digit as a drum seen through its window: the digits round a cylinder, the one before and the one after curving
+ * away above and below. On the first load it rolls up from zero, after as many full turns as a counter counting up from
+ * zero would make (capped).
+ */
+function Drum({position, turns, phase}: {position: number; turns: number; phase: RollPhase}) {
+  const turned = phase === 'rolling' ? turns * 10 + position : phase === 'still' ? position : 0;
   return (
     <span
-      className="hobbs-reel"
+      className="hobbs-drum"
       style={{
-        transform: `translateY(${phase === 'rolling' ? -(strip.length - 1) * 1.25 : 0}em)`,
-        transitionDuration: `${900 + turns * 300}ms`,
+        transform: `translateZ(-${AXLE.toFixed(4)}em) rotateX(${(turned * 36).toFixed(2)}deg)`,
+        transitionDuration: phase === 'rolling' ? `${900 + turns * 300}ms` : '0ms',
       }}
     >
-      {strip.map((value, index) => (
-        <span key={index}>{value}</span>
+      {Array.from({length: 10}, (_, digit) => (
+        <span key={digit} style={{transform: `rotateX(${-digit * 36}deg) translateZ(${AXLE.toFixed(4)}em)`}}>
+          {digit}
+        </span>
       ))}
     </span>
   );
 }
 
 /**
- * The airtime counter: rolling digits of whole minutes in the air, the last one lit as it turns, like the hour meter
- * of a real aircraft but counting minutes. Each time it appears (a change of tab) the digits roll up from zero.
+ * The airtime counter: drums of minutes in the air, the last one white and creeping on with the seconds, like the hour
+ * meter of a real aircraft but counting minutes. Each time it appears (a change of tab) the drums roll up from zero.
  */
 export function MinuteMeter({seconds}: {seconds: number}) {
   const minutes = Math.floor(seconds / 60);
   const digits = String(minutes).padStart(5, '0').split('');
+  const positions = drumPositions(seconds, digits.length);
   const [phase, setPhase] = useState<RollPhase>(() => (minutes === 0 ? 'waiting' : firstPhase()));
 
   useEffect(() => {
@@ -117,7 +140,7 @@ export function MinuteMeter({seconds}: {seconds: number}) {
       return () => cancelAnimationFrame(frame);
     }
     if (phase === 'rolling') {
-      // Once the reels have settled, plain digits again.
+      // Once the drums have settled, they stand still on the same faces without the extra turns.
       const done = window.setTimeout(() => setPhase('still'), 900 + MAX_TURNS * 300 + 100);
       return () => window.clearTimeout(done);
     }
@@ -130,16 +153,12 @@ export function MinuteMeter({seconds}: {seconds: number}) {
       aria-label={`${minutes.toLocaleString('en-GB')} minutes in the air`}
       title={formatAirtime(seconds, true)}
     >
-      {digits.map((digit, index) => {
+      {digits.map((_, index) => {
         const place = digits.length - 1 - index;
         const turns = Math.min(MAX_TURNS, Math.floor(minutes / 10 ** (place + 1)));
         return (
           <span key={index} className={`hobbs-digit ${index === digits.length - 1 ? 'tenth' : ''}`}>
-            {phase === 'ready' || phase === 'rolling' ? (
-              <Reel digit={Number(digit)} turns={turns} phase={phase} />
-            ) : (
-              digit
-            )}
+            <Drum position={positions[index]} turns={turns} phase={phase} />
           </span>
         );
       })}
@@ -185,10 +204,114 @@ function around(centre: number, radius: number, angle: number) {
   return {x: centre + radius * Math.sin(radians), y: centre - radius * Math.cos(radians)};
 }
 
+/** An arc of that circle, clockwise from one angle to the other. */
 function sweep(centre: number, radius: number, from: number, to: number) {
   const start = around(centre, radius, from);
   const end = around(centre, radius, to);
-  return `M${start.x.toFixed(2)},${start.y.toFixed(2)} A${radius},${radius} 0 0 1 ${end.x.toFixed(2)},${end.y.toFixed(2)}`;
+  const large = to - from > 180 ? 1 : 0;
+  return `M${start.x.toFixed(2)},${start.y.toFixed(2)} A${radius},${radius} 0 ${large} 1 ${end.x.toFixed(2)},${end.y.toFixed(2)}`;
+}
+
+/** A dial's scale runs clockwise from half past seven (empty) to half past four (full), as on an aircraft's gauges. */
+const DIAL_FROM = -135;
+const DIAL_SWEEP = 270;
+
+export type DialBand = {to: number; tone: 'good' | 'caution' | 'warning'};
+
+/**
+ * A round engine instrument, as on a helicopter's panel: a 270° scale with ticks and numbers, coloured range arcs where
+ * the scale has them (green, amber, red), a needle, and the exact value in a box under the hub. A bug on the rim marks
+ * a second value, such as the highest the needle went. The scale ends on a whole number of steps.
+ */
+export function Dial({
+  value,
+  max,
+  step,
+  minor = 2,
+  color,
+  readout,
+  label,
+  number = String,
+  bands = [],
+  bug,
+}: {
+  value: number;
+  max: number;
+  /** The gap between numbered ticks, with `minor` ticks to each. */
+  step: number;
+  minor?: number;
+  color: string;
+  readout: string;
+  label: string;
+  /** The number printed by a major tick, or null to leave it bare. */
+  number?: (at: number) => string | null;
+  bands?: DialBand[];
+  bug?: number;
+}) {
+  const angle = (at: number) => DIAL_FROM + (Math.max(0, Math.min(max, at)) / max) * DIAL_SWEEP;
+  const count = Math.round(max / step) * minor;
+  const ticks = Array.from({length: count + 1}, (_, index) => ({
+    at: (index * step) / minor,
+    major: index % minor === 0,
+  }));
+  const edge = (at: number, radius: number) => around(50, radius, angle(at));
+  return (
+    <svg viewBox="0 0 100 100" className="dial-face" role="img" aria-label={`${label}: ${readout}`}>
+      <circle cx={50} cy={50} r={48} className="stick-gate" />
+      <circle cx={50} cy={50} r={45.5} className="dial-lip" />
+      <path d={sweep(50, 41, DIAL_FROM, DIAL_FROM + DIAL_SWEEP)} className="dial-track" />
+      {bands.map((band, index) => (
+        <path
+          key={band.to}
+          d={sweep(50, 43.4, angle(bands[index - 1]?.to ?? 0), angle(band.to))}
+          className={`dial-band ${band.tone}`}
+        />
+      ))}
+      {ticks.map(({at, major}) => {
+        const outer = edge(at, 41);
+        const inner = edge(at, major ? 34 : 37.5);
+        const text = major ? number(at) : null;
+        const spot = edge(at, 27);
+        return (
+          <g key={at}>
+            <line
+              x1={outer.x}
+              y1={outer.y}
+              x2={inner.x}
+              y2={inner.y}
+              className={major ? 'dial-tick major' : 'dial-tick'}
+            />
+            {text && (
+              <text x={spot.x} y={spot.y} className="dial-number">
+                {text}
+              </text>
+            )}
+          </g>
+        );
+      })}
+      {bug !== undefined && (
+        <polygon
+          points={[edge(bug, 41.5), around(50, 47, angle(bug) - 4), around(50, 47, angle(bug) + 4)]
+            .map(point => `${point.x.toFixed(2)},${point.y.toFixed(2)}`)
+            .join(' ')}
+          fill={color}
+          className="dial-bug"
+        />
+      )}
+      <rect x={32} y={75.5} width={36} height={13} rx={2.5} className="dial-window" />
+      <text x={50} y={82.3} className="dial-readout">
+        {readout}
+      </text>
+      <path
+        d="M50 11 L51.5 50 L51 59 L49 59 L48.5 50 Z"
+        fill={color}
+        transform={`rotate(${angle(value)} 50 50)`}
+        className="dial-needle"
+      />
+      <circle cx={50} cy={50} r={4.4} className="dial-hub" />
+      <circle cx={50} cy={50} r={1.5} className="dial-pin" />
+    </svg>
+  );
 }
 
 const MARK_ANGLE = 40;
