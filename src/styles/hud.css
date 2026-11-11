@@ -601,6 +601,15 @@
     width: 100%;
     height: auto;
   }
+
+  /* A dial a third of a phone wide: only empty, half and full are numbered, large enough to read. */
+  .dial-number {
+    font-size: 10.5px;
+  }
+
+  .dial-number:not(.key) {
+    display: none;
+  }
 }
 
 .replay-footer {

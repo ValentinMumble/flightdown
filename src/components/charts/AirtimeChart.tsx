@@ -42,6 +42,9 @@ export function AirtimeChart({months, short = false}: {months: MonthTally[]; sho
   const {heli} = useStore();
   const color = useSeriesColor();
   const ink = useChartInk();
+  // A quiet stretch, under 2 hours in its busiest month, is drawn in minutes so its columns still show.
+  const inMinutes = Math.max(0, ...months.map(month => month.airtime)) < 2 * 3600;
+  const scale = inMinutes ? 60 : 3600;
 
   const {rows, keys} = useMemo(() => {
     const totalsByHeli = new Map<string, number>();
@@ -57,16 +60,16 @@ export function AirtimeChart({months, short = false}: {months: MonthTally[]; sho
     const ordered = shown.sort((left, right) => (heli(left)?.color ?? 9) - (heli(right)?.color ?? 9));
     const seriesKeys = folded ? [...ordered, OTHER] : ordered;
     const data = months.map(month => {
-      const row: Record<string, number | string> = {month: month.month, total: month.airtime / 3600};
+      const row: Record<string, number | string> = {month: month.month, total: month.airtime / scale};
       for (const key of seriesKeys) row[key] = 0;
       for (const [id, seconds] of Object.entries(month.byHeli)) {
         const key = seriesKeys.includes(id) ? id : OTHER;
-        row[key] = (row[key] as number) + seconds / 3600;
+        row[key] = (row[key] as number) + seconds / scale;
       }
       return row;
     });
     return {rows: data, keys: seriesKeys};
-  }, [months, heli]);
+  }, [months, heli, scale]);
 
   const topOf = (row: Record<string, number | string>) => [...keys].reverse().find(key => (row[key] as number) > 0);
   const label = (key: string) => (key === OTHER ? 'Other helis' : (heli(key)?.name ?? 'Unknown'));
@@ -94,7 +97,7 @@ export function AirtimeChart({months, short = false}: {months: MonthTally[]; sho
               tickLine={false}
               axisLine={false}
               allowDecimals={false}
-              tickFormatter={(value: number) => `${value} h`}
+              tickFormatter={(value: number) => `${value} ${inMinutes ? 'min' : 'h'}`}
               width={52}
             />
             <Tooltip
@@ -113,12 +116,12 @@ export function AirtimeChart({months, short = false}: {months: MonthTally[]; sho
                             <i style={{background: fill(key)}} />
                             {label(key)}
                           </span>
-                          <b>{formatAirtime((row[key] as number) * 3600)}</b>
+                          <b>{formatAirtime((row[key] as number) * scale)}</b>
                         </div>
                       ))}
                     <div className="tooltip-row" style={{marginTop: 4}}>
                       <span>Total</span>
-                      <b>{formatAirtime((row.total as number) * 3600)}</b>
+                      <b>{formatAirtime((row.total as number) * scale)}</b>
                     </div>
                   </div>
                 );

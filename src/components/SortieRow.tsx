@@ -21,7 +21,16 @@ export function CrashPill({crashes}: {crashes: number | null}) {
  * A sortie as a flight strip, the paper strip air traffic controllers keep for each flight: the heli's colour on
  * the holder, then the day, the heli and spot, the packs, the airtime and how it ended.
  */
-export function FlightStrip({sortie, large = false}: {sortie: Sortie; large?: boolean}) {
+export function FlightStrip({
+  sortie,
+  large = false,
+  inMonth = false,
+}: {
+  sortie: Sortie;
+  large?: boolean;
+  /** The strip sits under its month's heading, so it shows the weekday and the day only. */
+  inMonth?: boolean;
+}) {
   const {heli, spot} = useStore();
   const color = useSeriesColor();
   const one = heli(sortie.heliId);
@@ -38,9 +47,11 @@ export function FlightStrip({sortie, large = false}: {sortie: Sortie; large?: bo
       <span className="strip-date" title={formatDay(sortie.date, {year: true})}>
         <span>{WEEKDAYS[date.getDay()]}</span>
         <b>{String(date.getDate()).padStart(2, '0')}</b>
-        <span>
-          {MONTHS[date.getMonth()]} {date.getFullYear()}
-        </span>
+        {!inMonth && (
+          <span>
+            {MONTHS[date.getMonth()]} ’{String(date.getFullYear()).slice(2)}
+          </span>
+        )}
       </span>
       <span className="strip-main">
         <span className="strip-heli">{one?.name ?? 'Unknown heli'}</span>

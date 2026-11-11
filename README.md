@@ -9,9 +9,10 @@ small monospace labels, one soft green for anything good, a rolling counter of m
 
 - **Cockpit:** the minute counter on 3D drums (they roll up at each change of tab) beside a rotor that spools up,
   packs per crash on a tape (all time, and the last 20 sorties), the crash-free run in packs and days, the last three
-  sorties, the helis on the flight line, airtime and the next rung of the skill ladder.
+  sorties, the helis on the flight line, airtime over the two years up to the last sortie and the next rung of the
+  skill ladder.
 - **Sorties:** every sortie as a flight strip, a month at a time. Search notes, parts, places and days; filter by
-  heli, spot, crashes, a broken part or sorties with a radio log.
+  heli, spot, crashes, a broken part or sorties with a radio log (behind one Filters button on a phone).
 - **Photos:** they stay in Apple Photos, in an iCloud shared album with its public website on (its link goes in
   Settings). A sortie shows the album's photos taken that day, or the ones picked in its form.
 - **Log a sortie:** heli, day, packs and time per pack (minus and plus, or typed), crashes, the last flown spots (the
@@ -19,19 +20,20 @@ small monospace labels, one soft green for anything good, a rolling counter of m
   made without signal wait and sync later.
 - **Telemetry:** add EdgeTX logs (the radio's `LOGS` folder) to a sortie. It shows a card per pack (files a few
   seconds apart are one pack, the radio splits a log when the link drops), and for the chosen pack: voltage, current,
-  signal and throttle traces, a map of the sticks and a replay of them with round throttle, current and battery dials
-  (with a cursor on the traces), and what the log says: the pack ran flat, how much of it was used, sag per cell, when
-  80 % was used (a timer that fits), pack resistance, the radio link. `npm run logs` brings them from the plugged-in
-  radio. Debrief compares every pack's voltage under load.
-- **Debrief:** the learning curve (crashes every 10 packs), milestones, where the heli breaks (a damage map on a heli
-  drawing), what brings it down (crash causes read from the notes), the fleet's history, the skill ladder, the flying
-  season, packs a sortie, spots and hours by heli.
+  signal and throttle as lanes of one recorder (each reads out at the cursor), a map of the sticks and a replay of them
+  with round throttle, current and battery dials (with a cursor on the lanes), and what the log says: the pack ran
+  flat, how much of it was used, sag per cell, when 80 % was used (a timer that fits), pack resistance, the radio link.
+  `npm run logs` brings them from the plugged-in radio. Debrief compares every pack's voltage under load.
+- **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
+  heli breaks (a damage map on a heli drawing), what brings it down (crash causes read from the notes), the fleet's
+  history, the skill ladder, the flying season, packs a sortie, spots and hours by heli.
 - **Hangar:** the flight line, the radio and other gear, the helis that left (stamped sold or lost), spare parts whose
-  stock goes down as you log broken parts, packs and their cycles, notes. Each heli has a data plate page and its own chart
-  colour, picked in the Hangar; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac; others are cut out in
-  the page).
-- **Spots:** every flying spot on a satellite map. Set a spot's GPS point by tapping the map, pasting coordinates or a
-  Maps link, or from the phone's position; each sortie then shows its spot from above.
+  stock goes down as you log broken parts, packs and their cycles, notes. Each heli has a data plate page and its own
+  chart colour (tap its dot in the Hangar to change it); photos are lifted out of their background (`npm run cutouts`,
+  with Apple's Vision on the Mac; others are cut out in the page).
+- **Spots:** every flying spot on a satellite map (spots close together share a pin with a count until you zoom in).
+  Set a spot's GPS point by tapping the map, pasting coordinates or a Maps link, or from the phone's position; each
+  sortie then shows its spot from above.
 - **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`) with a round log button; swipe sideways to
   change tab. Add it to the home screen: it opens like an app, with the 🚁 icon, and offline at the field.
 

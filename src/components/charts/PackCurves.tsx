@@ -4,7 +4,8 @@ import {CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tool
 import type {Sortie, TelemetryLog, TelemetrySeries} from '../../types';
 import {useStore} from '../../data/store';
 import {estimateCells, packOf} from '../../model/insights';
-import {formatDay, formatNumber, formatTimer} from '../../model/format';
+import {formatDay, formatNumber, formatTimer, fromDay, shortMonth} from '../../model/format';
+import {groupPacks} from '../../model/packs';
 import {useChartInk, useSeriesColor} from '../colors';
 
 const IDLE_AMPS = 2;
@@ -85,6 +86,17 @@ export function PackCurves({sorties}: {sorties: Sortie[]}) {
 
   const name = (curve: Curve) =>
     `${formatDay(curve.sortie.date, {weekday: false, year: true})}, ${curve.log.start?.slice(11, 16) ?? ''}`;
+  // "28 Apr ’23 · pack 2": short enough for a phone's table, the pack counted as the sortie's cards count it, and a
+  // letter for each file of a pack the radio logged in several (2a, 2b).
+  const shortName = (curve: Curve) => {
+    const packs = groupPacks(curve.sortie.telemetry);
+    const index = packs.findIndex(pack => pack.files.some(file => file.id === curve.log.id));
+    const day = `${fromDay(curve.sortie.date).getDate()} ${shortMonth(curve.sortie.date)} ’${curve.sortie.date.slice(2, 4)}`;
+    if (index < 0 || (packs.length < 2 && packs[index].files.length < 2)) return day;
+    const files = packs[index].files;
+    const part = files.length > 1 ? 'abcdefghij'[files.findIndex(file => file.id === curve.log.id)] : '';
+    return `${day} · pack ${index + 1}${part}`;
+  };
   const rows = new Map<number, Record<string, number>>();
   for (const curve of curves) {
     for (const point of curve.points) {
@@ -122,13 +134,13 @@ export function PackCurves({sorties}: {sorties: Sortie[]}) {
               y={3.5}
               stroke="var(--caution)"
               strokeDasharray="4 4"
-              label={{value: 'Land 3.5 V', fill: '#ffb020', fontSize: 11, position: 'insideTopRight'}}
+              label={{value: 'Land 3.5 V', fill: '#ffb020', fontSize: 11, position: 'insideBottomLeft'}}
             />
             <ReferenceLine
               y={3.3}
               stroke="var(--warning)"
               strokeDasharray="4 4"
-              label={{value: 'Never 3.3 V', fill: '#ff4d4f', fontSize: 11, position: 'insideBottomRight'}}
+              label={{value: 'Never 3.3 V', fill: '#ff4d4f', fontSize: 11, position: 'insideTopLeft'}}
             />
             <Tooltip
               cursor={{stroke: ink.axis}}
@@ -178,9 +190,10 @@ export function PackCurves({sorties}: {sorties: Sortie[]}) {
         </div>
         {curves.map((curve, index) => (
           <Link key={curve.key} to={`/sorties/${curve.sortie.id}`} className="spot-row">
-            <span className="name">
-              <i className="dot" style={{background: color(index), marginRight: 8}} />
-              {name(curve)} <span className="muted">· {heli(curve.sortie.heliId)?.name}</span>
+            <span className="name with-dot">
+              <i className="dot" style={{background: color(index)}} />
+              <span className="name-main">{shortName(curve)}</span>
+              <small className="name-note">{heli(curve.sortie.heliId)?.name}</small>
             </span>
             <span>{formatTimer(curve.flight)}</span>
             <span>{formatNumber(curve.average, 1)} A</span>

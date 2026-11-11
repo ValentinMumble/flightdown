@@ -160,7 +160,7 @@ export function TelemetryPacks({
             ))}
           </div>
         )}
-        <div className="telemetry-figures">
+        <div className="figures telemetry-figures">
           {figures.map(figure => (
             <div key={figure.label}>
               <div className="figure-label">{figure.label}</div>

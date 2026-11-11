@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useSearchParams} from 'react-router';
-import {Activity, Plus, Search} from 'lucide-react';
+import {Activity, Plus, Search, SlidersHorizontal} from 'lucide-react';
 import {useStore} from '../data/store';
 import {Empty, HeliDot, PageHeader, Segmented, useOverlay} from '../components/ui';
 import {FlightStrip} from '../components/SortieRow';
@@ -54,6 +54,9 @@ export function Sorties() {
   const part = params.get('part') ?? '';
   const crashes = (params.get('crashes') as CrashFilter | null) ?? 'all';
   const withLog = params.get('log') === '1';
+  // On a phone the pickers fold behind one button, so the strips start near the top.
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilters = [spotId, crashes !== 'all', withLog, heliId].filter(Boolean).length;
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -147,29 +150,40 @@ export function Sorties() {
               }}
             />
           </label>
-          <select className="input" value={spotId} onChange={event => setParam('spot', event.target.value)}>
-            <option value="">Every spot</option>
-            {sortSpots(doc.spots).map(one => (
-              <option key={one.id} value={one.id}>
-                {one.emoji} {one.name}
-              </option>
-            ))}
-          </select>
-          <Segmented<CrashFilter>
-            label="Crashes"
-            value={crashes}
-            onChange={value => setParam('crashes', value)}
-            options={[
-              {value: 'all', label: 'All'},
-              {value: 'crashed', label: 'Crashed'},
-              {value: 'clean', label: 'Clean'},
-            ]}
-          />
-          <button className="chip" aria-pressed={withLog} onClick={() => setParam('log', withLog ? '' : '1')}>
-            <Activity size={14} /> With log
+          <button
+            className="chip filter-toggle phone-only"
+            aria-expanded={showFilters}
+            aria-pressed={activeFilters > 0}
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <SlidersHorizontal size={14} /> Filters
+            {activeFilters > 0 && <span className="filter-count">{activeFilters}</span>}
           </button>
+          <div className={showFilters ? 'filter-set open' : 'filter-set'}>
+            <select className="input" value={spotId} onChange={event => setParam('spot', event.target.value)}>
+              <option value="">Every spot</option>
+              {sortSpots(doc.spots).map(one => (
+                <option key={one.id} value={one.id}>
+                  {one.emoji} {one.name}
+                </option>
+              ))}
+            </select>
+            <Segmented<CrashFilter>
+              label="Crashes"
+              value={crashes}
+              onChange={value => setParam('crashes', value)}
+              options={[
+                {value: 'all', label: 'All'},
+                {value: 'crashed', label: 'Crashed'},
+                {value: 'clean', label: 'Clean'},
+              ]}
+            />
+            <button className="chip" aria-pressed={withLog} onClick={() => setParam('log', withLog ? '' : '1')}>
+              <Activity size={14} /> With log
+            </button>
+          </div>
         </div>
-        <div className="chips scroll">
+        <div className={showFilters ? 'chips scroll filter-set open' : 'chips scroll filter-set'}>
           <button className="chip" aria-pressed={!heliId} onClick={() => setParam('heli', '')}>
             Every heli
           </button>
@@ -183,12 +197,14 @@ export function Sorties() {
               <HeliDot heli={one} /> {one.name}
             </button>
           ))}
-          {part && (
+        </div>
+        {part && (
+          <div className="chips">
             <button className="chip" aria-pressed onClick={() => setParam('part', '')}>
               Broke: {part} ✕
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="summary-line">
@@ -210,7 +226,7 @@ export function Sorties() {
               </div>
               <div className="strip-board">
                 {group.sorties.map(sortie => (
-                  <FlightStrip key={sortie.id} sortie={sortie} />
+                  <FlightStrip key={sortie.id} sortie={sortie} inMonth />
                 ))}
               </div>
             </section>

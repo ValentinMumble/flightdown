@@ -19,9 +19,16 @@ const TRACE: Partial<Record<Channel, string>> = {
 
 const ORDER: Channel[] = ['voltage', 'current', 'capacity', 'rssi', 'throttle'];
 
+/** Below this the radio lost the voltage for a sample. */
+const NO_VOLTAGE = 0.5;
+
+/** A sensor's value as the radio shows it: volts to the hundredth, amps to the tenth, the rest whole. */
+const reading = (channel: Channel, value: number) =>
+  channel === 'voltage' ? value.toFixed(2) : channel === 'current' ? value.toFixed(1) : String(Math.round(value));
+
 /**
- * One pack's log as small multiples: one chart a sensor, all on the same time axis, the hover shared between them
- * (never two scales on one chart), then the sticks.
+ * One pack's log as a flight data recorder: a thin lane a sensor, stacked on one time axis, each with its own scale
+ * (never two on one chart) and its reading at the shared cursor, then the sticks.
  */
 export function TelemetryCharts({
   series,
@@ -68,21 +75,29 @@ export function TelemetryCharts({
           ))}
         </div>
       )}
-      <div className="telemetry-grid">
-        {channels.map(channel => {
+      <div className="telemetry-lanes">
+        {channels.map((channel, index) => {
           const {label, unit} = CHANNELS[channel];
           const stroke = TRACE[channel] ?? '#e8eef5';
+          const last = index === channels.length - 1;
+          const values = (series.channels[channel] ?? []).filter(value => channel !== 'voltage' || value >= NO_VOLTAGE);
+          const low = values.length ? Math.min(...values) : 0;
+          const high = values.length ? Math.max(...values) : 0;
           return (
-            <div key={channel} className="telemetry-chart">
+            <div key={channel} className="telemetry-lane">
               <div className="telemetry-label">
-                {label} <span className="muted">({unit})</span>
+                <span className="lane-key" style={{background: stroke}} aria-hidden />
+                {label.toLowerCase()}
+                <span className="lane-range">
+                  {reading(channel, low)} to {reading(channel, high)} {unit}
+                </span>
               </div>
-              <div className="chart short">
+              <div className={last ? 'lane-chart axis' : 'lane-chart'}>
                 <ResponsiveContainer>
                   <AreaChart
                     data={rows}
                     syncId={`telemetry-${series.id}`}
-                    margin={{top: 6, right: 6, bottom: 0, left: -14}}
+                    margin={{top: 4, right: 6, bottom: 0, left: 0}}
                   >
                     <CartesianGrid vertical={false} stroke={ink.grid} />
                     <XAxis
@@ -93,28 +108,30 @@ export function TelemetryCharts({
                       tickLine={false}
                       axisLine={{stroke: ink.axis}}
                       minTickGap={24}
+                      hide={!last}
                     />
                     <YAxis
                       tickLine={false}
                       axisLine={false}
                       domain={channel === 'voltage' ? ['auto', 'auto'] : [0, 'auto']}
-                      width={46}
+                      width={34}
+                      tickCount={3}
                       tickFormatter={(value: number) => String(Math.round(value * 10) / 10)}
                     />
                     <Tooltip
                       cursor={{stroke: ink.axis}}
+                      position={{y: 0}}
+                      allowEscapeViewBox={{x: false, y: true}}
+                      isAnimationActive={false}
                       content={({active, payload}) => {
                         const row = payload?.[0]?.payload as Record<string, number> | undefined;
-                        if (!active || !row) return null;
+                        if (!active || !row || row[channel] === undefined) return null;
                         return (
-                          <div className="tooltip">
-                            <div className="tooltip-title">{formatTimer(row.time)}</div>
-                            <div className="tooltip-row">
-                              <span>{label}</span>
-                              <b>
-                                {row[channel]} {unit}
-                              </b>
-                            </div>
+                          <div className="lane-reading" style={{borderColor: stroke}}>
+                            {index === 0 && <span>{formatTimer(row.time)}</span>}
+                            <b>
+                              {reading(channel, row[channel])} {unit}
+                            </b>
                           </div>
                         );
                       }}
@@ -124,13 +141,13 @@ export function TelemetryCharts({
                       type="monotone"
                       dataKey={channel}
                       stroke={stroke}
-                      strokeWidth={2}
+                      strokeWidth={1.6}
                       fill={stroke}
                       fillOpacity={0.1}
                       dot={false}
-                      activeDot={{r: 4, stroke: ink.surface, strokeWidth: 2}}
+                      activeDot={{r: 3.5, stroke: ink.surface, strokeWidth: 2}}
                       isAnimationActive={false}
-                      style={{filter: `drop-shadow(0 0 4px ${stroke})`}}
+                      style={{filter: `drop-shadow(0 0 3px ${stroke})`}}
                     />
                   </AreaChart>
                 </ResponsiveContainer>

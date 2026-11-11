@@ -10,8 +10,8 @@ import {VisitorBanner} from '../components/VisitorBanner';
 import {AirtimeChart} from '../components/charts/AirtimeChart';
 import {SkillLadder} from '../components/charts/SkillLadder';
 import {useSeriesColor} from '../components/colors';
-import {ago, formatAirtime, formatDay, formatRate, plural, today} from '../model/format';
-import {daysSinceCrash, groupBy, monthly, packsSinceCrash, sortSorties, streaks, totals} from '../model/stats';
+import {ago, formatAirtime, formatDay, formatMonth, formatRate, plural, today} from '../model/format';
+import {daysSinceCrash, groupBy, monthly, monthOf, packsSinceCrash, sortSorties, streaks, totals} from '../model/stats';
 import {spareStock} from '../model/parts';
 import {HeliPhoto} from '../components/HeliPhoto';
 
@@ -24,7 +24,10 @@ export function Home() {
   const all = useMemo(() => totals(sorties), [sorties]);
   const recent = useMemo(() => totals(sorties.slice(-20)), [sorties]);
   const runs = useMemo(() => streaks(sorties), [sorties]);
-  const months = useMemo(() => monthly(sorties, today().slice(0, 7)).slice(-24), [sorties]);
+  // Two years up to now, or up to the last sortie after a long break, so the chart never sits empty.
+  const lastMonth = sorties.length ? monthOf(sorties[sorties.length - 1].date) : monthOf(today());
+  const months = useMemo(() => monthly(sorties, lastMonth).slice(-24), [sorties, lastMonth]);
+  const lastMonthIsThisMonth = lastMonth === monthOf(today());
   const tallies = useMemo(
     () => new Map(groupBy(sorties, sortie => sortie.heliId).map(group => [group.key, group])),
     [sorties],
@@ -141,7 +144,7 @@ export function Home() {
           className="span-7"
           action={
             <button className="button small solid" onClick={logSortie}>
-              Log the next
+              Log a sortie
             </button>
           }
         >
@@ -201,7 +204,15 @@ export function Home() {
           )}
         </Panel>
 
-        <Panel label="Airtime" note="The last two years, month by month" className="span-8">
+        <Panel
+          label="Airtime"
+          note={
+            lastMonthIsThisMonth
+              ? 'The last two years, month by month'
+              : `The two years up to the last sortie, in ${formatMonth(lastMonth, true)}`
+          }
+          className="span-8"
+        >
           <AirtimeChart months={months} short />
         </Panel>
 

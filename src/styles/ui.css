@@ -332,6 +332,64 @@
   flex-wrap: wrap;
 }
 
+.debrief-toolbar {
+  justify-content: space-between;
+}
+
+/* The debrief's sections, under the top bar: regular glass, as the page scrolls under it. */
+.jump-bar {
+  position: sticky;
+  z-index: 15;
+  display: flex;
+  gap: 4px;
+  margin: 14px 0;
+  padding: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-radius: 12px;
+  border: 1px solid var(--bezel);
+  background-color: var(--glass-regular);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+
+.jump-bar button {
+  flex: 1 0 auto;
+  border: 0;
+  border-radius: 9px;
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
+.jump-bar button[aria-current='true'] {
+  background: linear-gradient(to bottom, rgba(124, 255, 178, 0.2), rgba(124, 255, 178, 0.06));
+  box-shadow: inset 0 0 0 1px rgba(124, 255, 178, 0.4);
+  color: var(--ink);
+}
+
+@media (max-width: 860px) {
+  .debrief-toolbar {
+    justify-content: flex-start;
+  }
+
+  .debrief-toolbar .input {
+    flex: 1;
+  }
+
+  /* On a phone it runs edge to edge, right under the top bar. */
+  .jump-bar {
+    margin: 0 -14px 12px;
+    padding: 6px 14px;
+    border-radius: 0;
+    border-width: 0 0 1px;
+  }
+}
+
 /* A toggle chip in the toolbar: as tall as the fields beside it. */
 .toolbar > .chip {
   align-self: stretch;
@@ -342,6 +400,42 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* The pickers sit in the toolbar on a wide screen; on a phone they fold behind the Filters button. */
+.filter-set {
+  display: contents;
+}
+
+.filter-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #04110a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@media (max-width: 860px) {
+  .filter-set:not(.open),
+  .chips.filter-set:not(.open) {
+    display: none;
+  }
+
+  .toolbar > .filter-set.open {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .toolbar > .filter-set.open > select {
+    flex: 1;
+  }
 }
 
 /* Chips and the small soft keys */
@@ -768,6 +862,11 @@ input[type='date'].input {
 
 .colour-row .clash {
   color: var(--caution);
+}
+
+.swatch.current {
+  flex: none;
+  cursor: pointer;
 }
 
 .small-note {

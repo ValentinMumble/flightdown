@@ -9,15 +9,17 @@ export function Panel({
   action,
   children,
   className = '',
+  id,
 }: {
   label?: ReactNode;
   note?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
-    <section className={`panel ${className}`}>
+    <section id={id} className={`panel ${className}`}>
       {(label || action) && (
         <div className="panel-head">
           <div>
@@ -282,7 +284,11 @@ export function Dial({
               className={major ? 'dial-tick major' : 'dial-tick'}
             />
             {text && (
-              <text x={spot.x} y={spot.y} className="dial-number">
+              <text
+                x={spot.x}
+                y={spot.y}
+                className={at === 0 || at === max || Math.abs(at - max / 2) < 1e-6 ? 'dial-number key' : 'dial-number'}
+              >
                 {text}
               </text>
             )}

@@ -6,6 +6,16 @@ import {hasLocation, type LatLng} from '../model/geo';
 /** France, for a map with nothing on it yet. */
 const NOWHERE: [number, number] = [46.6, 2.4];
 
+/** Pins closer than this on screen (px) are drawn as one, with a count, until the map is zoomed in. */
+const TOGETHER = 52;
+
+/** A name runs to the right of its pin: pins about this far apart side by side would have their names overlap. */
+const LABEL_WIDTH = 150;
+const LABEL_HEIGHT = 26;
+
+/** A tap on a group of spots zooms in on them up to this; past it, it opens the most flown one. */
+const GROUP_ZOOM = 16;
+
 /** A map with satellite and street layers, sized again whenever its box changes (a sheet sliding in, a rotation). */
 function useMap(element: RefObject<HTMLDivElement | null>, setUp: (map: L.Map) => void) {
   const mapRef = useRef<L.Map | null>(null);
@@ -38,16 +48,25 @@ function useMap(element: RefObject<HTMLDivElement | null>, setUp: (map: L.Map) =
   return mapRef;
 }
 
-/** A round pin with the spot's emoji, bigger where more sorties were flown. */
-function pin(spot: Spot, size: number, faint = false) {
+/** A round pin with the spot's emoji, bigger where more sorties were flown, and a count when it stands for several. */
+function pin(spot: Spot, size: number, faint = false, count = 1) {
   const html = document.createElement('span');
   html.className = `map-pin-mark ${faint ? 'faint' : ''}`;
   html.style.setProperty('--size', `${size}px`);
   html.textContent = spot.emoji ?? '';
+  if (count > 1) {
+    const badge = document.createElement('b');
+    badge.className = 'map-pin-count';
+    badge.textContent = String(count);
+    html.append(badge);
+  }
   return L.divIcon({className: 'map-pin', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2]});
 }
 
-/** Every spot with a location, its name beside it; a tap on one opens it. */
+/**
+ * Every spot with a location, its name beside it; a tap on one opens it. Spots too close to tell apart at this zoom
+ * show as one pin, the most flown one's, with a count: a tap zooms in on them.
+ */
 export function SpotsMap({
   spots,
   sorties,
@@ -67,21 +86,57 @@ export function SpotsMap({
 
   useEffect(() => {
     const current = map.current;
-    if (!current || !layer.current) return;
-    layer.current.clearLayers();
-    const placed = spots.filter(hasLocation);
-    const most = Math.max(1, ...placed.map(spot => sorties.get(spot.id) ?? 0));
-    for (const spot of placed) {
-      const size = Math.round(22 + 20 * Math.sqrt((sorties.get(spot.id) ?? 0) / most));
-      L.marker([spot.lat, spot.lng], {icon: pin(spot, size), title: spot.name})
-        .bindTooltip(spot.name, {permanent: true, direction: 'right', offset: [size / 2, 0], className: 'map-label'})
-        .on('click', () => select.current(spot))
-        .addTo(layer.current);
-    }
+    const group = layer.current;
+    if (!current || !group) return;
+    const flown = (spot: Spot) => sorties.get(spot.id) ?? 0;
+    const placed = spots.filter(hasLocation).sort((left, right) => flown(right) - flown(left));
+    const most = Math.max(1, ...placed.map(flown));
+
+    const draw = () => {
+      group.clearLayers();
+      // The most flown spots first: each one gathers the spots still free near it on screen.
+      const gathered: {lead: (typeof placed)[number]; point: L.Point; members: typeof placed}[] = [];
+      for (const spot of placed) {
+        const point = current.latLngToLayerPoint([spot.lat, spot.lng]);
+        const near = gathered.find(
+          gather =>
+            gather.point.distanceTo(point) < TOGETHER ||
+            (Math.abs(gather.point.x - point.x) < LABEL_WIDTH && Math.abs(gather.point.y - point.y) < LABEL_HEIGHT),
+        );
+        if (near) near.members.push(spot);
+        else gathered.push({lead: spot, point, members: [spot]});
+      }
+      for (const {lead, members} of gathered) {
+        const size = Math.round(22 + 20 * Math.sqrt(flown(lead) / most));
+        const more = members.length - 1;
+        L.marker([lead.lat, lead.lng], {icon: pin(lead, size, false, members.length), title: lead.name})
+          .bindTooltip(more ? `${lead.name} +${more}` : lead.name, {
+            permanent: true,
+            direction: 'right',
+            offset: [size / 2, 0],
+            className: 'map-label',
+          })
+          .on('click', () => {
+            if (more && current.getZoom() < GROUP_ZOOM) {
+              current.fitBounds(L.latLngBounds(members.map(spot => [spot.lat, spot.lng])), {
+                padding: [60, 60],
+                maxZoom: GROUP_ZOOM,
+              });
+            } else select.current(lead);
+          })
+          .addTo(group);
+      }
+    };
+
     if (placed.length === 1) current.setView([placed[0].lat, placed[0].lng], 15);
     if (placed.length > 1) {
       current.fitBounds(L.latLngBounds(placed.map(spot => [spot.lat, spot.lng])), {padding: [48, 48], maxZoom: 15});
     }
+    draw();
+    current.on('zoomend', draw);
+    return () => {
+      current.off('zoomend', draw);
+    };
   }, [map, spots, sorties]);
 
   return <div ref={element} className="spots-map" />;

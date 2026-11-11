@@ -27,6 +27,15 @@ export const SERIES_DARK = [
 ];
 export const SERIES_NAMES = ['Blue', 'Orange', 'Aqua', 'Yellow', 'Pink', 'Green', 'Violet', 'Red', 'White'];
 
+/** The text colour that reads on a fill: near-black on a light one (the white heli), white on the rest. */
+export function inkOn(fill: string) {
+  const channels = [1, 3, 5].map(start => parseInt(fill.slice(start, start + 2), 16) / 255);
+  const [red, green, blue] = channels.map(value =>
+    value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+  );
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue > 0.4 ? '#0b0f14' : '#ffffff';
+}
+
 /** Helis past the first few in a chart fold into this. */
 export const OTHER_LIGHT = '#a6a59f';
 export const OTHER_DARK = '#5f5e5a';

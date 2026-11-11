@@ -1,4 +1,4 @@
-import {useEffect, useMemo} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {Link, useParams, useSearchParams} from 'react-router';
 import {
   BatteryCharging,
@@ -34,7 +34,7 @@ const VIEWS = [
 ];
 
 /** A heli on the flight line: its picture lit in its colour, its stamp, its numbers. */
-export function HeliCard({heli, tally}: {heli: Heli; tally?: GroupTally}) {
+export function HeliCard({heli, tally, wide = false}: {heli: Heli; tally?: GroupTally; wide?: boolean}) {
   const {doc} = useStore();
   const color = useSeriesColor();
   const since = useMemo(
@@ -42,7 +42,11 @@ export function HeliCard({heli, tally}: {heli: Heli; tally?: GroupTally}) {
     [doc.sorties, heli.id],
   );
   return (
-    <Link to={`/helis/${heli.id}`} className="panel heli-card" style={{['--hue' as string]: color(heli.color)}}>
+    <Link
+      to={`/helis/${heli.id}`}
+      className={wide ? 'panel heli-card wide' : 'panel heli-card'}
+      style={{['--hue' as string]: color(heli.color)}}
+    >
       <div className="heli-band">
         {heli.photo ? <HeliPhoto url={heli.photo} /> : <span className="heli-glyph">🚁</span>}
         <Stamp status={heli.status} />
@@ -173,7 +177,7 @@ function Fleet() {
       {flying.length ? (
         <div className="grid grid-auto">
           {flying.map(heli => (
-            <HeliCard key={heli.id} heli={heli} tally={tallies.get(heli.id)} />
+            <HeliCard key={heli.id} heli={heli} tally={tallies.get(heli.id)} wide={flying.length === 1} />
           ))}
         </div>
       ) : (
@@ -239,12 +243,14 @@ function Colours({tallies}: {tallies: Map<string, GroupTally>}) {
     return {first, last: stillHere ? now : (tallies.get(heli.id)?.last ?? first)};
   };
   const helis = [...doc.helis].sort((left, right) => periodOf(left).first.localeCompare(periodOf(right).first));
+  // The heli whose eight colours are open: the others show only their own.
+  const [picking, setPicking] = useState<string | null>(null);
 
   return (
     <>
       <div className="section-head">
         <h2 className="section-title">Colours</h2>
-        <span className="muted small-note">Dimmed: taken by a heli flown in the same months</span>
+        <span className="muted small-note">Tap a colour to change it. Dimmed: taken by a heli flown then</span>
       </div>
       <div className="list">
         {helis.map(heli => {
@@ -272,24 +278,35 @@ function Colours({tallies}: {tallies: Map<string, GroupTally>}) {
                   {clash && <span className="clash"> · same colour as {clash} then</span>}
                 </span>
               </span>
-              <span className="swatches small" role="group" aria-label={`${heli.name}'s colour`}>
-                {SERIES_NAMES.map((label, index) => (
-                  <button
-                    key={label}
-                    type="button"
-                    className="swatch"
-                    aria-label={label}
-                    aria-pressed={index === heli.color}
-                    title={sharing.has(index) ? `${label}, also ${sharing.get(index)} in the same months` : label}
-                    style={{background: color(index), opacity: sharing.has(index) && index !== heli.color ? 0.3 : 1}}
-                    onClick={() => {
-                      if (index === heli.color) return;
-                      put('helis', {...heli, color: index});
-                      toast(`${heli.name} is ${label.toLowerCase()} now`);
-                    }}
-                  />
-                ))}
-              </span>
+              {picking !== heli.id ? (
+                <button
+                  type="button"
+                  className="swatch current"
+                  aria-label={`${heli.name} is ${(SERIES_NAMES[heli.color] ?? 'grey').toLowerCase()}: change it`}
+                  style={{background: color(heli.color)}}
+                  onClick={() => setPicking(heli.id)}
+                />
+              ) : (
+                <span className="swatches small" role="group" aria-label={`${heli.name}'s colour`}>
+                  {SERIES_NAMES.map((label, index) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className="swatch"
+                      aria-label={label}
+                      aria-pressed={index === heli.color}
+                      title={sharing.has(index) ? `${label}, also ${sharing.get(index)} in the same months` : label}
+                      style={{background: color(index), opacity: sharing.has(index) && index !== heli.color ? 0.3 : 1}}
+                      onClick={() => {
+                        setPicking(null);
+                        if (index === heli.color) return;
+                        put('helis', {...heli, color: index});
+                        toast(`${heli.name} is ${label.toLowerCase()} now`);
+                      }}
+                    />
+                  ))}
+                </span>
+              )}
             </div>
           );
         })}
