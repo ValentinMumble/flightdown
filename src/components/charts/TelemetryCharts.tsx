@@ -1,7 +1,6 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useMemo, useState} from 'react';
 import {Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
-import type {TelemetryLog, TelemetrySeries} from '../../types';
-import {useStore} from '../../data/store';
+import type {TelemetrySeries} from '../../types';
 import {CHANNELS, type Channel} from '../../model/telemetry';
 import {telemetryInsights} from '../../model/insights';
 import {StickMap} from './StickMap';
@@ -21,54 +20,38 @@ const TRACE: Partial<Record<Channel, string>> = {
 const ORDER: Channel[] = ['voltage', 'current', 'capacity', 'rssi', 'throttle'];
 
 /**
- * One EdgeTX log as small multiples: one chart a sensor, all on the same time axis, the hover shared between them
- * (never two scales on one chart).
+ * One pack's log as small multiples: one chart a sensor, all on the same time axis, the hover shared between them
+ * (never two scales on one chart), then the sticks.
  */
 export function TelemetryCharts({
-  log,
+  series,
+  mAh,
   pack,
   packs = [],
 }: {
-  log: TelemetryLog;
+  series: TelemetrySeries;
+  /** The mAh the pack used, for the notes. */
+  mAh?: number;
   pack?: {cells?: number; capacity?: number};
   /** Every pack size the heli flies (mAh). */
   packs?: number[];
 }) {
-  const {loadSeries} = useStore();
   const ink = useChartInk();
-  const [series, setSeries] = useState<TelemetrySeries | null | undefined>(undefined);
   // The replay's moment, shown as a cursor on every trace.
   const [cursor, setCursor] = useState<number | null>(null);
 
-  useEffect(() => {
-    let current = true;
-    const load = async () => {
-      const found = await loadSeries(log.id).catch(() => null);
-      if (current) setSeries(found);
-    };
-    void load();
-    return () => {
-      current = false;
-    };
-  }, [log.id, loadSeries]);
-
   const rows = useMemo(
     () =>
-      series
-        ? series.time.map((second, index) =>
-            Object.fromEntries([
-              ['time', second],
-              ...Object.entries(series.channels).map(([key, values]) => [key, values[index]]),
-            ]),
-          )
-        : [],
+      series.time.map((second, index) =>
+        Object.fromEntries([
+          ['time', second],
+          ...Object.entries(series.channels).map(([key, values]) => [key, values[index]]),
+        ]),
+      ),
     [series],
   );
 
-  const insights = useMemo(() => (series ? telemetryInsights(log, series, pack) : []), [log, series, pack]);
-
-  if (series === undefined) return <div className="muted">Loading the samples…</div>;
-  if (series === null) return <div className="muted">The samples of this log could not be read.</div>;
+  const insights = useMemo(() => telemetryInsights({mAh}, series, pack), [mAh, series, pack]);
 
   const channels = ORDER.filter(channel => series.channels[channel]?.length);
   return (
@@ -98,7 +81,7 @@ export function TelemetryCharts({
                 <ResponsiveContainer>
                   <AreaChart
                     data={rows}
-                    syncId={`telemetry-${log.id}`}
+                    syncId={`telemetry-${series.id}`}
                     margin={{top: 6, right: 6, bottom: 0, left: -14}}
                   >
                     <CartesianGrid vertical={false} stroke={ink.grid} />

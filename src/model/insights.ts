@@ -39,7 +39,7 @@ export function packOf(heli: Heli | undefined, batteries: Battery[]): {cells?: n
  * of it used (a good timer for flying like that), how the radio link held.
  */
 export function telemetryInsights(
-  log: TelemetryLog,
+  log: Pick<TelemetryLog, 'mAh'>,
   series: TelemetrySeries,
   pack: {cells?: number; capacity?: number} = {},
 ): Insight[] {

@@ -1,6 +1,6 @@
 import {useMemo, useRef} from 'react';
 import {Link, useParams} from 'react-router';
-import {ChevronRight, ExternalLink, FileUp, MapPin, Pencil, Trash, Wrench} from 'lucide-react';
+import {ChevronRight, ExternalLink, FileUp, MapPin, Pencil, Wrench} from 'lucide-react';
 import type {Sortie} from '../types';
 import {useStore} from '../data/store';
 import {Card, Empty, HeliName, PageHeader, spotLabel, useOverlay} from '../components/ui';
@@ -10,7 +10,7 @@ import {SortieForm} from '../components/forms/SortieForm';
 import {SpotForm} from '../components/forms/HangarForms';
 import {MiniMap} from '../components/MiniMap';
 import {SortiePhotos} from '../components/SortiePhotos';
-import {TelemetryCharts} from '../components/charts/TelemetryCharts';
+import {TelemetryPacks} from '../components/TelemetryPacks';
 import {formatAirtime, formatDay, formatTimer, plural} from '../model/format';
 import {airtime, sortSorties} from '../model/stats';
 import {readTelemetry} from '../model/telemetry';
@@ -224,55 +224,7 @@ export function SortiePage() {
             </>
           }
         >
-          {sortie.telemetry.map(log => (
-            <div key={log.id} className="telemetry-log">
-              <div className="telemetry-head">
-                <div>
-                  <div className="row-title">{log.name}</div>
-                  <div className="row-sub">
-                    {log.start ? `Started ${log.start.slice(11, 16)} · ` : ''}
-                    {formatTimer(log.duration)} recorded · {plural(log.samples, 'sample')}
-                  </div>
-                </div>
-                <button className="icon-button" aria-label="Remove this log" onClick={() => removeLog(log.id)}>
-                  <Trash size={15} />
-                </button>
-              </div>
-              <div className="telemetry-figures">
-                {log.mAh !== undefined && (
-                  <div>
-                    <div className="figure-label">Used</div>
-                    <div className="figure-value">{log.mAh} mAh</div>
-                  </div>
-                )}
-                {log.minVoltage !== undefined && (
-                  <div>
-                    <div className="figure-label">Lowest voltage</div>
-                    <div className="figure-value">{log.minVoltage} V</div>
-                  </div>
-                )}
-                {log.maxCurrent !== undefined && (
-                  <div>
-                    <div className="figure-label">Peak current</div>
-                    <div className="figure-value">{log.maxCurrent} A</div>
-                  </div>
-                )}
-                {log.avgCurrent !== undefined && (
-                  <div>
-                    <div className="figure-label">Average current</div>
-                    <div className="figure-value">{log.avgCurrent} A</div>
-                  </div>
-                )}
-                {log.minRssi !== undefined && (
-                  <div>
-                    <div className="figure-label">Weakest signal</div>
-                    <div className="figure-value">{log.minRssi} dB</div>
-                  </div>
-                )}
-              </div>
-              <TelemetryCharts log={log} pack={pack} packs={packs} />
-            </div>
-          ))}
+          <TelemetryPacks logs={sortie.telemetry} pack={pack} packs={packs} onRemove={removeLog} />
         </Card>
       </div>
 
