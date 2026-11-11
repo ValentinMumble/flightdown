@@ -57,6 +57,8 @@ export interface TelemetryLog {
   maxCurrent?: number;
   avgCurrent?: number;
   minRssi?: number;
+  /** The 6-position button pressed through the log (1 to 6): which pack it was, when packs are given buttons. */
+  packButton?: number;
 }
 
 /** A log's samples, thinned to a few hundred points: seconds from the start, and one list per sensor. */
@@ -121,6 +123,14 @@ export interface Battery {
   /** YYYY-MM-DD */
   bought?: string;
   notes?: string;
+  /** A link to a photo of it, cut out of its white background as the helis' are. */
+  photo?: string;
+  /**
+   * The radio's 6-position buttons its packs are picked with before a flight, one a pack ([3, 4]: its first pack on 3,
+   * its second on 4), and the day that began (YYYY-MM-DD): a log names its pack from then on.
+   */
+  buttons?: number[];
+  buttonsSince?: string;
 }
 
 export interface Tip {
@@ -145,6 +155,8 @@ export interface Gear {
   /** YYYY-MM-DD */
   since?: string;
   notes?: string;
+  /** A link to a photo of it, cut out of its white background as the helis' are. */
+  photo?: string;
 }
 
 export interface Doc {

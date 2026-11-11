@@ -2,7 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {Trash} from 'lucide-react';
 import type {TelemetryLog, TelemetrySeries} from '../types';
 import {useStore} from '../data/store';
-import {groupPacks, joinSeries, packUsed} from '../model/packs';
+import {groupPacks, joinSeries, packName, packUsed} from '../model/packs';
 import {formatTimer, plural} from '../model/format';
 import {TelemetryCharts} from './charts/TelemetryCharts';
 
@@ -46,7 +46,7 @@ export function TelemetryPacks({
   packs: number[];
   onRemove: (logId: string) => void;
 }) {
-  const {loadSeries} = useStore();
+  const {doc, loadSeries} = useStore();
   const flights = useMemo(() => groupPacks(logs), [logs]);
   // Each file's samples once loaded, null when they could not be read.
   const [loaded, setLoaded] = useState<Record<string, TelemetrySeries | null>>({});
@@ -113,7 +113,7 @@ export function TelemetryPacks({
               onClick={() => setChosen(index)}
             >
               <span className="pack-card-label">
-                pack {index + 1}
+                {packName(one, doc.batteries) ?? `pack ${index + 1}`}
                 {one.start && ` · ${one.start.slice(11, 16)}`}
               </span>
               <span className="pack-card-value">

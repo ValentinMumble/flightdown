@@ -12,10 +12,13 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"api/**/*.ts\" \"scripts/**/*.ts\" local-api.ts vite.config.ts index.html",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"api/**/*.ts\" \"scripts/**/*.ts\" local-api.ts vite.config.ts index.html",
     "logs": "tsx scripts/logs.ts",
-    "cutouts": "tsx scripts/cutouts.ts"
+    "cutouts": "tsx scripts/cutouts.ts",
+    "radio": "tsx scripts/radio.ts",
+    "reread": "tsx scripts/reread.ts"
   },
   "dependencies": {
     "@upstash/redis": "1.39.0",
+    "fengari-web": "0.1.4",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.70.0",
     "react": "^19.3.1",
@@ -33,7 +36,8 @@
     "tsx": "^4.23.15",
     "typescript": "~7.0.2",
     "vite": "^8.3.4",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "yaml": "^2.9.1"
   },
   "license": "MIT"
 }

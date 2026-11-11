@@ -18,8 +18,9 @@ small monospace labels, one soft green for anything good, a rolling counter of m
 - **Log a sortie:** heli, day, packs and time per pack (minus and plus, or typed), crashes, the last flown spots (the
   rest one tap away), broken parts, manoeuvres practised, notes and links. Quick with one hand at the field; changes
   made without signal wait and sync later.
-- **Telemetry:** add EdgeTX logs (the radio's `LOGS` folder) to a sortie. It shows a card per pack (files a few
-  seconds apart are one pack, the radio splits a log when the link drops), and for the chosen pack: voltage, current,
+- **Telemetry:** add EdgeTX logs (the radio's `LOGS` folder) to a sortie. It shows a card per pack, named by the
+  6-position button pressed for it (packs get buttons in the Hangar; files a few seconds apart are one pack, the radio
+  splits a log when the link drops), and for the chosen pack: voltage, current,
   signal and throttle as lanes of one recorder (each reads out at the cursor), a map of the sticks and a replay of them
   with round throttle, current and battery dials (with a cursor on the lanes), and what the log says: the pack ran
   flat, how much of it was used, sag per cell, when 80 % was used (a timer that fits), pack resistance, the radio link.
@@ -29,8 +30,16 @@ small monospace labels, one soft green for anything good, a rolling counter of m
   history, the skill ladder, the flying season, packs a sortie, spots and hours by heli.
 - **Hangar:** the flight line, the radio and other gear, the helis that left (stamped sold or lost), spare parts whose
   stock goes down as you log broken parts, packs and their cycles, notes. Each heli has a data plate page and its own
-  chart colour (tap its dot in the Hangar to change it); photos are lifted out of their background (`npm run cutouts`,
-  with Apple's Vision on the Mac; others are cut out in the page).
+  chart colour (tap its dot in the Hangar to change it). Helis, radios and packs take a photo link; photos are lifted
+  out of their background (`npm run cutouts`, with Apple's Vision on the Mac; others are cut out in the page).
+- **Radio:** the TX16S in the Hangar, running the Lua that goes on it (in the browser, with Fengari), its switches
+  around the screen where they sit on the radio, each saying what it does on the model where it is set (`roles.ts`,
+  written by hand from the model files). Model screens: the M2 EVO's and M4's screens as the radio draws them,
+  from its card, every widget in its zone (EdgeTX's own ones redrawn). One widget: a widget built in
+  [edge-tx](https://github.com/ValentinMumble/edge-tx), in a zone of its size, its Lua to edit (kept in the browser,
+  downloadable as `main.lua`). Set the switches and the 6-position buttons by hand, or replay a logged pack: its log drives
+  the sensors, the buttons and the switches (their real positions; in older logs, the arming ones follow the rotor, on
+  while the pack draws 2 A). Widgets read the model's global variables (mAhRe its cell count).
 - **Spots:** every flying spot on a satellite map (spots close together share a pin with a count until you zoom in).
   Set a spot's GPS point by tapping the map, pasting coordinates or a Maps link, or from the phone's position; each
   sortie then shows its spot from above.
@@ -64,6 +73,15 @@ only prints what it would do.
 
 **Heli photos:** `npm run cutouts` lifts every heli photo out of its background with Apple's Vision framework (macOS
 14 or later) and keeps the PNGs in Redis; run it after setting a new photo. `--force` lifts them all again.
+
+**Radio:** `npm run radio` copies the widgets built in `../edge-tx` (`npm run build` there; `EDGETX_DIR` for another
+place) into `public/widgets`, and from the radio's SD card (plugged in as USB storage, else edge-tx's latest backup of
+it, or a folder given after `--`) the kept models' screens, their Lua widgets and pictures into `public/radio`.
+`npm run dev` reads edge-tx's widgets live, so a rebuild there (`npm run dev` in edge-tx) shows in the Radio tab on its
+own.
+
+**Reading logs again:** `npm run reread` reads every log Flightdown has from its backup in `SEED_LOGS_DIR` again, so
+what the reader learned since (the switches, the 6-position button) reaches older logs. `--dry-run` only prints.
 
 **App icons:** `swift scripts/icons.swift` draws them into `public/` from the 🚁 emoji.
 

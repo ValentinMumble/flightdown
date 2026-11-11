@@ -26,7 +26,7 @@ const listeners = new Set<(state: AlbumState) => void>();
 
 async function read(): Promise<AlbumState> {
   const answer = await fetch('/api/album').catch(() => null);
-  if (!answer) return {status: 'failed', message: 'No connection'};
+  if (!answer) return {status: 'failed', message: 'The server could not be reached, so the album was not read.'};
   const body = await answer.json().catch(() => null);
   if (answer.status === 404) return {status: 'missing'};
   if (!answer.ok) return {status: 'failed', message: body?.error ?? `The server answered ${answer.status}`};

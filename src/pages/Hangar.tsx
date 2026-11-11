@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {lazy, Suspense, useEffect, useMemo, useState} from 'react';
 import {Link, useParams, useSearchParams} from 'react-router';
 import {
   BatteryCharging,
@@ -12,7 +12,7 @@ import {
   Plus,
   ShoppingCart,
 } from 'lucide-react';
-import type {Heli} from '../types';
+import type {Battery, Heli} from '../types';
 import {useStore} from '../data/store';
 import {Card, Empty, HeliDot, PageHeader, useOverlay} from '../components/ui';
 import {BatteryForm, GearForm, HeliForm, SpareForm, TipForm} from '../components/forms/HangarForms';
@@ -31,7 +31,11 @@ const VIEWS = [
   {to: '/hangar/spares', label: 'Spares', view: 'spares'},
   {to: '/hangar/batteries', label: 'Batteries', view: 'batteries'},
   {to: '/hangar/notes', label: 'Notes', view: 'notes'},
+  {to: '/hangar/radio', label: 'Radio', view: 'radio'},
 ];
+
+/** The radio's screen, with its Lua engine: loaded with the tab, not with the app. */
+const RadioView = lazy(() => import('./RadioView'));
 
 /** A heli on the flight line: its picture lit in its colour, its stamp, its numbers. */
 export function HeliCard({heli, tally, wide = false}: {heli: Heli; tally?: GroupTally; wide?: boolean}) {
@@ -100,7 +104,10 @@ function Gear() {
       {doc.gear.length ? (
         <div className="grid grid-auto">
           {[...doc.gear]
-            .sort((left, right) => Number(Boolean(left.gone)) - Number(Boolean(right.gone)))
+            .sort(
+              (left, right) =>
+                Number(Boolean(left.gone)) - Number(Boolean(right.gone)) || left.name.localeCompare(right.name),
+            )
             .map(item => {
               const Icon = GEAR_ICONS[item.category] ?? Cable;
               const keys = codes(`${item.name} ${item.details ?? ''}`);
@@ -111,9 +118,15 @@ function Gear() {
                   className={`panel gear-card ${item.gone ? 'gone' : ''}`}
                   onClick={() => open(<GearForm gear={item} />)}
                 >
-                  <span className="gear-icon">
-                    <Icon size={22} />
-                  </span>
+                  {item.photo ? (
+                    <span className="gear-photo">
+                      <HeliPhoto url={item.photo} alt={item.name} />
+                    </span>
+                  ) : (
+                    <span className="gear-icon">
+                      <Icon size={22} />
+                    </span>
+                  )}
                   <span className="stack" style={{gap: 6}}>
                     <span className="heli-name" style={{fontSize: 17}}>
                       {item.name}
@@ -433,9 +446,25 @@ function Spares() {
   );
 }
 
+/**
+ * Packs in a fixed order (the store hands them back in any order): those of the helis still flying first, then the
+ * others, the ones with no pack left holding a charge last; bigger packs first, then by name.
+ */
+function packOrder(helis: Heli[]) {
+  const flying = new Set(helis.filter(one => one.status === 'active' || one.status === 'grounded').map(one => one.id));
+  const rank = (battery: Battery) =>
+    battery.count > 0 && (battery.dead ?? 0) >= battery.count ? 2 : battery.heliIds.some(id => flying.has(id)) ? 0 : 1;
+  return (left: Battery, right: Battery) =>
+    rank(left) - rank(right) ||
+    right.capacity - left.capacity ||
+    left.name.localeCompare(right.name) ||
+    left.id.localeCompare(right.id);
+}
+
 function Batteries() {
   const {doc, heli} = useStore();
   const {open} = useOverlay();
+  const batteries = useMemo(() => [...doc.batteries].sort(packOrder(doc.helis)), [doc.batteries, doc.helis]);
   return (
     <>
       <div className="section-head">
@@ -446,7 +475,7 @@ function Batteries() {
       </div>
       {doc.batteries.length ? (
         <div className="grid grid-auto">
-          {doc.batteries.map(battery => {
+          {batteries.map(battery => {
             // Packs flown on its helis since it was bought, shared with any other packs for the same helis.
             const sharing = doc.batteries
               .filter(other => other.heliIds.some(id => battery.heliIds.includes(id)))
@@ -463,9 +492,15 @@ function Batteries() {
                 className="card battery-card"
                 onClick={() => open(<BatteryForm battery={battery} />)}
               >
-                <div className="battery-icon">
-                  <BatteryCharging size={22} />
-                </div>
+                {battery.photo ? (
+                  <div className="battery-photo">
+                    <HeliPhoto url={battery.photo} alt={battery.name} />
+                  </div>
+                ) : (
+                  <div className="battery-icon">
+                    <BatteryCharging size={22} />
+                  </div>
+                )}
                 <div className="heli-name">{battery.name}</div>
                 <div className="muted" style={{fontSize: 13}}>
                   {battery.count} × {battery.cells}S {formatNumber(battery.capacity)} mAh
@@ -486,6 +521,9 @@ function Batteries() {
                   </div>
                 </div>
                 <div className="chips" style={{marginTop: 10}}>
+                  {battery.buttons?.length ? (
+                    <span className="pill label">buttons {battery.buttons.join(' · ')}</span>
+                  ) : null}
                   {battery.heliIds.map(id => (
                     <span key={id} className="pill">
                       <HeliDot heli={heli(id)} /> {heli(id)?.name}
@@ -518,17 +556,19 @@ function Notes() {
       </div>
       {doc.tips.length ? (
         <div className="notes">
-          {doc.tips.map(tip => (
-            <button key={tip.id} className="card note-card" onClick={() => open(<TipForm tip={tip} />)}>
-              <div className="card-title">{tip.title}</div>
-              {tip.heliId && (
-                <span className="pill" style={{alignSelf: 'flex-start'}}>
-                  <HeliDot heli={heli(tip.heliId)} /> {heli(tip.heliId)?.name}
-                </span>
-              )}
-              <p className="prose note-body">{tip.body}</p>
-            </button>
-          ))}
+          {[...doc.tips]
+            .sort((left, right) => left.title.localeCompare(right.title))
+            .map(tip => (
+              <button key={tip.id} className="card note-card" onClick={() => open(<TipForm tip={tip} />)}>
+                <div className="card-title">{tip.title}</div>
+                {tip.heliId && (
+                  <span className="pill" style={{alignSelf: 'flex-start'}}>
+                    <HeliDot heli={heli(tip.heliId)} /> {heli(tip.heliId)?.name}
+                  </span>
+                )}
+                <p className="prose note-body">{tip.body}</p>
+              </button>
+            ))}
         </div>
       ) : (
         <div className="panel">
@@ -562,7 +602,19 @@ export function Hangar() {
           </Link>
         ))}
       </nav>
-      {view === 'spares' ? <Spares /> : view === 'batteries' ? <Batteries /> : view === 'notes' ? <Notes /> : <Fleet />}
+      {view === 'spares' ? (
+        <Spares />
+      ) : view === 'batteries' ? (
+        <Batteries />
+      ) : view === 'notes' ? (
+        <Notes />
+      ) : view === 'radio' ? (
+        <Suspense fallback={<div className="panel radio-loading">Starting the radio…</div>}>
+          <RadioView />
+        </Suspense>
+      ) : (
+        <Fleet />
+      )}
     </div>
   );
 }

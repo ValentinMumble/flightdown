@@ -1,4 +1,4 @@
-import type {TelemetryLog, TelemetrySeries} from '../types';
+import type {Battery, TelemetryLog, TelemetrySeries} from '../types';
 import {usedMah} from './battery';
 
 /**
@@ -19,6 +19,8 @@ export interface PackLog {
   avgCurrent?: number;
   minRssi?: number;
   samples: number;
+  /** The 6-position button pressed through it: which pack it was. */
+  packButton?: number;
 }
 
 /** Seconds of a log's start ("2023-04-28T12:43:01"), to measure the gaps between files. */
@@ -49,6 +51,7 @@ function summarise(files: TelemetryLog[]): PackLog {
     files,
     duration,
     start: files[0].start,
+    packButton: files[0].packButton,
     mAh: used.length ? used.reduce((sum, file) => sum + (file.mAh ?? 0), 0) : undefined,
     minVoltage: smallest(files.map(file => file.minVoltage)),
     maxCurrent: largest(files.map(file => file.maxCurrent)),
@@ -102,6 +105,24 @@ export function joinSeries(pack: PackLog, parts: TelemetrySeries[]): TelemetrySe
     }
   });
   return {id: parts.map(part => part.id).join('+'), time, channels};
+}
+
+/**
+ * The pack a flight was flown on, from the 6-position button pressed (once its kind was given buttons, and from the day
+ * it was): "OMPHobby #1", the kind's name up to its cells.
+ */
+export function packName(pack: PackLog, batteries: Battery[]): string | null {
+  return buttonPack(pack.packButton ?? 0, batteries, pack.start?.slice(0, 10) ?? '');
+}
+
+/** The pack a 6-position button stands for ("OMPHobby #1"), on a day, else today. */
+export function buttonPack(button: number, batteries: Battery[], day?: string): string | null {
+  for (const battery of batteries) {
+    const index = battery.buttons?.indexOf(button) ?? -1;
+    if (index < 0 || (day !== undefined && battery.buttonsSince && day < battery.buttonsSince)) continue;
+    return `${battery.name.split(/\s\d+S\s/)[0]} #${index + 1}`;
+  }
+  return null;
 }
 
 /** The mAh a pack used, from its joined samples: the radio's count or the current added up. */

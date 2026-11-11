@@ -15,7 +15,20 @@ export const CHANNELS = {
   aileron: {label: 'Aileron stick', unit: '%', columns: ['Ail']},
   elevator: {label: 'Elevator stick', unit: '%', columns: ['Ele']},
   rudder: {label: 'Rudder stick', unit: '%', columns: ['Rud']},
+  // The switches, -1 (up), 0 (middle) or 1 (down), and the 6-position buttons, -1024 to 1024 in six steps.
+  sa: {label: 'Switch SA', unit: '', columns: ['SA']},
+  sb: {label: 'Switch SB', unit: '', columns: ['SB']},
+  sc: {label: 'Switch SC', unit: '', columns: ['SC']},
+  sd: {label: 'Switch SD', unit: '', columns: ['SD']},
+  se: {label: 'Switch SE', unit: '', columns: ['SE']},
+  sf: {label: 'Switch SF', unit: '', columns: ['SF']},
+  sg: {label: 'Switch SG', unit: '', columns: ['SG']},
+  sh: {label: 'Switch SH', unit: '', columns: ['SH']},
+  buttons: {label: '6-position buttons', unit: '', columns: ['6P']},
 } as const;
+
+/** The 6-position button pressed (1 to 6) from the value logged for them. */
+export const buttonOf = (value: number) => Math.max(1, Math.min(6, Math.round((value + 1024) / 409.6) + 1));
 
 export type Channel = keyof typeof CHANNELS;
 
@@ -159,6 +172,15 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     ? `${day}T${pad(Math.floor(clock / 3600))}:${pad(Math.floor((clock % 3600) / 60))}:${pad(clock % 60)}`
     : undefined;
   const round = (value: number) => Math.round(value * 100) / 100;
+  // The pack: the 6-position button pressed through most of the log.
+  const pressed = (channels.buttons ?? []).map(buttonOf);
+  const counts = pressed.reduce<Record<number, number>>(
+    (tally, button) => ({...tally, [button]: (tally[button] ?? 0) + 1}),
+    {},
+  );
+  const packButton = pressed.length
+    ? Number(Object.entries(counts).sort((left, right) => right[1] - left[1])[0][0])
+    : undefined;
   const log: TelemetryLog = {
     id,
     name,
@@ -169,6 +191,7 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     ...(voltages.length && {minVoltage: round(Math.min(...voltages))}),
     ...(currents.length && {maxCurrent: round(Math.max(...currents)), avgCurrent: round(average(currents))}),
     ...(signals.length && {minRssi: Math.min(...signals)}),
+    ...(packButton !== undefined && {packButton}),
   };
   return {log, series: {id, ...thin(time, channels)}};
 }

@@ -1350,6 +1350,51 @@
   border: 1px solid rgba(124, 255, 178, 0.3);
 }
 
+/* A radio's or a pack's photo, cut out like the helis', in place of its icon; a photo that cannot be cut out sits
+   on a light plate. */
+.gear-photo,
+.battery-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.gear-photo {
+  width: 104px;
+  height: 104px;
+}
+
+.battery-photo {
+  height: 108px;
+  margin-bottom: 8px;
+}
+
+.gear-photo .heli-photo,
+.battery-photo .heli-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.gear-photo .heli-photo.cut,
+.battery-photo .heli-photo.cut {
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+
+.gear-photo:has(.plain),
+.battery-photo:has(.plain) {
+  padding: 4px;
+  border-radius: 12px;
+  background: #eef0f2;
+}
+
+.gear-card.gone .gear-photo {
+  filter: grayscale(0.7);
+  opacity: 0.7;
+}
+
 .notes {
   columns: 2 320px;
   column-gap: 14px;

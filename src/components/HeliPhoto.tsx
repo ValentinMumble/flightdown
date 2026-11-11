@@ -48,7 +48,7 @@ async function cutFrom(image: HTMLImageElement) {
  * others are cut out here, read straight from their host when it allows it, else through /api/photo (owner's log
  * only). Null when nothing works or the photo is not on white.
  */
-function cutout(url: string) {
+export function cutout(url: string) {
   const known = pending.get(url);
   if (known) return known;
   const run = async () => {

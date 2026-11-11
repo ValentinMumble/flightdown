@@ -1,0 +1,509 @@
+/* The Radio tab: one column. The screen, a bar of what it shows, the pack replay, the switches as small tiles, the
+   rest folded away. */
+.radio-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+/* The screen with the switches on its sides, as on the radio. */
+.radio-console {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 780px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.radio-switches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  align-content: start;
+}
+
+.radio-switches .radio-input {
+  padding: 6px 8px;
+}
+
+.radio-screen {
+  width: 100%;
+  min-width: 0;
+}
+
+/* The 6-position buttons under the screen, as on the TX16S: the pressed one lit, its pack named after them. */
+.radio-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.radio-button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--bezel-strong);
+  background: var(--panel);
+  color: var(--muted);
+  font: 600 12px/1 var(--mono);
+  cursor: pointer;
+}
+
+.radio-button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, var(--panel));
+  color: var(--ink);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.radio-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.radio-buttons-pack {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.radio-screen canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 480 / 272;
+  image-rendering: pixelated;
+  border-radius: 12px;
+  border: 6px solid #050607;
+  background: #303030;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* What the screen shows, in one row that wraps on a phone. */
+.radio-bar,
+.radio-replay {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.radio-bar > select.input,
+.radio-replay > select.input {
+  width: auto;
+  min-width: 0;
+  flex: 0 1 auto;
+  min-height: 38px;
+  padding: 6px 10px;
+}
+
+.radio-bar-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.radio-replay {
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--bezel);
+  background: var(--panel);
+}
+
+.radio-replay > select.input {
+  flex: 0 1 280px;
+}
+
+.radio-replay input[type='range'] {
+  flex: 1 1 160px;
+  min-width: 120px;
+  accent-color: var(--accent);
+}
+
+.radio-problem {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-small);
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  color: var(--warning);
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.radio-heading {
+  margin: 0 0 8px;
+}
+
+/* Sources as small tiles, as many to a row as fit. */
+.radio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.radio-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--bezel);
+  background: var(--panel);
+}
+
+.radio-input.from-pack {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--bezel));
+}
+
+.radio-input.unused {
+  opacity: 0.45;
+}
+
+.radio-input-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* Source names are the widget's own (ArmedSwitch, tele(5)): kept as written. */
+.radio-input-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--label);
+}
+
+.radio-input-name small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* A switch drawn as one: the nut and washer, the lever and its cap; its top, middle and bottom set it. */
+.radio-lever {
+  position: relative;
+  align-self: center;
+  width: 48px;
+  height: 84px;
+}
+
+.radio-lever svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.lever-nut {
+  stroke: #5d6772;
+  stroke-width: 0.8;
+}
+
+.lever-washer {
+  fill: #191d22;
+  stroke: #444d57;
+  stroke-width: 0.8;
+}
+
+.lever-collar {
+  fill: #0d1014;
+  stroke: #2b3239;
+  stroke-width: 1;
+}
+
+.lever-shaft,
+.lever-cap {
+  transform-box: view-box;
+  transform-origin: 24px 42px;
+  transition: transform 160ms cubic-bezier(0.3, 1.5, 0.6, 1);
+}
+
+.lever-cap {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.65));
+}
+
+.lever-glint {
+  fill: rgba(255, 255, 255, 0.85);
+}
+
+/* Its positions: a notch each side of the lever at each stop (two or three), the one it is at lit. */
+.lever-notch line {
+  stroke: var(--bezel-strong);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.lever-notch.on line {
+  stroke: var(--accent);
+}
+
+/* Where a click would put it: a cap at that position, shown on hover. */
+.lever-ghost {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 0.9;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.radio-lever:has(.lever-zone.up:hover) .lever-ghost.up,
+.radio-lever:has(.lever-zone.middle:hover) .lever-ghost.middle,
+.radio-lever:has(.lever-zone.down:hover) .lever-ghost.down {
+  opacity: 0.8;
+}
+
+.radio-lever.driven .lever-cap ellipse:first-child {
+  stroke: var(--accent);
+  stroke-width: 1.2;
+}
+
+.radio-lever.driven .lever-cap {
+  filter: drop-shadow(0 0 4px rgba(124, 255, 178, 0.75));
+}
+
+.lever-zone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 33.4%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.lever-zone.up {
+  top: 0;
+}
+
+.lever-zone.middle {
+  top: 33.3%;
+}
+
+.lever-zone.down {
+  bottom: 0;
+}
+
+/* Two positions: up and down share the switch between them. */
+.radio-lever:not(:has(.lever-zone.middle)) .lever-zone {
+  height: 50%;
+}
+
+.lever-zone:focus {
+  outline: none;
+}
+
+.lever-zone:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: -3px;
+  border-radius: 6px;
+}
+
+/* How many positions it has, beside its name. */
+.radio-switch-ways {
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid var(--bezel-strong);
+  font-size: 10px;
+  color: var(--muted);
+  vertical-align: 1px;
+}
+
+/* What the switch does where it is now: Armed, the motor runs once SF is up too. */
+.radio-switch-role {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+  text-align: center;
+}
+
+.radio-switch-role strong {
+  display: block;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* The position after the name, as EdgeTX writes it (SA↑). */
+.radio-switch-mark {
+  margin-left: 1px;
+  color: var(--ink);
+}
+
+.radio-input.from-pack .radio-switch-mark {
+  color: var(--accent);
+}
+
+.radio-input-follow.icon-button {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  margin: -4px -4px 0 0;
+  color: var(--muted);
+}
+
+.radio-input-follow[aria-pressed='true'] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--bezel));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lever-shaft,
+  .lever-cap {
+    transition: none;
+  }
+}
+
+.radio-input-pack {
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.radio-input .input {
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.radio-input-bind.input {
+  min-height: 28px;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.radio-positions {
+  display: flex;
+  gap: 4px;
+}
+
+.radio-positions .chip {
+  flex: 1;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0;
+}
+
+.radio-value {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.radio-color {
+  width: 48px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+/* What is folded away: the other sources, the screen's widgets. */
+.radio-more {
+  border-radius: 12px;
+  border: 1px solid var(--bezel);
+  background: var(--panel);
+  padding: 0 12px;
+}
+
+.radio-more > summary {
+  padding: 10px 0;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.radio-more[open] {
+  padding-bottom: 12px;
+}
+
+.radio-placed {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  gap: 4px 16px;
+  font-size: 13px;
+}
+
+.radio-placed-row {
+  display: contents;
+}
+
+textarea.input.radio-code {
+  min-height: 360px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+  resize: vertical;
+}
+
+.radio-sounds {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Narrower: the screen first, the left and right switches under it, each on its side. */
+@media (max-width: 1100px) {
+  .radio-console {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'screen screen'
+      'left right';
+  }
+
+  .radio-screen {
+    grid-area: screen;
+  }
+
+  .radio-switches.left {
+    grid-area: left;
+  }
+
+  .radio-switches.right {
+    grid-area: right;
+  }
+}
+
+@media (max-width: 560px) {
+  .radio-screen canvas {
+    border-width: 4px;
+    border-radius: 10px;
+  }
+
+  .radio-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .radio-placed {
+    grid-template-columns: auto 1fr;
+  }
+
+  .radio-bar > select.input,
+  .radio-replay > select.input {
+    flex: 1 1 100%;
+  }
+}

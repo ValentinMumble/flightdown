@@ -4,7 +4,7 @@ import {ChevronRight, LocateFixed, Trash, X} from 'lucide-react';
 import type {Battery, Gear, GearGone, Heli, HeliStatus, Spare, Spot, Tip} from '../../types';
 import {useStore} from '../../data/store';
 import {newId, now} from '../../model/ids';
-import {formatTimer, parseTimer, plural} from '../../model/format';
+import {formatTimer, parseTimer, plural, today} from '../../model/format';
 import {formatLocation, hasLocation, parseLocation, type LatLng} from '../../model/geo';
 import {SERIES_NAMES} from '../../model/palette';
 import {brokenRanking, spareStock} from '../../model/parts';
@@ -364,8 +364,11 @@ export function BatteryForm({battery}: {battery?: Battery}) {
   const [heliIds, setHeliIds] = useState<string[]>(battery?.heliIds ?? []);
   const [bought, setBought] = useState(battery?.bought ?? '');
   const [notes, setNotes] = useState(battery?.notes ?? '');
+  const [photo, setPhoto] = useState(battery?.photo ?? '');
+  const [buttons, setButtons] = useState((battery?.buttons ?? []).join(', '));
 
   const save = () => {
+    const pressed = [...new Set(buttons.split(/[^\d]+/).map(Number))].filter(button => button >= 1 && button <= 6);
     const saved: Battery = {
       id: battery?.id ?? newId(),
       name: name.trim() || `${cells}S ${capacity} mAh`,
@@ -376,6 +379,8 @@ export function BatteryForm({battery}: {battery?: Battery}) {
       heliIds,
       ...(bought && {bought}),
       ...(notes.trim() && {notes: notes.trim()}),
+      ...(photo.trim() && {photo: photo.trim()}),
+      ...(pressed.length && {buttons: pressed, buttonsSince: battery?.buttonsSince ?? today()}),
     };
     put('batteries', saved);
     close();
@@ -460,6 +465,28 @@ export function BatteryForm({battery}: {battery?: Battery}) {
               </button>
             ))}
         </div>
+      </div>
+      <div className="field">
+        <label htmlFor="battery-buttons">6-position buttons</label>
+        <input
+          id="battery-buttons"
+          className="input"
+          inputMode="numeric"
+          placeholder="3, 4: one a pack, pressed before flying it"
+          value={buttons}
+          onChange={event => setButtons(event.target.value)}
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="battery-photo">Photo link</label>
+        <input
+          id="battery-photo"
+          className="input"
+          type="url"
+          placeholder="https://…"
+          value={photo}
+          onChange={event => setPhoto(event.target.value)}
+        />
       </div>
       <div className="field">
         <label htmlFor="battery-notes">Notes</label>
@@ -776,6 +803,7 @@ export function GearForm({gear}: {gear?: Gear}) {
   const [since, setSince] = useState(gear?.since ?? '');
   const [notes, setNotes] = useState(gear?.notes ?? '');
   const [gone, setGone] = useState<GearGone | undefined>(gear?.gone);
+  const [photo, setPhoto] = useState(gear?.photo ?? '');
 
   return (
     <form
@@ -791,6 +819,7 @@ export function GearForm({gear}: {gear?: Gear}) {
           ...(details.trim() && {details: details.trim()}),
           ...(since && {since}),
           ...(notes.trim() && {notes: notes.trim()}),
+          ...(photo.trim() && {photo: photo.trim()}),
         });
         close();
         toast(gear ? 'Saved' : `${name.trim()} in the hangar`);
@@ -858,6 +887,17 @@ export function GearForm({gear}: {gear?: Gear}) {
           type="date"
           value={since}
           onChange={event => setSince(event.target.value)}
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="gear-photo">Photo link</label>
+        <input
+          id="gear-photo"
+          className="input"
+          type="url"
+          placeholder="https://…"
+          value={photo}
+          onChange={event => setPhoto(event.target.value)}
         />
       </div>
       <div className="field">
