@@ -79,11 +79,11 @@ only prints what it would do.
 **Heli photos:** `npm run cutouts` lifts every heli photo out of its background with Apple's Vision framework (macOS
 14 or later) and keeps the PNGs in Redis; run it after setting a new photo. `--force` lifts them all again.
 
-**Radio:** `npm run radio` copies the widgets built in `../edge-tx` (`npm run build` there; `EDGETX_DIR` for another
-place) into `public/widgets`, and from the radio's SD card (plugged in as USB storage, else edge-tx's latest backup of
-it, or a folder given after `--`) the kept models' screens, their Lua widgets and pictures into `public/radio`.
-`npm run dev` reads edge-tx's widgets live, so a rebuild there (`npm run dev` in edge-tx) shows in the Radio tab on its
-own.
+**Radio:** the Radio tab reads the radio's card from [edge-tx](https://github.com/ValentinMumble/edge-tx), whose
+`sd-card/` is the card as it should be: `/api/radio` gives the kept models' screens and logic, the radio's settings,
+and the Lua widgets and pictures they use. On Vercel it reads GitHub (kept five minutes, so a push there shows within
+that); in `npm run dev` it reads the edge-tx checkout beside this one (`EDGETX_DIR` for another place), its built
+widgets fresh from `npm run dev` there, so a save shows at once. `EDGETX_SOURCE=github` reads GitHub locally too.
 
 **Reading logs again:** `npm run reread` reads every log Flightdown has from its backup in `SEED_LOGS_DIR` again, so
 what the reader learned since (the switches, the 6-position button) reaches older logs. `--dry-run` only prints.

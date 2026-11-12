@@ -37,6 +37,7 @@ import {
 import {
   guessSignal,
   listWidgets,
+  radioFile,
   packSignals,
   radioName,
   signalLabel,
@@ -638,12 +639,12 @@ export default function RadioView() {
     };
   }, []);
 
-  // The radio's card: every model's screens, read by `npm run radio`.
+  // The radio's card: every kept model's screens and logic, read from edge-tx by /api/radio.
   useEffect(() => {
     let current = true;
     const read = async () => {
       try {
-        const response = await fetch('/radio/card.json', {cache: 'no-store'});
+        const response = await fetch('/api/radio', {cache: 'no-store'});
         if (!response.ok) throw new Error('no card');
         const read = (await response.json()) as Card;
         if (current) setCard(read);
@@ -789,7 +790,7 @@ export default function RadioView() {
     const setUp = async () => {
       clearScreen();
       inputs.current!.model = {name: model.name, bitmap: model.bitmap, globals: model.globals};
-      await loadPicture(model.bitmap, async () => `/radio/images/${encodeURIComponent(model.bitmap)}`);
+      await loadPicture(model.bitmap, async () => radioFile(`IMAGES/${model.bitmap}`));
       const next: Placed[] = [];
       const readers: Record<string, string> = {};
       for (const {rect, zone: slot, id} of placeScreen(model, screenIndex)) {
@@ -1290,7 +1291,7 @@ export default function RadioView() {
               ))}
             </div>
           ) : (
-            <div className="muted">{model ? 'No widget on this screen.' : 'No card read yet: run npm run radio.'}</div>
+            <div className="muted">{model ? 'No widget on this screen.' : 'The card did not load from edge-tx.'}</div>
           )}
           {card?.from && <p className="caption">Read from {card.from}.</p>}
         </details>

@@ -1,6 +1,7 @@
 import {EDGETX_WIDGETS, type Card, type CardModel, type CardOption, type CardZone, type LayoutOptions} from './card';
 import {layoutZones, mainView, TOP_BAR, topbarZones, type Rect} from './layout';
 import {SCREEN, THEME, type Radio, type WidgetOption, type WidgetRunner} from './edgetx';
+import {radioFile} from './widgets';
 
 /**
  * A model's whole screen on the simulated radio: the screen around the zones (top bar, sliders, trims), each zone's
@@ -89,11 +90,10 @@ export function loadCardWidget(card: Card, name: string, runner: WidgetRunner, r
   const known = loaded.get(widget.folder);
   if (known) return known.then(result => ({...result, key: widget.folder}));
   const load = async () => {
-    const base = `/radio/widgets/${encodeURIComponent(widget.folder)}`;
     let main = '';
     for (const file of widget.files) {
       const path = `WIDGETS/${widget.folder}/${file}`;
-      const url = `${base}/${encodeURIComponent(file)}`;
+      const url = radioFile(path);
       if (file.toLowerCase().endsWith('.lua')) {
         const code = await (await fetch(url)).text();
         radio.files.set(path, code);

@@ -1,7 +1,10 @@
 import type {TelemetrySeries} from '../types';
 import {CHANNELS, type Channel} from '../model/telemetry';
 
-/** A radio widget built from edge-tx (TypeScript turned into Lua), as `npm run widgets` copies it into public/. */
+/** A file of the radio's card (WIDGETS/Pack/main.lua, IMAGES/M2EVO.png), as /api/radio reads it from edge-tx. */
+export const radioFile = (path: string) => `/api/radio?file=${encodeURIComponent(path)}`;
+
+/** A radio widget built in edge-tx (TypeScript turned into Lua), on its card: WIDGETS/Pack/main.lua. */
 export interface WidgetFile {
   file: string;
   /** The name the widget registers on the radio. */
@@ -11,13 +14,13 @@ export interface WidgetFile {
 }
 
 export async function listWidgets(): Promise<WidgetFile[]> {
-  const response = await fetch('/widgets/widgets.json', {cache: 'no-store'});
+  const response = await fetch('/api/radio?part=widgets', {cache: 'no-store'});
   if (!response.ok) throw new Error('No widgets found');
   return (await response.json()) as WidgetFile[];
 }
 
 export async function widgetCode(file: string) {
-  const response = await fetch(`/widgets/${encodeURIComponent(file)}`, {cache: 'no-store'});
+  const response = await fetch(radioFile(file), {cache: 'no-store'});
   if (!response.ok) throw new Error(`${file} did not load`);
   return response.text();
 }

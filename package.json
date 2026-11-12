@@ -13,7 +13,6 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"api/**/*.ts\" \"scripts/**/*.ts\" local-api.ts vite.config.ts index.html",
     "logs": "tsx scripts/logs.ts",
     "cutouts": "tsx scripts/cutouts.ts",
-    "radio": "tsx scripts/radio.ts",
     "reread": "tsx scripts/reread.ts"
   },
   "dependencies": {

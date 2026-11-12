@@ -1,7 +1,7 @@
 /**
  * The radio's SD card as the Radio tab reads it: each model's screens (layout, widgets in their zones, their options)
- * and top bar, the Lua widgets those screens use, and the model pictures. `npm run radio` writes it to
- * public/radio/card.json from the card or its latest backup.
+ * and top bar, its logic, the Lua widgets those screens use, and the model pictures. /api/radio reads it from
+ * edge-tx's sd-card/ (api/_lib/edgetx.ts).
  */
 import type {LogicalSwitch, ModelTimer} from './timers';
 
