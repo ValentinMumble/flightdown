@@ -48,8 +48,8 @@ const ZONES = [
   {key: 'topbar', label: 'Top bar slot', width: 74, height: TOP_BAR - 6},
 ];
 const SPEEDS = ['1', '2', '4'];
-/** What a source reads before anything sets it: the radio's own battery is not flat. */
-const RESTING: Record<string, number> = {TX_VOLTAGE: 8.1};
+/** What a source reads before anything sets it: the radio's own battery is not flat, SF down holds the throttle. */
+const RESTING: Record<string, number> = {TX_VOLTAGE: 8.1, SF: 1024};
 
 const PREFERENCES = 'flightdown.radio';
 const CODE = 'flightdown.radio.code.';
@@ -126,8 +126,8 @@ const BUTTONS = [1, 2, 3, 4, 5, 6];
 const buttonValue = (button: number) => Math.round(-1024 + (button - 1) * 409.6);
 
 /**
- * Where a source rests until set: a 2-way switch up (it has no middle), the 6-position buttons on button 1, any other
- * at 0 unless listed.
+ * Where a source rests until set: a 2-way switch up (it has no middle) unless listed, the 6-position buttons on
+ * button 1, any other at 0 unless listed.
  */
 const restingValue = (name: string) => RESTING[name] ?? (TWO_POSITIONS.includes(name) || name === '6P' ? -1024 : 0);
 
