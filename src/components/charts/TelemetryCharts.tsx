@@ -1,8 +1,19 @@
 import {useMemo, useState} from 'react';
-import {Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ReferenceArea,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import type {TelemetrySeries} from '../../types';
 import {CHANNELS, type Channel} from '../../model/telemetry';
-import {telemetryInsights} from '../../model/insights';
+import {invertedStretches, telemetryInsights} from '../../model/insights';
+import {INVERTED} from '../PackTimes';
 import {StickMap} from './StickMap';
 import {formatTimer} from '../../model/format';
 import {useChartInk} from '../colors';
@@ -28,7 +39,8 @@ const reading = (channel: Channel, value: number) =>
 
 /**
  * One pack's log as a flight data recorder: a thin lane a sensor, stacked on one time axis, each with its own scale
- * (never two on one chart) and its reading at the shared cursor, then the sticks.
+ * (never two on one chart) and its reading at the shared cursor, the time upside down as pale bands across them, then
+ * the sticks.
  */
 export function TelemetryCharts({
   series,
@@ -59,6 +71,8 @@ export function TelemetryCharts({
   );
 
   const insights = useMemo(() => telemetryInsights({mAh}, series, pack), [mAh, series, pack]);
+  // Upside down: a pale band across every lane, named on the top one.
+  const inverted = useMemo(() => invertedStretches(series), [series]);
 
   const channels = ORDER.filter(channel => series.channels[channel]?.length);
   return (
@@ -136,6 +150,22 @@ export function TelemetryCharts({
                         );
                       }}
                     />
+                    {inverted.map(stretch => (
+                      <ReferenceArea
+                        key={stretch.start}
+                        x1={stretch.start}
+                        x2={stretch.start + stretch.seconds}
+                        fill={INVERTED}
+                        fillOpacity={0.14}
+                        stroke="none"
+                        ifOverflow="hidden"
+                        label={
+                          index === 0
+                            ? {value: 'inverted', position: 'insideTopLeft', fill: INVERTED, fontSize: 10}
+                            : undefined
+                        }
+                      />
+                    ))}
                     {cursor !== null && <ReferenceLine x={cursor} stroke="#7cffb2" strokeWidth={1.5} />}
                     <Area
                       type="monotone"

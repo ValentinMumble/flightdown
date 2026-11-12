@@ -9,18 +9,21 @@
 
 export const SCREEN = {width: 480, height: 272};
 
-/** FM2M Concrete, the radio's theme, and EdgeTX's named colours. */
+/**
+ * Cockpit, the radio's theme (FM2M Concrete's greys with a dark top bar, edge-tx's cockpit_theme.py), and EdgeTX's
+ * named colours.
+ */
 export const THEME = {
   COLOR_THEME_PRIMARY1: 0xa0a0a0,
-  COLOR_THEME_PRIMARY2: 0x202020,
+  COLOR_THEME_PRIMARY2: 0xc8c8c8,
   COLOR_THEME_PRIMARY3: 0x505050,
-  COLOR_THEME_SECONDARY1: 0x808080,
+  COLOR_THEME_SECONDARY1: 0x161616,
   COLOR_THEME_SECONDARY2: 0x505050,
   COLOR_THEME_SECONDARY3: 0x303030,
-  COLOR_THEME_FOCUS: 0xc0c0c0,
-  COLOR_THEME_EDIT: 0xeeeeee,
-  COLOR_THEME_ACTIVE: 0x3b75a9,
-  COLOR_THEME_WARNING: 0x794044,
+  COLOR_THEME_FOCUS: 0x2f5f8f,
+  COLOR_THEME_EDIT: 0x7a2e2e,
+  COLOR_THEME_ACTIVE: 0x1f4a2c,
+  COLOR_THEME_WARNING: 0x404040,
   COLOR_THEME_DISABLED: 0x808080,
   WHITE: 0xffffff,
   BLACK: 0x000000,
@@ -39,31 +42,29 @@ export const THEME = {
   CUSTOM_COLOR: 0xffffff,
 };
 
-/** Text flags, in the low 16 bits; a colour's palette slot sits above them. The values are this preview's own. */
+/**
+ * Text flags, in the low 16 bits; a colour's palette slot sits above them. The font is a number in bits 8 to 11, as on
+ * a colour radio (EdgeTX's FONT(...)): BOLD is a font of its own, so BOLD added to SMLSIZE makes MIDSIZE, there as here.
+ */
 const FLAG = {
   INVERS: 1,
   BLINK: 2,
-  BOLD: 4,
   SHADOWED: 8,
   RIGHT: 16,
   CENTER: 32,
   VCENTER: 64,
-  TINSIZE: 128,
-  SMLSIZE: 256,
-  MIDSIZE: 512,
-  DBLSIZE: 1024,
-  XXLSIZE: 2048,
-  PREC1: 4096,
-  PREC2: 8192,
+  BOLD: 0x100,
+  TINSIZE: 0x200,
+  SMLSIZE: 0x300,
+  MIDSIZE: 0x400,
+  DBLSIZE: 0x500,
+  XXLSIZE: 0x600,
+  PREC1: 0x1000,
+  PREC2: 0x2000,
 };
 
-const FONT_SIZES: [number, number][] = [
-  [FLAG.XXLSIZE, 64],
-  [FLAG.DBLSIZE, 32],
-  [FLAG.MIDSIZE, 22],
-  [FLAG.SMLSIZE, 12],
-  [FLAG.TINSIZE, 9],
-];
+/** Each font's height in pixels on the TX16S, by its number: standard, bold, tiny, small, mid, double, XXL. */
+const FONT_SIZES = [16, 16, 9, 13, 24, 32, 64];
 
 const hex = (rgb: number) => `#${rgb.toString(16).padStart(6, '0')}`;
 const whole = Math.trunc;
@@ -80,7 +81,7 @@ interface RadioBitmap {
 export interface RadioInputs {
   value: (source: string) => number;
   /** The model it is on: its name, picture and global variables (first flight mode, by index). */
-  model: {name: string; bitmap: string; globals?: Record<number, number>};
+  model: {name: string; bitmap: string; globals?: Record<number, number>; reversed?: number[]};
   /** A model timer as the radio runs it (timers.ts): its value (the time left when it counts down) and start. */
   timer?: (index: number) => {value: number; start: number};
 }
@@ -178,6 +179,11 @@ export class Radio {
     return this.inputs.model.bitmap;
   }
 
+  /** 1 when a channel's output (from 0) is reversed in the model, as model.getOutput(index).revert gives it. */
+  outputReversed(index: number) {
+    return this.inputs.model.reversed?.includes(Number(index)) ? 1 : 0;
+  }
+
   modelGlobal(index: number) {
     return this.inputs.model.globals?.[index] ?? 0;
   }
@@ -265,8 +271,23 @@ export class Radio {
     });
   }
 
-  /** A pixel at a time (Bresenham), as the radio draws a line; any pattern but SOLID dots it. */
-  drawLine(x1: number, y1: number, x2: number, y2: number, pattern?: number, flags?: number) {
+  /**
+   * A pixel at a time (Bresenham), as the radio draws a line; any pattern but SOLID dots it. An LVGL line thicker than
+   * a pixel (`width`) is drawn smooth with round ends, as LVGL draws it.
+   */
+  drawLine(x1: number, y1: number, x2: number, y2: number, pattern?: number, flags?: number, width = 1) {
+    if (width > 1) {
+      this.withZone(context => {
+        context.strokeStyle = this.color(flags);
+        context.lineWidth = width;
+        context.lineCap = 'round';
+        context.beginPath();
+        context.moveTo(whole(x1) + 0.5, whole(y1) + 0.5);
+        context.lineTo(whole(x2) + 0.5, whole(y2) + 0.5);
+        context.stroke();
+      });
+      return;
+    }
     let fromX = whole(x1);
     let fromY = whole(y1);
     const [toX, toY] = [whole(x2), whole(y2)];
@@ -418,8 +439,9 @@ export class Radio {
 
   // Text.
   private font(flags = 0) {
-    const size = FONT_SIZES.find(([flag]) => (flags & 0xf80) === flag)?.[1] ?? 16;
-    return {size, css: `${flags & FLAG.BOLD ? 700 : 500} ${size}px Roboto, "Helvetica Neue", Arial, sans-serif`};
+    const font = ((flags ?? 0) >> 8) & 0xf;
+    const size = FONT_SIZES[font] ?? 16;
+    return {size, css: `${font === 1 ? 700 : 500} ${size}px Roboto, "Helvetica Neue", Arial, sans-serif`};
   }
 
   sizeTextWidth(text: unknown, flags?: number) {
@@ -624,9 +646,10 @@ function model.getTimer(index)
   return {value = int(host:timerValue(index)), start = int(host:timerStart(index)), mode = 1, countdownBeep = 0,
     minuteBeep = false, persistent = 0, name = ''}
 end
+function model.resetTimer(index) end
 function model.getOutput(index)
   return {name = 'CH' .. (index + 1), min = -1000, max = 1000, offset = 0, ppmCenter = 1500, symetrical = 0,
-    revert = 0}
+    revert = int(host:outputReversed(index))}
 end
 function getOutputValue(index) return int(host:getValue('CH' .. (index + 1))) end
 function getRSSI() return int(host:getValue('RSSI')), 45, 42 end
@@ -659,6 +682,96 @@ function loadScript(path, mode, env)
 end
 function getUsage() return 10 end
 function getFieldInfo(name) return {id = 0, name = tostring(name), desc = tostring(name), unit = 0} end
+function getVersion() return '2.12.5', 'tx16s', 2, 12, 5, 'EdgeTX' end
+function getSourceName(source) return tostring(source) end
+function model.getSensor(index) return nil end
+function setTelemetryValue() return true end
+-- require only through a widget's own searcher (BattAnalog adds one reading loadScript): Fengari's own would fetch the
+-- path from the page, which answers anything with the site's HTML.
+package.path, package.cpath = '', ''
+
+-- EdgeTX's named fonts (2.11), as the sizes here: FONT_8 is SMLSIZE, FONT_38 XXLSIZE.
+FONT_6, FONT_8, FONT_12, FONT_16, FONT_24, FONT_38 = TINSIZE, SMLSIZE, 0, MIDSIZE, DBLSIZE, XXLSIZE
+
+-- LVGL (a widget with useLvgl), as far as the card's widgets use it: lvgl.build gives labels, rectangles, lines,
+-- triangles, circles, images and boxes whose properties may be functions, read again at each refresh; they are drawn
+-- with the lcd calls after the widget's refresh, a box's children inside it. Rounded corners are drawn square.
+lvgl = {LCD_SCALE = 1}
+local building
+function lvgl.clear() if building then building.objects = {} end end
+function lvgl.build(objects)
+  if building then for _, object in ipairs(objects) do table.insert(building.objects, object) end end
+  return {}
+end
+-- The other way to make them: lvgl.box({...}) (or lvgl.rectangle(parent, {...})), then box:rectangle({...}) inside it.
+local made = {}
+made.__index = made
+local function make(kind, props, into)
+  local object = setmetatable(props or {}, made)
+  object.type = object.type or kind
+  object.children = object.children or {}
+  table.insert(into, object)
+  return object
+end
+function made:build(objects) for _, object in ipairs(objects) do table.insert(self.children, object) end end
+for _, kind in ipairs({'box', 'rectangle', 'label', 'circle', 'arc', 'image', 'line', 'triangle', 'hline', 'vline'}) do
+  made[kind] = function(self, props) return make(kind, props, self.children) end
+  lvgl[kind] = function(parent, props)
+    if props == nil then parent, props = nil, parent end
+    return make(kind, props, parent and parent.children or (building and building.objects) or {})
+  end
+end
+local function now(value) if type(value) == 'function' then return value() end return value end
+local function drawObjects(objects, left, top)
+  for _, object in ipairs(objects) do
+    if object.visible == nil or now(object.visible) then
+      local x, y = now(object.x) or 0, now(object.y) or 0
+      if object.pos then x, y = now(object.pos) end
+      local w, h = now(object.w) or 0, now(object.h) or 0
+      if object.size then w, h = now(object.size) end
+      x, y = left + (x or 0), top + (y or 0)
+      local color = now(object.color) or COLOR_THEME_PRIMARY1
+      if object.type == 'label' then
+        -- In its box: centred or to the right of it when it has a width, else from its left.
+        local text, flags, align = tostring(now(object.text) or ''), bit32.bor(now(object.font) or 0, color), now(object.align) or 0
+        if bit32.band(align, CENTER) ~= 0 and w > 0 then lcd.drawText(x + w / 2, y, text, bit32.bor(flags, CENTER))
+        elseif bit32.band(align, RIGHT) ~= 0 and w > 0 then lcd.drawText(x + w, y, text, bit32.bor(flags, RIGHT))
+        else lcd.drawText(x, y, text, flags) end
+      elseif object.type == 'image' and object.file then
+        -- Opened once, fitted inside its frame keeping its shape, centred, as LVGL shows it.
+        if object.fitted == nil then
+          local opened = Bitmap.open(object.file)
+          object.fitted = opened and (Bitmap.resize(opened, w, h) or opened) or false
+        end
+        if object.fitted then lcd.drawBitmap(object.fitted, x, y) end
+      elseif object.type == 'line' or object.type == 'triangle' then
+        -- Points from the parent's corner, as {x, y} pairs.
+        local points = now(object.pts) or {}
+        if object.type == 'triangle' and #points == 3 then
+          lcd.drawFilledTriangle(x + points[1][1], y + points[1][2], x + points[2][1], y + points[2][2],
+            x + points[3][1], y + points[3][2], color)
+        elseif object.type == 'line' then
+          for index = 1, #points - 1 do
+            host:drawLine(x + points[index][1], y + points[index][2], x + points[index + 1][1],
+              y + points[index + 1][2], SOLID, color, object.thickness or 1)
+          end
+        end
+      elseif object.type == 'circle' then
+        -- At its centre.
+        local radius = now(object.radius) or 0
+        if object.filled and now(object.filled) then lcd.drawFilledCircle(x, y, radius, color)
+        else lcd.drawCircle(x, y, radius, color) end
+      elseif (object.type == 'hline' or object.type == 'vline') and w > 0 and h > 0 then
+        lcd.drawFilledRectangle(x, y, w, h, color)
+      elseif object.type == 'rectangle' and (w or 0) > 0 and (h or 0) > 0 then
+        -- One with no size (an empty battery's fill) draws nothing, as on the radio, not leftwards as a canvas would.
+        if now(object.filled) then lcd.drawFilledRectangle(x, y, w or 0, h or 0, color)
+        else lcd.drawRectangle(x, y, w or 0, h or 0, color, now(object.thickness) or 1) end
+      end
+      if object.children then drawObjects(object.children, x, y) end
+    end
+  end
+end
 
 -- Widgets by key (a module loaded once), and their instances by id (one a zone).
 function __preview_load(_, key, code)
@@ -674,20 +787,35 @@ function __preview_load(_, key, code)
   return table.concat(lines, '\n')
 end
 
+-- Each call runs with its instance as the one LVGL builds for.
+local function within(instance, call, ...)
+  building = instance
+  local ok, result = pcall(call, ...)
+  building = nil
+  if not ok then error(result, 0) end
+  return result
+end
+
 function __preview_create(_, id, key, width, height, values)
   local module = modules[key]
   local zone = {x = 0, y = 0, w = int(width), h = int(height)}
-  instances[id] = {module = module, state = module.create(zone, optionsFrom(values))}
+  local instance = {module = module, objects = {}}
+  instances[id] = instance
+  instance.state = within(instance, module.create, zone, optionsFrom(values))
+  -- As the radio does, an LVGL widget's update right after its create.
+  if module.useLvgl and module.update then within(instance, module.update, instance.state, optionsFrom(values)) end
 end
 
 function __preview_update(_, id, values)
   local instance = instances[id]
-  if instance and instance.module.update then instance.module.update(instance.state, optionsFrom(values)) end
+  if instance and instance.module.update then within(instance, instance.module.update, instance.state, optionsFrom(values)) end
 end
 
 function __preview_refresh(_, id)
   local instance = instances[id]
-  if instance then instance.module.refresh(instance.state, nil, nil) end
+  if not instance then return end
+  within(instance, instance.module.refresh, instance.state, nil, nil)
+  if instance.module.useLvgl then drawObjects(instance.objects, 0, 0) end
 end
 
 function __preview_drop(_, id)

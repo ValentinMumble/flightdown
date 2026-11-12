@@ -11,8 +11,9 @@ import {SpotForm} from '../components/forms/HangarForms';
 import {MiniMap} from '../components/MiniMap';
 import {SortiePhotos} from '../components/SortiePhotos';
 import {TelemetryPacks} from '../components/TelemetryPacks';
+import {InvertedRing, PackBars, packTimes} from '../components/PackTimes';
 import {formatAirtime, formatDay, formatTimer, plural} from '../model/format';
-import {airtime, sortSorties} from '../model/stats';
+import {airtime, loggedTimes, sortSorties} from '../model/stats';
 import {readTelemetry} from '../model/telemetry';
 import {packOf} from '../model/insights';
 import {parseCsv} from '../model/csv';
@@ -62,6 +63,7 @@ export function SortiePage() {
   const one = heli(sortie.heliId);
   const place = spot(sortie.spotId);
   const pack = packOf(one, doc.batteries);
+  const logged = sortie ? loggedTimes(sortie) !== null : false;
   // Every size of pack this heli flies, to pick from in a replay.
   const packs = [
     ...new Set(
@@ -119,12 +121,15 @@ export function SortiePage() {
             <div className="figures">
               <div>
                 <div className="figure-label">Air</div>
-                <div className="figure-value">{formatAirtime(airtime(sortie), true)}</div>
+                {/* From its logs, to the second; else its packs times its timer. */}
+                <div className="figure-value">
+                  {logged ? formatTimer(airtime(sortie)) : formatAirtime(airtime(sortie), true)}
+                </div>
               </div>
               <div>
                 <div className="figure-label">Packs</div>
                 <div className="figure-value">
-                  {sortie.packs} × {formatTimer(sortie.timer)}
+                  {logged ? sortie.packs : `${sortie.packs} × ${formatTimer(sortie.timer)}`}
                 </div>
               </div>
               <div>
@@ -140,6 +145,18 @@ export function SortiePage() {
                 </div>
               </div>
             </div>
+            {/* Its packs as their logs flew them, and the share upside down. */}
+            {logged && (
+              <div className="debrief-packs">
+                <PackBars packs={packTimes(sortie, doc.batteries)} />
+                {sortie.telemetry.some(log => log.inverted !== undefined) && (
+                  <InvertedRing
+                    inverted={sortie.telemetry.reduce((sum, log) => sum + (log.inverted ?? 0), 0)}
+                    air={airtime(sortie)}
+                  />
+                )}
+              </div>
+            )}
             {sortie.skills.length > 0 && (
               <div className="chips">
                 {sortie.skills.map(skill => (

@@ -87,6 +87,8 @@ export class ModelTimers {
       this.step(next, next - this.clock, readAt(next));
     }
     if (clock > this.clock) this.step(clock, clock - this.clock, readAt(clock));
+    // Not moved on (a replay paused): read again, so a switch set by hand reaches the logical switches at once.
+    else if (clock === this.clock) this.step(clock, 0, readAt(clock));
   }
 
   /** A timer's value as the radio gives it to Lua: the time left when it counts down (below 0 past it), else run. */

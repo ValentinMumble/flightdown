@@ -59,6 +59,12 @@ export interface CardMix {
   name: string;
 }
 
+/** A curve's points in % (-100 to 100): y at evenly spaced x, or, for a custom curve, at its own x (inner points). */
+export interface CardCurve {
+  y: number[];
+  x?: number[];
+}
+
 /** A special function (or a global one, on the radio): on its switch, PLAY_TRACK "armed,1,1x" says "armed" once. */
 export interface CardFunction {
   swtch: string;
@@ -87,6 +93,8 @@ export interface CardModel {
   switches: string[];
   /** Its global variables in the first flight mode, by index, those not 0: GV6 (index 5) is 3 cells for mAhRe. */
   globals?: Record<number, number>;
+  /** The channels (from 0) whose output is reversed: the radio gives them upside down (CH3 on the M2 EVO). */
+  reversed?: number[];
   /** Telemetry sensor precisions by index: Curr (precision 1) is kept in tenths of an amp. */
   precisions?: number[];
   /** Its timers, the logical switches they may run on (by index, L1 is 0), and the special functions resetting them. */
@@ -97,6 +105,8 @@ export interface CardModel {
   inputNames?: string[];
   inputs?: CardInput[];
   mixes?: CardMix[];
+  /** Its curves by index (curve 1 is 0), for the mixer. */
+  curves?: CardCurve[];
   functions?: CardFunction[];
   curveNames?: string[];
 }
@@ -203,6 +213,30 @@ export function readRadio(data: Yaml): CardRadio {
   return {functions: functionsOf(data.customFn), ...(warning ? {batteryWarning: warning / 10} : {})};
 }
 
+/**
+ * A model's curves: their points are one list for all of them, in curve order. Each takes 5 points plus its header's
+ * `points` (a curve the file leaves out takes 5), and a custom one (type 1) takes its inner x positions after them.
+ */
+function curvesOf(data: Yaml): CardCurve[] {
+  const headers = record(data.curves);
+  const points: number[] = [];
+  for (const [index, item] of entries(data.points)) points[index] = Number(record(item).val) || 0;
+  const last = Math.max(-1, ...entries(data.curves).map(([index]) => index));
+  const curves: CardCurve[] = [];
+  let at = 0;
+  for (let index = 0; index <= last; index += 1) {
+    const header = record(headers[index]);
+    const count = 5 + (Number(header.points) || 0);
+    const y = Array.from({length: count}, (_, offset) => points[at + offset] ?? 0);
+    at += count;
+    if (Number(header.type) === 1) {
+      curves.push({y, x: Array.from({length: count - 2}, (_, offset) => points[at + offset] ?? 0)});
+      at += count - 2;
+    } else curves.push({y});
+  }
+  return curves;
+}
+
 /** One model file (model20.yml), read with a YAML parser. */
 export function readModel(id: string, data: Yaml): CardModel {
   const header = record(data.header);
@@ -295,10 +329,14 @@ export function readModel(id: string, data: Yaml): CardModel {
       };
     }),
     functions: functionsOf(data.customFn),
+    curves: curvesOf(data),
     curveNames: entries(data.curves).reduce<string[]>((list, [index, item]) => {
       list[index] = String(record(item).name ?? '');
       return list;
     }, []),
+    reversed: entries(data.limitData)
+      .filter(([, limit]) => Number(record(limit).revert) === 1)
+      .map(([index]) => index),
     globals: Object.fromEntries(
       entries(record(record(entries(data.flightModeData)[0]?.[1]).gvars))
         .map(([index, variable]) => [index, Number(record(variable).val) || 0])

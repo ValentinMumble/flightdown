@@ -65,7 +65,8 @@ function summarise(files: TelemetryLog[]): PackLog {
 
 /**
  * A sortie's log files as the packs flown, in the order flown: files that follow each other within SAME_PACK_GAP
- * seconds are one pack. A file with no start time stands alone, after the others.
+ * seconds are one pack, unless their 6-position buttons say two packs (a pack swapped that quickly). A file with no
+ * start time stands alone, after the others.
  */
 export function groupPacks(logs: TelemetryLog[]): PackLog[] {
   const timed = logs
@@ -76,7 +77,9 @@ export function groupPacks(logs: TelemetryLog[]): PackLog[] {
     const group = groups[groups.length - 1];
     const previous = group?.[group.length - 1];
     const gap = previous ? (startSeconds(log) ?? 0) - ((startSeconds(previous) ?? 0) + previous.duration) : Infinity;
-    if (group && gap <= SAME_PACK_GAP) group.push(log);
+    const otherPack =
+      previous?.packButton !== undefined && log.packButton !== undefined && previous.packButton !== log.packButton;
+    if (group && gap <= SAME_PACK_GAP && !otherPack) group.push(log);
     else groups.push([log]);
   }
   for (const log of logs) if (startSeconds(log) === null) groups.push([log]);
@@ -115,14 +118,20 @@ export function packName(pack: PackLog, batteries: Battery[]): string | null {
   return buttonPack(pack.packButton ?? 0, batteries, pack.start?.slice(0, 10) ?? '');
 }
 
-/** The pack a 6-position button stands for ("OMPHobby #1"), on a day, else today. */
-export function buttonPack(button: number, batteries: Battery[], day?: string): string | null {
+/** The kind of pack a 6-position button stands for on a day (else today), and which of them it is (from 0). */
+export function buttonBattery(button: number, batteries: Battery[], day?: string) {
   for (const battery of batteries) {
     const index = battery.buttons?.indexOf(button) ?? -1;
     if (index < 0 || (day !== undefined && battery.buttonsSince && day < battery.buttonsSince)) continue;
-    return `${battery.name.split(/\s\d+S\s/)[0]} #${index + 1}`;
+    return {battery, index};
   }
   return null;
+}
+
+/** The pack a 6-position button stands for ("OMPHobby #1"), on a day, else today. */
+export function buttonPack(button: number, batteries: Battery[], day?: string): string | null {
+  const found = buttonBattery(button, batteries, day);
+  return found ? `${found.battery.name.split(/\s\d+S\s/)[0]} #${found.index + 1}` : null;
 }
 
 /** The mAh a pack used, from its joined samples: the radio's count or the current added up. */

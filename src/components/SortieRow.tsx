@@ -3,7 +3,7 @@ import {Activity, Camera, Wrench} from 'lucide-react';
 import type {Sortie} from '../types';
 import {useStore} from '../data/store';
 import {sortiePhotos, useAlbum} from '../data/album';
-import {airtime} from '../model/stats';
+import {airtime, loggedTimes} from '../model/stats';
 import {formatAirtime, formatDay, formatTimer, fromDay} from '../model/format';
 import {useSeriesColor} from './colors';
 
@@ -62,9 +62,8 @@ export function FlightStrip({
       </span>
       <span className="strip-cell strip-packs">
         <small>Packs</small>
-        <b>
-          {sortie.packs}×{formatTimer(sortie.timer)}
-        </b>
+        {/* From its logs, each pack's own time makes the airtime: no time a pack to show. */}
+        <b>{loggedTimes(sortie) ? sortie.packs : `${sortie.packs}×${formatTimer(sortie.timer)}`}</b>
       </span>
       <span className="strip-cell strip-time">
         <small>Air</small>

@@ -59,6 +59,12 @@ export interface TelemetryLog {
   minRssi?: number;
   /** The 6-position button pressed through the log (1 to 6): which pack it was, when packs are given buttons. */
   packButton?: number;
+  /** Seconds with the motor on (CH3 off cut, else drawing 2 A or more): the time in the air, as the PACK timer's. */
+  flying?: number;
+  /** Seconds upside down: the collective held past the other side of hover under load (see invertedStretches). */
+  inverted?: number;
+  /** The pack's resistance (mΩ, the whole pack) from the voltage drop when the current jumps: it climbs with age. */
+  resistance?: number;
 }
 
 /** A log's samples, thinned to a few hundred points: seconds from the start, and one list per sensor. */

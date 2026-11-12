@@ -13,6 +13,15 @@ describe('groupPacks', () => {
     file('second', '2023-04-28T12:43:01', 175, {mAh: 368, minVoltage: 10.58, maxCurrent: 23.6, avgCurrent: 7}),
   ];
 
+  it('keeps files a few seconds apart apart when their buttons name two packs', () => {
+    const swapped = [
+      file('one', '2026-11-12T17:02:07', 263, {packButton: 6}),
+      file('two', '2026-11-12T17:06:50', 120, {packButton: 3}),
+      file('split', '2026-11-12T17:08:55', 60, {packButton: 3}),
+    ];
+    expect(groupPacks(swapped).map(pack => pack.files.map(one => one.id))).toEqual([['one'], ['two', 'split']]);
+  });
+
   it('joins files a few seconds apart into one pack, in the order flown', () => {
     const packs = groupPacks(logs);
     expect(packs.map(pack => pack.files.map(one => one.id))).toEqual([['first'], ['second', 'third']]);

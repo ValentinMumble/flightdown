@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {guessSignal, packSignals, radioName, sourceValue, widgetName} from './widgets';
+import {followedValue, guessSignal, guessSwitch, packSignals, radioName, sourceValue, widgetName} from './widgets';
 
 describe('widgetName', () => {
   it('reads the name the widget registers, not a field of the same name', () => {
@@ -72,6 +72,32 @@ describe('guessSignal', () => {
     expect(guessSignal('RSSI', signals)).toBe('');
     expect(guessSignal('SA', signals)).toBe('');
     expect(guessSignal('ArmedSwitch', [])).toBe('');
+  });
+});
+
+describe('guessSwitch', () => {
+  const signals = packSignals({id: 'pack', time: [0], channels: {voltage: [12], current: [1]}});
+
+  it('lets the switches that cut the motor follow the rotor in a log that kept no switches', () => {
+    expect(guessSwitch('down', signals)).toBe('running');
+    expect(guessSwitch('up', signals)).toBe('running');
+  });
+
+  it('leaves the others, or a pack with neither current nor throttle, set by hand', () => {
+    expect(guessSwitch(undefined, signals)).toBe('');
+    expect(guessSwitch('down', packSignals({id: 'pack', time: [0], channels: {voltage: [12]}}))).toBe('');
+  });
+
+  it('puts SA down and SF up while the rotor turns, as the M2 EVO arms', () => {
+    const series = {id: 'pack', time: [0, 1], channels: {current: [12, 0.4]}};
+    expect([0, 1].map(second => followedValue(series, 'running', second, 'down'))).toEqual([1024, -1024]);
+    expect([0, 1].map(second => followedValue(series, 'running', second, 'up'))).toEqual([-1024, 1024]);
+  });
+
+  it('reads SA the other way round in a log from before it armed down', () => {
+    const logged = {id: 'pack', time: [0, 1], channels: {sa: [-1, 1]}};
+    expect([0, 1].map(second => followedValue(logged, 'sa', second, 'down', true))).toEqual([1024, -1024]);
+    expect([0, 1].map(second => followedValue(logged, 'sa', second, 'down'))).toEqual([-1024, 1024]);
   });
 });
 

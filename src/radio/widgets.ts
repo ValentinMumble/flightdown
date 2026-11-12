@@ -92,6 +92,32 @@ export function guessSignal(name: string, signals: PackSignal[]): PackSignal | '
   return rules.find(([pattern, signal]) => pattern.test(name) && signals.includes(signal))?.[1] ?? '';
 }
 
+/**
+ * What a switch follows in a pack that kept no column for it (older logs): the rotor when the switch lets the motor run
+ * (its role says where it sits then, `running`: SA down, SF up), so a replay arms as the heli did; else nothing, and
+ * it stays as set by hand.
+ */
+export function guessSwitch(running: string | undefined, signals: PackSignal[]): PackSignal | '' {
+  return running && signals.includes('running') ? 'running' : '';
+}
+
+/**
+ * A source's value at a moment of the pack. The rotor turning reads -1024 (up), so a switch that sits down while it
+ * turns (`running`, SA) reads it the other way round; so does a logged switch whose positions meant the other way round
+ * when the log was made (`flipped`: SA, armed up before 12 Nov 2026).
+ */
+export function followedValue(
+  series: TelemetrySeries,
+  channel: PackSignal,
+  second: number,
+  running?: string,
+  flipped = false,
+) {
+  const value = sourceValue(series, channel, second);
+  if (channel === 'running') return running === 'down' ? -value : value;
+  return flipped && /^s[a-h]$/.test(channel) ? -value : value;
+}
+
 /** A channel's sample at a moment of the pack: the last one taken by then. */
 function sampleAt(series: TelemetrySeries, channel: Channel, second: number) {
   const values =

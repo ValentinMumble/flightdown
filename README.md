@@ -20,11 +20,16 @@ small monospace labels, one soft green for anything good, a rolling counter of m
   made without signal wait and sync later.
 - **Telemetry:** add EdgeTX logs (the radio's `LOGS` folder) to a sortie. It shows a card per pack, named by the
   6-position button pressed for it (packs get buttons in the Hangar; files a few seconds apart are one pack, the radio
-  splits a log when the link drops), and for the chosen pack: voltage, current,
-  signal and throttle as lanes of one recorder (each reads out at the cursor), a map of the sticks and a replay of them
-  with round throttle, current and battery dials (with a cursor on the lanes), and what the log says: the pack ran
-  flat, how much of it was used, sag per cell, when 80 % was used (a timer that fits), pack resistance, the radio link.
-  `npm run logs` brings them from the plugged-in radio. Debrief compares every pack's voltage under load.
+  splits a log when the link drops, unless their buttons differ), and for the chosen pack: voltage, current, signal and
+  throttle as lanes of one recorder (each reads out at the cursor), a map of the sticks and a replay of them with round
+  throttle, current and battery dials (the battery from the pack its button names: its charge at rest when plugged in,
+  less the mAh used; with a cursor on the lanes), and what the log says: the pack ran flat, how much of it was used, sag
+  per cell, when 80 % was used (a timer that fits), pack resistance, the radio link, the time upside down (the
+  collective held past the other side of hover under load for 3 s or more, shaded on the lanes). A sortie flown with
+  logs shows its exact air time, each pack as a bar (named by its button, the inverted part in violet) and the share
+  upside down as a ring. `npm run logs` brings them from the plugged-in radio. Debrief compares every pack's voltage
+  under load, and each pack's resistance over time (named by its button, from the voltage drop when the current jumps:
+  twice its first reading is worn).
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
   heli breaks (a damage map on a heli drawing), what brings it down (crash causes read from the notes), the fleet's
   history, the skill ladder, the flying season, packs a sortie, spots and hours by heli.
@@ -32,19 +37,21 @@ small monospace labels, one soft green for anything good, a rolling counter of m
   stock goes down as you log broken parts, packs and their cycles, notes. Each heli has a data plate page and its own
   chart colour (tap its dot in the Hangar to change it). Helis, radios and packs take a photo link; photos are lifted
   out of their background (`npm run cutouts`, with Apple's Vision on the Mac; others are cut out in the page).
-- **Radio:** the TX16S in the Hangar, running the Lua that goes on it (in the browser, with Fengari), its switches
+- **Radio:** a tab of its own: the TX16S, running the Lua that goes on it (in the browser, with Fengari), its switches
   around the screen where they sit on the radio, each saying what it does on the model where it is set (`roles.ts`,
-  written by hand from the model files). Model screens: the M2 EVO's and M4's screens as the radio draws them,
-  from its card, every widget in its zone (EdgeTX's own ones redrawn). One widget: a widget built in
+  written by hand from the model files). Model screens: the M2 EVO's and M4's screens as the radio draws them, from its
+  card, every widget in its zone (EdgeTX's own ones redrawn, LVGL ones drawn from their labels, rectangles, lines,
+  triangles, circles, images and boxes). One widget: a widget built in
   [edge-tx](https://github.com/ValentinMumble/edge-tx), in a zone of its size, its Lua to edit (kept in the browser,
   downloadable as `main.lua`). Logic: under the screen, the model's logic and the radio's in words, live with the
   switches and a replay: controls, conditions, what each channel is made of now and why, special and global functions,
-  timers; pick one to light what it reads and what reads it (`logic.ts`). Set the switches by hand (a click on one moves it; SH, the red rescue switch, springs
-  back, down only while held; SF starts in hold) and the 6-position buttons, or replay a logged pack: its log drives
-  the sensors, the buttons, the switches (their real positions; in older logs, the arming ones follow the rotor, on
-  while the pack draws 2 A) and the outputs; a log with no mAh sensor counts the mAh from the current, as the radio
-  does. Widgets read the model's global variables (mAhRe its cell count), and its timers run as on the radio, on its
-  logical switches (`timers.ts`).
+  timers; pick one to light what it reads and what reads it (`logic.ts`). Set the switches by hand (a click on one moves
+  it; SH, the red rescue switch, springs back, down only while held; SF starts in hold) and the 6-position buttons, or
+  replay a logged pack: its log drives the sensors, the buttons, the switches (their real positions; in older logs, the
+  arming ones follow the rotor, on while the pack draws 2 A) and the outputs; a log with no mAh sensor counts the mAh
+  from the current, as the radio does. Widgets read the model's global variables (mAhRe its cell count), and its timers
+  run as on the radio, on its logical switches (`timers.ts`); its outputs come from its own inputs, curves and mixes
+  when no log drives them (`mixer.ts`).
 - **Spots:** every flying spot on a satellite map (spots close together share a pin with a count until you zoom in).
   Set a spot's GPS point by tapping the map, pasting coordinates or a Maps link, or from the phone's position; each
   sortie then shows its spot from above.
@@ -69,12 +76,13 @@ It opens on http://127.0.0.1:5194 and serves `/api/*` itself, with the variables
 **Seed** the store once from a Google Sheets log and the radio's logs: `npm run seed` reads `SEED_SHEET_ID` and
 `SEED_LOGS_DIR`. `--dry-run` only prints what it read; `--force` replaces a log already there.
 
-**Radio logs:** on the radio, give each heli a special function "SD Logs" on the switch `Telem` (telemetry
-streaming) at 0.2 s: it then logs every pack, one file each, from plug-in to unplug. Plug the radio in as USB storage
-and run `npm run logs`. It backs up new CSV files to
-`SEED_LOGS_DIR` and adds each new flight log to the sortie of its day on the heli named like the radio's model.
-`--create` makes a sortie for logs with none; `--clean` then removes the backed-up logs from the radio; `--dry-run`
-only prints what it would do.
+**Radio logs:** on the radio, give each heli a special function "SD Logs" on the switch `Telem` (telemetry streaming) at
+0.2 s: it then logs every pack, one file each, from plug-in to unplug. Plug the radio in as USB storage and run `npm run
+logs`. It backs up new CSV files to `SEED_LOGS_DIR` and adds each new flight log to the sortie of its day on the heli
+named like the radio's model. `--create` makes a sortie for logs with none, on the heli of that name still flying, its
+time per pack the logs' time with the motor under load; a sortie counts at least the packs its logs show, and
+`--recount` checks every sortie for that; `--clean` then removes the backed-up logs from the radio; `--dry-run` only
+prints what it would do.
 
 **Heli photos:** `npm run cutouts` lifts every heli photo out of its background with Apple's Vision framework (macOS
 14 or later) and keeps the PNGs in Redis; run it after setting a new photo. `--force` lifts them all again.

@@ -346,6 +346,85 @@
   gap: 10px 16px;
 }
 
+/* A sortie's packs from their logs: a bar each, as long as its time in the air, the inverted part violet at its end;
+   the share upside down as a ring beside them. */
+.debrief-packs {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.pack-bars {
+  display: grid;
+  gap: 6px;
+}
+
+.pack-bar-row {
+  display: grid;
+  grid-template-columns: minmax(84px, max-content) 1fr 3.2em;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8125rem;
+}
+
+.pack-bar-name {
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pack-bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+}
+
+.pack-bar-fill {
+  display: flex;
+  justify-content: flex-end;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  overflow: hidden;
+}
+
+.pack-bar-inverted {
+  height: 100%;
+}
+
+.pack-bar-time {
+  text-align: right;
+  color: var(--ink);
+}
+
+.inverted-ring {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  margin: 0;
+}
+
+.inverted-ring-share {
+  fill: var(--ink);
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.inverted-ring figcaption {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+@media (max-width: 520px) {
+  .debrief-packs {
+    grid-template-columns: 1fr;
+  }
+}
+
 .figure-label {
   font-family: var(--display);
   font-size: 0.6875rem;

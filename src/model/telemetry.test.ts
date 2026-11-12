@@ -2,7 +2,7 @@ import {describe, expect, it} from 'vitest';
 import type {Sortie} from '../types';
 import {parseCsv} from './csv';
 import {matchSortie, modelFromFileName, readDay, readTelemetry, sampleAt} from './telemetry';
-import {estimateCells, packOf, telemetryInsights} from './insights';
+import {estimateCells, invertedStretches, packOf, telemetryInsights} from './insights';
 
 /** A made-up EdgeTX log of a 3S pack: hover, then the pack sags and the ESC cuts with the throttle up. */
 function edgeTxLog() {
@@ -37,6 +37,28 @@ describe('readTelemetry', () => {
     expect(read!.log.maxCurrent).toBe(20);
     expect(read!.log.mAh).toBeGreaterThan(150);
     expect(read!.series.channels.throttle[10]).toBe(84);
+    // In the air from 5 s to 50 s: the motor under load (12 A and more).
+    expect(read!.log.flying).toBe(45);
+  });
+
+  it('reads the 6-position button from EdgeTX 2.12 logs, where it is P2', () => {
+    const lines = [
+      'Date,Time,VFAS(V),P1,P2,P3',
+      '2026-11-12,16:10:32.210,0.00,-1024,615,0',
+      '2026-11-12,16:10:32.410,0.00,-1024,615,0',
+    ];
+    const read = readTelemetry(parseCsv(lines.join('\n')), 'M2 EVO-2026-11-12-161032.csv');
+    expect(read!.log.packButton).toBe(5);
+  });
+
+  it('counts the time in the air from the motor output, low current or not', () => {
+    // CH3 at cut (2012 µs, reversed) while the pack draws nothing; on from 2 s to 6 s, drawing 0.5 A at moments.
+    const lines = ['Date,Time,Curr(A),CH3(us)'];
+    for (let second = 0; second < 10; second += 1) {
+      const on = second >= 2 && second < 6;
+      lines.push(`2026-11-12,17:17:0${second}.000,${on ? (second % 2 ? 0.5 : 6) : 0},${on ? 1424 : 2012}`);
+    }
+    expect(readTelemetry(parseCsv(lines.join('\n')), 'M2 EVO-2026-11-12-171700.csv')!.log.flying).toBe(4);
   });
 
   it('finds the sortie of the log, on the heli named like the model', () => {
@@ -60,6 +82,28 @@ describe('readTelemetry', () => {
     expect(modelFromFileName('M2 EVO-2023-05-03-124800.csv')).toBe('M2 EVO');
     expect(matchSortie(read.log, 'M2 EVO', sorties, id => names[id])?.id).toBe('b');
     expect(matchSortie(read.log, 'M4', sorties, id => names[id])).toBeNull();
+  });
+});
+
+describe('invertedStretches', () => {
+  // Hover at +1.5° on a reversed CH6 (1436 µs); upside down at -9° (1884 µs) from 5 s to 10 s, a 1 s flip at 12 s.
+  const time = Array.from({length: 41}, (_, index) => index / 2);
+  const ch6 = time.map(second => ((second >= 5 && second < 10) || (second >= 12 && second < 13) ? 1884 : 1436));
+  const series = {id: 'pack', time, channels: {ch6, current: time.map(() => 6)}};
+
+  it('finds the pitch held past the other side of hover under load, not a flip', () => {
+    expect(invertedStretches(series)).toEqual([{start: 5, seconds: 5}]);
+  });
+
+  it('says so in the pack analysis', () => {
+    const texts = telemetryInsights({}, {...series, channels: {...series.channels, current: time.map(() => 6)}}).map(
+      insight => insight.text,
+    );
+    expect(texts.join('\n')).toContain('Inverted once: 5 s in all, the longest 5 s');
+  });
+
+  it('needs the motor under load', () => {
+    expect(invertedStretches({...series, channels: {ch6, current: time.map(() => 0)}})).toEqual([]);
   });
 });
 

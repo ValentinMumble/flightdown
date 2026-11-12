@@ -19,9 +19,10 @@ import {formatDay, formatTimer, plural} from '../model/format';
 import {buttonOf, isOutput} from '../model/telemetry';
 import {Radio, SCREEN, startLua, type RadioInputs, type WidgetOption, type WidgetRunner} from '../radio/edgetx';
 import {ModelTimers} from '../radio/timers';
+import {channelOutput, outputIndex} from '../radio/mixer';
 import {describeLogic} from '../radio/logic';
 import {RadioLogic} from '../components/RadioLogic';
-import type {Card} from '../radio/card';
+import type {Card, CardModel} from '../radio/card';
 import {switchRole, type SwitchRole} from '../radio/roles';
 import {mainView, TOP_BAR} from '../radio/layout';
 import {
@@ -36,12 +37,13 @@ import {
 } from '../radio/screen';
 import {
   guessSignal,
+  guessSwitch,
+  followedValue,
   listWidgets,
   radioFile,
   packSignals,
   radioName,
   signalLabel,
-  sourceValue,
   widgetCode,
   type PackSignal,
   type WidgetFile,
@@ -55,10 +57,13 @@ type Shown = Mode | 'logic';
 /** Zones a widget can sit in on the TX16S, measured from EdgeTX: the M2 EVO's first. */
 const ALL_DECORATIONS = {topbar: true, flightMode: true, sliders: true, trims: true, mirrored: false};
 const VIEW = mainView(ALL_DECORATIONS);
+/** The main view with the top bar only, no sliders, trims or flight mode: the M2 EVO's cockpit screen. */
+const BARE = mainView({...ALL_DECORATIONS, flightMode: false, sliders: false, trims: false});
 const ZONES = [
-  {key: 'top-left', label: 'M2 EVO screen, top left', width: VIEW.w / 2, height: Math.trunc(VIEW.h / 2)},
+  {key: 'top-left', label: 'Layout 2 + 1, top left', width: VIEW.w / 2, height: Math.trunc(VIEW.h / 2)},
   {key: 'right', label: 'Layout 2 + 1, right', width: VIEW.w / 2, height: VIEW.h},
   {key: 'view', label: 'Whole main view', width: VIEW.w, height: VIEW.h},
+  {key: 'bare', label: 'Main view, top bar only (the cockpit)', width: BARE.w, height: BARE.h},
   {key: 'full', label: 'Full screen', width: SCREEN.width, height: SCREEN.height},
   {key: 'topbar', label: 'Top bar slot', width: 74, height: TOP_BAR - 6},
 ];
@@ -111,16 +116,29 @@ const isPositional = (name: string) => /^S[A-Z]\d?$|switch|^ch\(|^I\d+$|^(Thr|Ru
 const isSwitch = (name: string) => /^S[A-Z]\d?$|switch/i.test(name);
 
 /** A source as one name whatever its case: EdgeTX reads "sh" as the switch SH. */
-const sourceKey = (source: string) => (/^s[a-z]$/i.test(source) ? source.toUpperCase() : source);
+/** The TX16S's knobs, sliders and buttons as Lua names them on the radio (EdgeTX 2.12.5, exactly), as the tab does. */
+const LUA_NAMES: Record<string, string> = {'6pos': '6P', s1: 'S1', s2: 'S2', ls: 'LS', rs: 'RS'};
+const sourceKey = (source: string) => LUA_NAMES[source] ?? (/^s[a-z]$/i.test(source) ? source.toUpperCase() : source);
 
 /**
  * The pack signal a source most likely follows: by its own name (a telemetry source by its sensor's, "tele(5)" being
- * VFAS), else by the option it feeds (SA feeds the ArmedModel's ArmedSwitch, so it follows the rotor).
+ * VFAS), else by the option it feeds (SA feeds the ArmedModel's ArmedSwitch, so it follows the rotor), else by its role
+ * on the model (`running`, from roles.ts: Arm and Throttle hold follow the rotor in a log that kept no switches).
  */
-function guessFor(source: string, sensors: string[], readers: Record<string, string>, signals: PackSignal[]) {
+function guessFor(
+  source: string,
+  sensors: string[],
+  readers: Record<string, string>,
+  signals: PackSignal[],
+  running?: string,
+) {
   const telemetry = /^tele\([-+]?(\d+)\)$/.exec(source);
   const named = telemetry ? (sensors[Number(telemetry[1])] ?? source) : source;
-  return guessSignal(named, signals) || (readers[source] ? guessSignal(readers[source], signals) : '');
+  return (
+    guessSignal(named, signals) ||
+    (readers[source] ? guessSignal(readers[source], signals) : '') ||
+    guessSwitch(running, signals)
+  );
 }
 
 const POSITIONS = [
@@ -512,6 +530,8 @@ export default function RadioView() {
   const [paused, setPaused] = useState(false);
   const [packKey, setPackKey] = useState('');
   const [series, setSeries] = useState<TelemetrySeries | null>(null);
+  /** When the pack replayed started (YYYY-MM-DDTHH:MM:SS): a switch whose meaning changed since reads flipped. */
+  const [seriesStart, setSeriesStart] = useState<string | undefined>(undefined);
   const [replay, setReplay] = useState({at: 0, playing: false, speed: '1'});
 
   const heli = doc.helis.find(one => one.id === heliId);
@@ -537,6 +557,7 @@ export default function RadioView() {
     manual,
     bindings,
     series,
+    seriesStart,
     replay,
     placed: [] as Placed[],
     chrome: ALL_DECORATIONS as typeof ALL_DECORATIONS | null,
@@ -544,6 +565,7 @@ export default function RadioView() {
     hints: {} as Record<string, string>,
     outline: false,
     timers: null as ModelTimers | null,
+    model: null as CardModel | null,
     last: performance.now(),
   });
   live.current = {
@@ -551,6 +573,7 @@ export default function RadioView() {
     manual,
     bindings,
     series,
+    seriesStart,
     chrome:
       mode === 'screen'
         ? (screen?.options ?? null)
@@ -558,6 +581,7 @@ export default function RadioView() {
     sensors: mode === 'screen' ? (model?.sensors ?? []) : [],
     outline: mode === 'widget',
     timers,
+    model: mode === 'screen' ? (model ?? null) : null,
   };
 
   const packs = useMemo(
@@ -588,13 +612,27 @@ export default function RadioView() {
 
   // A source at a moment of the pack replayed (now unless said), or as set by hand. It reads `live`, so the Lua and the
   // Logic view both see the latest.
-  const valueAt = (asked: string, second?: number) => {
+  const valueAt = (asked: string, second?: number): number => {
     const now = live.current;
     const source = sourceKey(asked);
+    const role = switchRole(now.model?.name, source);
+    const running = role?.running;
+    const flipped = Boolean(role?.flippedBefore && now.seriesStart && now.seriesStart < role.flippedBefore);
     // A source set by hand stays so, even when the pack has a channel of its name.
     const bound = now.bindings[source];
-    const channel = bound === undefined ? guessFor(source, now.sensors, now.hints, packSignals(now.series)) : bound;
-    if (channel && now.series) return sourceValue(now.series, channel, second ?? now.replay.at);
+    const channel =
+      bound === undefined ? guessFor(source, now.sensors, now.hints, packSignals(now.series), running) : bound;
+    if (channel && now.series) return followedValue(now.series, channel, second ?? now.replay.at, running, flipped);
+    // An output no log drives: the model's mixer makes it, from the switches and sticks as set, as the radio would.
+    const output = outputIndex(asked);
+    if (output !== null && now.model) {
+      return channelOutput(
+        now.model,
+        output,
+        mixed => valueAt(mixed, second),
+        name => logicNow()?.isOn(name) ?? false,
+      );
+    }
     return now.manual[source] ?? restingValue(source);
   };
 
@@ -789,7 +827,12 @@ export default function RadioView() {
     let current = true;
     const setUp = async () => {
       clearScreen();
-      inputs.current!.model = {name: model.name, bitmap: model.bitmap, globals: model.globals};
+      inputs.current!.model = {
+        name: model.name,
+        bitmap: model.bitmap,
+        globals: model.globals,
+        reversed: model.reversed,
+      };
       await loadPicture(model.bitmap, async () => radioFile(`IMAGES/${model.bitmap}`));
       const next: Placed[] = [];
       const readers: Record<string, string> = {};
@@ -910,6 +953,7 @@ export default function RadioView() {
       return;
     }
     setSeries(joinSeries(chosen.pack, parts as TelemetrySeries[]));
+    setSeriesStart(chosen.pack.start);
     live.current.replay = {...live.current.replay, at: 0, playing: true};
   };
 
@@ -954,10 +998,16 @@ export default function RadioView() {
     mode === 'screen' && !(model?.switches ? model.switches.includes(name) : switches.includes(name));
   // A source now: what the pack replayed gives it, else what was set by hand, else where it rests.
   const sourceNow = (name: string) => {
-    const followed = bindings[name] ?? guessFor(name, sensors, hints, channels);
+    const role = switchRole(model?.name, name);
+    const running = role?.running;
+    const flipped = Boolean(role?.flippedBefore && seriesStart && seriesStart < role.flippedBefore);
+    const followed = bindings[name] ?? guessFor(name, sensors, hints, channels, running);
     return {
       followed,
-      value: followed && series ? sourceValue(series, followed, replay.at) : (manual[name] ?? restingValue(name)),
+      value:
+        followed && series
+          ? followedValue(series, followed, replay.at, running, flipped)
+          : (manual[name] ?? restingValue(name)),
     };
   };
   // The 6-position buttons, under the screen as on the radio: always on a model screen, else when the widget reads them.

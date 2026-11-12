@@ -2,7 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {Trash} from 'lucide-react';
 import type {TelemetryLog, TelemetrySeries} from '../types';
 import {useStore} from '../data/store';
-import {groupPacks, joinSeries, packName, packUsed} from '../model/packs';
+import {buttonBattery, groupPacks, joinSeries, packName, packUsed} from '../model/packs';
 import {formatTimer, plural} from '../model/format';
 import {TelemetryCharts} from './charts/TelemetryCharts';
 
@@ -92,6 +92,9 @@ export function TelemetryPacks({
   const flight = flights[selected];
   const series = joined[selected];
   const used = usedBy[selected];
+  // The pack its button names, its size and cells; else the heli's usual one.
+  const named = buttonBattery(flight.packButton ?? 0, doc.batteries, flight.start?.slice(0, 10));
+  const flightPack = named ? {cells: named.battery.cells, capacity: named.battery.capacity} : pack;
   const figures = [
     {label: 'Used', value: used !== undefined ? `${used} mAh` : undefined},
     {label: 'Lowest voltage', value: flight.minVoltage !== undefined ? `${flight.minVoltage} V` : undefined},
@@ -173,7 +176,7 @@ export function TelemetryPacks({
         ) : series === null ? (
           <div className="muted">The samples of this pack could not be read.</div>
         ) : (
-          <TelemetryCharts key={series.id} series={series} mAh={used} pack={pack} packs={packs} />
+          <TelemetryCharts key={series.id} series={series} mAh={used} pack={flightPack} packs={packs} />
         )}
       </div>
     </>

@@ -5,6 +5,7 @@ import {Empty, HeliName, PageHeader, Segmented, spotLabel} from '../components/u
 import {Panel} from '../components/instruments';
 import {CrashTrend} from '../components/charts/CrashTrend';
 import {PackCurves} from '../components/charts/PackCurves';
+import {PackResistance} from '../components/charts/PackResistance';
 import {BarList} from '../components/charts/BarList';
 import {DamageMap} from '../components/charts/DamageMap';
 import {FleetTimeline} from '../components/charts/FleetTimeline';
@@ -249,6 +250,15 @@ export function Stats() {
               className="span-12"
             >
               <PackCurves sorties={sorties} />
+            </Panel>
+
+            <Panel
+              id="resistance"
+              label="Pack resistance"
+              note="Each pack by its button, a cell's share: it climbs as a pack ages, and twice its first reading is worn"
+              className="span-12"
+            >
+              <PackResistance sorties={sorties} />
             </Panel>
 
             <Panel id="skills" label="Skill ladder" note="Manoeuvres in the order they are learnt" className="span-4">

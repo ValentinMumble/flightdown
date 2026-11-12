@@ -191,8 +191,11 @@ export function drawBuiltin(radio: Radio, placed: Placed, model: {name: string; 
     case 'Date Time': {
       const now = new Date();
       const two = (value: number) => String(value).padStart(2, '0');
-      radio.drawText(w / 2, 4, `${two(now.getHours())}:${two(now.getMinutes())}`, colors.CENTER + strong);
-      radio.drawText(w / 2, h - 16, `${two(now.getDate())}/${two(now.getMonth() + 1)}`, small + colors.CENTER + ink);
+      // Both lines in its colour option, the theme's PRIMARY2 unless set (EdgeTX's HeaderDateTime).
+      const color =
+        option(0) === undefined ? colors.COLOR_THEME_PRIMARY2 : colorFlag(radio, option(0) as number | string);
+      radio.drawText(w / 2, 4, `${two(now.getHours())}:${two(now.getMinutes())}`, colors.CENTER + color);
+      radio.drawText(w / 2, h - 16, `${two(now.getDate())}/${two(now.getMonth() + 1)}`, small + colors.CENTER + color);
       return;
     }
     case 'Radio Info': {
@@ -235,14 +238,15 @@ export function drawChrome(context: CanvasRenderingContext2D, options: LayoutOpt
   context.fillRect(0, 0, SCREEN.width, SCREEN.height);
   const shown = options ?? {topbar: true, flightMode: false, sliders: false, trims: false, mirrored: false};
   if (shown.topbar) {
-    context.fillStyle = hex(THEME.COLOR_THEME_PRIMARY2);
+    // EdgeTX paints the top bar in the theme's SECONDARY1: near black in the radio's Cockpit theme.
+    context.fillStyle = hex(THEME.COLOR_THEME_SECONDARY1);
     context.fillRect(0, 0, SCREEN.width, TOP_BAR);
     // The EdgeTX button.
     context.fillStyle = hex(THEME.COLOR_THEME_SECONDARY2);
     context.beginPath();
     context.roundRect(4, 4, 39, TOP_BAR - 8, 6);
     context.fill();
-    context.fillStyle = hex(THEME.COLOR_THEME_EDIT);
+    context.fillStyle = hex(THEME.COLOR_THEME_PRIMARY2);
     context.font = '700 11px Roboto, Arial, sans-serif';
     context.textAlign = 'center';
     context.textBaseline = 'middle';

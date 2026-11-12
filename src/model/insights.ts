@@ -10,6 +10,61 @@ export interface Insight {
 /** Below this current the motor is idle: on the ground, or in throttle hold. */
 const IDLE_AMPS = 2;
 
+/** Held at least this long, the pitch past the other side of hover under load is inverted flight. */
+const INVERTED_SECONDS = 3;
+/** How far to the other side of hover: a quarter of the collective's travel (-3° on a ±12° heli). */
+const INVERTED_SHARE = 0.25;
+
+/**
+ * When the heli flew upside down, from the collective (CH6, logged in µs, 512 each way of 1500). Upright it hovers with
+ * the pitch to one side of centre (the side of most of its time under load, whatever the channel's reversal): held well
+ * to the other side, the motor under load, for 3 s or more, it is inverted. Upright it would fall: flips, rolls and
+ * dives pass through that pitch quicker. Each stretch's start and length, in seconds.
+ */
+export function invertedStretches(series: TelemetrySeries): {start: number; seconds: number}[] {
+  const pitch = series.channels.ch6 ?? [];
+  const current = series.channels.current ?? [];
+  const {time} = series;
+  if (!pitch.length || !current.length) return [];
+  const loaded = pitch.map((_, index) => (current[index] ?? 0) >= IDLE_AMPS);
+  const sides = pitch.filter((_, index) => loaded[index]).map(value => value - 1500);
+  if (!sides.length) return [];
+  const hover = sides.sort((left, right) => left - right)[Math.floor(sides.length / 2)];
+  if (hover === 0) return [];
+  const upright = Math.sign(hover);
+  const stretches: {start: number; seconds: number}[] = [];
+  let from = -1;
+  for (let index = 0; index <= pitch.length; index += 1) {
+    const inverted = index < pitch.length && loaded[index] && -upright * (pitch[index] - 1500) >= 512 * INVERTED_SHARE;
+    if (inverted && from < 0) from = index;
+    if (!inverted && from >= 0) {
+      // Until the next sample, when it was upright again (or the log's end).
+      const seconds = time[Math.min(index, pitch.length - 1)] - time[from];
+      if (seconds >= INVERTED_SECONDS) stretches.push({start: time[from], seconds});
+      from = -1;
+    }
+  }
+  return stretches;
+}
+
+/**
+ * A pack's resistance (mΩ, the whole pack) from the voltage drop at each sharp rise in current (more than 6 A from one
+ * sample to the next): the median of three or more, else null. It climbs as a pack ages.
+ */
+export function packResistance(series: TelemetrySeries): number | null {
+  const voltage = series.channels.voltage ?? [];
+  const current = series.channels.current ?? [];
+  if (!voltage.length) return null;
+  const drops: number[] = [];
+  for (let index = 1; index < current.length; index += 1) {
+    const rise = current[index] - current[index - 1];
+    if (rise > 6) drops.push((voltage[index - 1] - voltage[index]) / rise);
+  }
+  if (drops.length < 3) return null;
+  const resistance = drops.sort((left, right) => left - right)[Math.floor(drops.length / 2)] * 1000;
+  return resistance > 0 ? resistance : null;
+}
+
 /** A LiPo pack's cell count from its highest voltage: no cell sits above 4.25 V. */
 export const estimateCells = (maxVoltage: number) => Math.max(1, Math.ceil(maxVoltage / 4.25));
 
@@ -36,7 +91,7 @@ export function packOf(heli: Heli | undefined, batteries: Battery[]): {cells?: n
 
 /**
  * What a log says, in words: did the pack run flat, how far was it drained, how low did each cell sag, when was 80 %
- * of it used (a good timer for flying like that), how the radio link held.
+ * of it used (a good timer for flying like that), how the radio link held, how long it flew upside down.
  */
 export function telemetryInsights(
   log: Pick<TelemetryLog, 'mAh'>,
@@ -143,23 +198,13 @@ export function telemetryInsights(
   }
 
   // Pack resistance from the voltage drop at each sharp rise in current: it climbs as a pack ages.
-  if (voltage.length && cells) {
-    const drops: number[] = [];
-    for (let index = 1; index < current.length; index += 1) {
-      const rise = current[index] - current[index - 1];
-      if (rise > 6) drops.push((voltage[index - 1] - voltage[index]) / rise);
-    }
-    if (drops.length >= 3) {
-      const sorted = drops.sort((left, right) => left - right);
-      const resistance = sorted[Math.floor(sorted.length / 2)] * 1000;
-      if (resistance > 0) {
-        insights.push({
-          tone: 'info',
-          icon: '🔬',
-          text: `Pack resistance about ${Math.round(resistance)} mΩ (${Math.round(resistance / cells)} mΩ a cell): watch it rise as the pack ages.`,
-        });
-      }
-    }
+  const resistance = packResistance(series);
+  if (resistance !== null && cells) {
+    insights.push({
+      tone: 'info',
+      icon: '🔬',
+      text: `Pack resistance about ${Math.round(resistance)} mΩ (${Math.round(resistance / cells)} mΩ a cell): watch it rise as the pack ages.`,
+    });
   }
 
   // The radio link, while flying (FrSky-style RSSI: EdgeTX warns at 45 dB, gives up at 42).
@@ -172,7 +217,19 @@ export function telemetryInsights(
         icon: '📡',
         text: `Signal fell to ${weakest} dB in flight: below EdgeTX's 45 dB warning.`,
       });
-    else insights.push({tone: 'good', icon: '📡', text: `Signal stayed strong in flight (lowest ${weakest} dB).`});
+  }
+
+  // Upside down, from the collective held past the other side of hover.
+  const inverted = invertedStretches(series);
+  if (inverted.length) {
+    const total = Math.round(inverted.reduce((sum, stretch) => sum + stretch.seconds, 0));
+    const longest = Math.round(Math.max(...inverted.map(stretch => stretch.seconds)));
+    const times = inverted.length === 1 ? 'once' : `${inverted.length} times`;
+    insights.push({
+      tone: 'good',
+      icon: '🙃',
+      text: `Inverted ${times}: ${total} s in all, the longest ${longest} s (the pitch held past the other side of hover).`,
+    });
   }
 
   if (startsFlying) {

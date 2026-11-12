@@ -7,7 +7,16 @@ export type Position = 'up' | 'middle' | 'down';
 /** A position's effect: a few words, and the detail after them. */
 export type Effect = [label: string, detail?: string];
 
-export type SwitchRole = {job: string} & Partial<Record<Position, Effect>>;
+/**
+ * A switch's job, what each position does, and for the switches that let the motor run (Arm, Throttle hold) where it
+ * sits while it does: a replay of a log that kept no switches puts it there while the pack draws current.
+ */
+export type SwitchRole = {
+  job: string;
+  running?: Position;
+  /** Until when its positions meant the other way round: a log started before then reads its position flipped. */
+  flippedBefore?: string;
+} & Partial<Record<Position, Effect>>;
 
 /**
  * The M2 EVO and the M4 share one set-up, all but their idle up throttles (flat curves for the ESC's governor, as % of
@@ -17,8 +26,21 @@ function heli(idleUps: [number, number, number]): Record<string, SwitchRole> {
   const disarmed: Effect = ['Disarmed', 'the motor stays off'];
   const normal: Effect = ['Off', 'full rates'];
   return {
-    SA: {job: 'Arm', up: ['Armed', 'the motor runs once SF is up too'], middle: disarmed, down: disarmed},
-    SF: {job: 'Throttle hold', up: ['Throttle on', 'once SA is up too'], down: ['Hold', 'the motor stops']},
+    // Armed with SA up until arm_down.py moved it down, on 12 Nov 2026 at 16:20.
+    SA: {
+      job: 'Arm',
+      up: disarmed,
+      middle: disarmed,
+      down: ['Armed', 'the motor runs once SF is up too'],
+      running: 'down',
+      flippedBefore: '2026-11-12T16:20:00',
+    },
+    SF: {
+      job: 'Throttle hold',
+      up: ['Throttle on', 'once SA is down too'],
+      down: ['Hold', 'the motor stops'],
+      running: 'up',
+    },
     SE: {
       job: 'Idle up',
       up: ['Idle up 1', `throttle ${idleUps[0]}%, S1 takes it down to ${idleUps[0] - 15}%`],
@@ -67,6 +89,7 @@ const HELI_CONDITIONS: Record<string, string> = {
   L14: 'Held and disarmed',
   L15: 'Low pack',
   L16: 'Pack unplugged',
+  L17: 'Pack in',
 };
 const HELI_CHANNELS: Record<number, string> = {
   1: 'Aileron',

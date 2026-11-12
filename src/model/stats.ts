@@ -1,9 +1,26 @@
 import type {Sortie} from '../types';
 import {daysBetween, fromDay, pad, today} from './format';
 import {SKILLS} from './skills';
+import {groupPacks} from './packs';
 
 /** Seconds in the air: packs times the flight time of one pack (nothing when the timer is not known). */
-export const airtime = (sortie: Sortie) => (sortie.timer ? sortie.packs * sortie.timer : 0);
+/**
+ * Each pack's time in the air from its logs (the motor on), when every pack of the sortie has a log saying it; else
+ * null, and its packs count its timer.
+ */
+export function loggedTimes(sortie: Sortie): number[] | null {
+  if (!sortie.telemetry.length || sortie.telemetry.some(log => log.flying === undefined)) return null;
+  const packs = groupPacks(sortie.telemetry);
+  if (packs.length < sortie.packs) return null;
+  return packs.map(pack => pack.files.reduce((sum, file) => sum + (file.flying ?? 0), 0));
+}
+
+/** A sortie's time in the air: its logs' when they cover every pack, else its packs times its timer. */
+export const airtime = (sortie: Sortie) => {
+  const logged = loggedTimes(sortie);
+  if (logged) return logged.reduce((sum, seconds) => sum + seconds, 0);
+  return sortie.timer ? sortie.packs * sortie.timer : 0;
+};
 
 export const byDate = (left: Sortie, right: Sortie) =>
   left.date.localeCompare(right.date) || left.loggedAt.localeCompare(right.loggedAt);

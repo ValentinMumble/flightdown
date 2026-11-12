@@ -1,4 +1,4 @@
-import {lazy, Suspense, useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {Link, useParams, useSearchParams} from 'react-router';
 import {
   BatteryCharging,
@@ -31,11 +31,9 @@ const VIEWS = [
   {to: '/hangar/spares', label: 'Spares', view: 'spares'},
   {to: '/hangar/batteries', label: 'Batteries', view: 'batteries'},
   {to: '/hangar/notes', label: 'Notes', view: 'notes'},
-  {to: '/hangar/radio', label: 'Radio', view: 'radio'},
 ];
 
 /** The radio's screen, with its Lua engine: loaded with the tab, not with the app. */
-const RadioView = lazy(() => import('./RadioView'));
 
 /** A heli on the flight line: its picture lit in its colour, its stamp, its numbers. */
 export function HeliCard({heli, tally, wide = false}: {heli: Heli; tally?: GroupTally; wide?: boolean}) {
@@ -593,7 +591,7 @@ export function Hangar() {
 
   return (
     <div className="page">
-      <PageHeader title="Hangar" sub="The helis, the radio, and what keeps them flying" />
+      <PageHeader title="Hangar" sub="The helis, their gear, and what keeps them flying" />
       <VisitorBanner />
       <nav className="segmented" aria-label="Hangar">
         {VIEWS.map(item => (
@@ -602,19 +600,7 @@ export function Hangar() {
           </Link>
         ))}
       </nav>
-      {view === 'spares' ? (
-        <Spares />
-      ) : view === 'batteries' ? (
-        <Batteries />
-      ) : view === 'notes' ? (
-        <Notes />
-      ) : view === 'radio' ? (
-        <Suspense fallback={<div className="panel radio-loading">Starting the radio…</div>}>
-          <RadioView />
-        </Suspense>
-      ) : (
-        <Fleet />
-      )}
+      {view === 'spares' ? <Spares /> : view === 'batteries' ? <Batteries /> : view === 'notes' ? <Notes /> : <Fleet />}
     </div>
   );
 }

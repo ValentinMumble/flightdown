@@ -1,6 +1,19 @@
 import type {Sortie, TelemetryLog, TelemetrySeries} from '../types';
 import {pad} from './format';
 import {newId} from './ids';
+import {invertedStretches, packResistance} from './insights';
+
+/** From this current the motor works under load: the heli is in the air (2 A, as the radio's Session widget). */
+const FLYING_AMPS = 2;
+/** How far (µs) the motor's output strays from cut before it counts as on: past the output's jitter. */
+const MOTOR_SLACK = 20;
+
+/** The value a list holds most often. */
+function mostFrequent(values: number[]): number {
+  const counts = new Map<number, number>();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return [...counts].sort((left, right) => right[1] - left[1])[0][0];
+}
 
 /** A cell of a log: text from a CSV, or a number from a spreadsheet (days and times are numbers there). */
 export type Cell = string | number | null;
@@ -24,7 +37,8 @@ export const CHANNELS = {
   sf: {label: 'Switch SF', unit: '', columns: ['SF']},
   sg: {label: 'Switch SG', unit: '', columns: ['SG']},
   sh: {label: 'Switch SH', unit: '', columns: ['SH']},
-  buttons: {label: '6-position buttons', unit: '', columns: ['6P']},
+  // "6P" until EdgeTX 2.12, which logs the TX16S's knobs and buttons as P1, P2 (the buttons) and P3.
+  buttons: {label: '6-position buttons', unit: '', columns: ['6P', 'P2']},
   // What the radio sends on its first eight channels, in µs (1500 the centre): the Radio tab's Outputs replays them.
   ch1: {label: 'Output CH1', unit: 'µs', columns: ['CH1']},
   ch2: {label: 'Output CH2', unit: 'µs', columns: ['CH2']},
@@ -177,6 +191,24 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     mAh = Math.round(used);
   }
   if (!channels.capacity?.some(value => value > 0)) delete channels.capacity;
+  // In the air: the motor on, its output (CH3) away from where it sits cut (its value while the pack draws nothing),
+  // as the radio's PACK timer counts it; a log with no outputs counts the motor under load, as the Session widget does.
+  const motor = channels.ch3;
+  let flying = 0;
+  if (motor?.length) {
+    const idle = currents.length ? motor.filter((_, index) => (currents[index] ?? 0) < 0.5) : [];
+    const cut = mostFrequent(idle.length ? idle : [motor[0]]);
+    for (let index = 1; index < motor.length; index += 1) {
+      if (Math.abs(motor[index] - cut) > MOTOR_SLACK) flying += time[index] - time[index - 1];
+    }
+  } else {
+    for (let index = 1; index < currents.length; index += 1) {
+      if (currents[index] >= FLYING_AMPS) flying += time[index] - time[index - 1];
+    }
+  }
+
+  // Upside down, read from every sample before they are thinned.
+  const upsideDown = invertedStretches({id: '', time, channels}).reduce((sum, stretch) => sum + stretch.seconds, 0);
 
   const id = newId();
   const clock = Math.floor(firstClock);
@@ -193,6 +225,9 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
   const packButton = pressed.length
     ? Number(Object.entries(counts).sort((left, right) => right[1] - left[1])[0][0])
     : undefined;
+  // The samples as kept, and the pack's resistance from them, as its card reads it.
+  const series = {id, ...thin(time, channels)};
+  const resistance = packResistance(series);
   const log: TelemetryLog = {
     id,
     name,
@@ -204,8 +239,11 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     ...(currents.length && {maxCurrent: round(Math.max(...currents)), avgCurrent: round(average(currents))}),
     ...(signals.length && {minRssi: Math.min(...signals)}),
     ...(packButton !== undefined && {packButton}),
+    ...((motor?.length || currents.length) && {flying: Math.round(flying)}),
+    ...(channels.ch6?.length && currents.length && {inverted: Math.round(upsideDown)}),
+    ...(resistance !== null && {resistance: Math.round(resistance)}),
   };
-  return {log, series: {id, ...thin(time, channels)}};
+  return {log, series};
 }
 
 /** "M2 EVO-2023-04-28-121854.csv" → "M2 EVO", the model's name on the radio. */

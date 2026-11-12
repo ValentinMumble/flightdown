@@ -40,6 +40,13 @@ describe('batteryAt', () => {
     expect(reading?.left).toBeCloseTo(77.8, 1);
   });
 
+  it('starts from the charge a pack had at rest when plugged in', () => {
+    // 11.4 V at rest on 3 cells: 3.8 V a cell, 40 %: 300 mAh of 750, less the 87.5 mAh of the first minute (5.25 A).
+    const half = {id: 'log', time: [0, 60, 120], channels: {current: [0.5, 10, 20], voltage: [11.4, 10.9, 10.6]}};
+    const reading = batteryAt(half, usedMah(half), 60, {cells: 3, capacity: 750});
+    expect(reading?.mahLeft).toBeCloseTo(300 - 87.5, 0);
+  });
+
   it('guesses from the cells’ voltage without a size', () => {
     const reading = batteryAt(series, used, 60, {});
     expect(reading?.source).toBe('voltage');

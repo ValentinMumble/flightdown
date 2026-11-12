@@ -1,12 +1,12 @@
 import {describe, expect, it} from 'vitest';
 import {ModelTimers, type Read, type TimedModel} from './timers';
 
-/** The M2 EVO's timer 1: counts down from 4:40 while the motor is on, armed (SA up) and out of hold (SF up). */
+/** The M2 EVO's timer 1: counts down from 4:40 while the motor is on, armed (SA down) and out of hold (SF up). */
 const heli: TimedModel = {
   timers: [{start: 280, swtch: '!L10', mode: 'ON'}],
   logicalSwitches: {
     3: {func: 'FUNC_VPOS', def: 'SF,0', andsw: 'NONE', delay: 0},
-    4: {func: 'FUNC_VPOS', def: 'SA,-1', andsw: 'NONE', delay: 0},
+    4: {func: 'FUNC_VNEG', def: 'SA,1', andsw: 'NONE', delay: 0},
     9: {func: 'FUNC_OR', def: 'L4,L5', andsw: 'NONE', delay: 0},
     15: {func: 'FUNC_AND', def: '!TELEMETRY_STREAMING,L5', andsw: 'NONE', delay: 0},
   },
@@ -19,7 +19,15 @@ const heli: TimedModel = {
 const pack =
   (second: number): Read =>
   source =>
-    source === 'tele(0)' ? 60 : source === 'SF' ? (second >= 10 && second < 70 ? -1024 : 1024) : -1024;
+    source === 'tele(0)'
+      ? 60
+      : source === 'SA'
+        ? 1024
+        : source === 'SF'
+          ? second >= 10 && second < 70
+            ? -1024
+            : 1024
+          : -1024;
 
 describe('ModelTimers', () => {
   it('counts down from its start only while its switch is on: the motor on', () => {
@@ -40,7 +48,16 @@ describe('ModelTimers', () => {
   it('starts again when telemetry stops while disarmed (L16)', () => {
     const timers = new ModelTimers(heli, 0);
     timers.advance(100, pack);
-    timers.advance(101, () => source => (source === 'SA' ? 1024 : 0));
+    timers.advance(101, () => source => (source === 'SA' ? -1024 : 0));
+    expect(timers.value(0)).toBe(280);
+  });
+
+  it('reads the switches again while its clock stands still: a switch moved by hand in a paused replay', () => {
+    const timers = new ModelTimers(heli, 0);
+    timers.advance(5, () => source => (source === 'SA' ? 0 : -1024));
+    expect(timers.isOn('L10')).toBe(true);
+    timers.advance(5, () => source => (source === 'SA' ? 1024 : -1024));
+    expect(timers.isOn('L10')).toBe(false);
     expect(timers.value(0)).toBe(280);
   });
 

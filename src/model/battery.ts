@@ -30,6 +30,11 @@ const CELL_CURVE: [number, number][] = [
   [4.2, 100],
 ];
 
+/** From this a cell is full at rest: 4.10 V allows for the voltage sensor's error (the Cockpit widget's level). */
+const FULL_CELL = 4.1;
+/** Under this current the motor rests, and the voltage tells the charge. */
+const REST_AMPS = 2;
+
 /** A cell's charge in percent from its voltage, along the LiPo curve. */
 export function chargeFromCell(volts: number) {
   if (volts <= CELL_CURVE[0][0]) return 0;
@@ -58,6 +63,29 @@ export function usedMah(series: TelemetrySeries): number[] | null {
   return used;
 }
 
+/** The pack's voltage at rest by a moment: its last sample by then with the motor resting, else the one of then. */
+function restingVolts(series: TelemetrySeries, second: number): number | null {
+  const {voltage, current} = series.channels;
+  if (!voltage?.length) return null;
+  let found: number | null = null;
+  for (let index = 0; index < series.time.length && series.time[index] <= second; index += 1) {
+    if (voltage[index] > 0.5 && (current?.[index] ?? 0) < REST_AMPS) found = voltage[index];
+  }
+  return found ?? sampleAt(series.time, voltage, second);
+}
+
+/**
+ * The charge a pack started with (%), as the radio's Cockpit takes it: its first voltage at rest, plugged in before
+ * the motor spins; full from 4.10 V a cell.
+ */
+export function startCharge(series: TelemetrySeries, cells: number | undefined): number {
+  const {voltage, current} = series.channels;
+  const resting = voltage?.findIndex((value, index) => value > 0.5 && (current?.[index] ?? 0) < REST_AMPS) ?? -1;
+  const first = resting >= 0 ? voltage?.[resting] : voltage?.find(value => value > 0.5);
+  if (first === undefined || !cells) return 100;
+  return first / cells >= FULL_CELL ? 100 : chargeFromCell(first / cells);
+}
+
 export interface BatteryReading {
   /** Charge left, 0 to 100. */
   left: number;
@@ -75,13 +103,15 @@ export function batteryAt(
   pack: {cells?: number; capacity?: number},
 ): BatteryReading | null {
   const spent = used ? sampleAt(series.time, used, second) : null;
+  const voltage = series.channels.voltage;
+  const cells = pack.cells ?? (voltage?.length ? estimateCells(Math.max(...voltage)) : undefined);
+  // From the pack's size: what it started with, less the mAh used since.
   if (pack.capacity && spent !== null) {
-    const mahLeft = Math.max(0, pack.capacity - spent);
+    const mahLeft = Math.max(0, (pack.capacity * startCharge(series, cells)) / 100 - spent);
     return {left: (mahLeft / pack.capacity) * 100, source: 'capacity', mahLeft};
   }
-  const voltage = series.channels.voltage;
-  const volts = sampleAt(series.time, voltage, second);
+  // Else a guess from the voltage at rest: under load a cell reads lower than its charge.
+  const volts = restingVolts(series, second);
   if (!voltage?.length || volts === null) return null;
-  const cells = pack.cells ?? estimateCells(Math.max(...voltage));
   return cells ? {left: chargeFromCell(volts / cells), source: 'voltage'} : null;
 }

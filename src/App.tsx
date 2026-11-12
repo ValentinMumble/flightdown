@@ -1,6 +1,16 @@
 import {useEffect} from 'react';
 import {Link, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType} from 'react-router';
-import {BookOpen, CloudOff, Gauge, MapPin, Plus, Radar, Settings as SettingsIcon, Warehouse} from 'lucide-react';
+import {
+  BookOpen,
+  CloudOff,
+  Gauge,
+  MapPin,
+  Plus,
+  RadioTower,
+  Radar,
+  Settings as SettingsIcon,
+  Warehouse,
+} from 'lucide-react';
 import {useStore, type Mode} from './data/store';
 import {OverlayProvider, useOverlay} from './components/ui';
 import {RotorMark} from './components/instruments';
@@ -10,6 +20,7 @@ import {Sorties} from './pages/Sorties';
 import {SortiePage} from './pages/SortiePage';
 import {Stats} from './pages/Stats';
 import {Hangar} from './pages/Hangar';
+import {Radio} from './pages/Radio';
 import {HeliPage} from './pages/HeliPage';
 import {Settings} from './pages/Settings';
 import {Spots} from './pages/Spots';
@@ -20,6 +31,7 @@ const TABS = [
   {to: '/sorties', label: 'Sorties', icon: BookOpen},
   {to: '/stats', label: 'Debrief', icon: Radar},
   {to: '/hangar', label: 'Hangar', icon: Warehouse},
+  {to: '/radio', label: 'Radio', icon: RadioTower},
   {to: '/spots', label: 'Spots', icon: MapPin},
 ];
 
@@ -143,7 +155,10 @@ function Shell() {
           <Route path="/sorties/:id" element={<SortiePage />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/hangar" element={<Hangar />} />
+          {/* The radio was a view of the Hangar: its old link leads to its tab. */}
+          <Route path="/hangar/radio" element={<Navigate to="/radio" replace />} />
           <Route path="/hangar/:view" element={<Hangar />} />
+          <Route path="/radio" element={<Radio />} />
           <Route path="/helis/:id" element={<HeliPage />} />
           <Route path="/spots" element={<Spots />} />
           <Route path="/settings" element={<Settings />} />

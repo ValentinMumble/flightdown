@@ -5,8 +5,10 @@
  * the CSV files not yet backed up to SEED_LOGS_DIR, and adds each log Flightdown does not have yet to the sortie of
  * its day flown on the heli named like the radio's model, samples included, in the Upstash Redis store of .env.local.
  * Bench checks and logs of a few seconds are left out. A log with no sortie that day is listed; with --create, the
- * logs of one heli on one day become a sortie of their own. --clean then removes from the radio the logs whose backup is
- * the same file, to free its small SD card. --dry-run only prints what it would do.
+ * logs of one heli on one day become a sortie of their own, on the heli of that name still flying, its time per pack
+ * the logs' time in the air. A sortie counts at least the packs its logs show (files a few seconds apart are one pack);
+ * --recount checks every sortie for both, logs new or not. --clean then removes from
+ * the radio the logs whose backup is the same file, to free its small SD card. --dry-run only prints what it would do.
  */
 import {constants} from 'node:fs';
 import {copyFile, readdir, readFile, stat, unlink} from 'node:fs/promises';
@@ -17,6 +19,7 @@ import {formatAirtime, formatDay, formatNumber, formatTimer} from '../src/model/
 import {matchSortie, modelFromFileName, readTelemetry, simple} from '../src/model/telemetry';
 import {parseCsv} from '../src/model/csv';
 import {newId, now} from '../src/model/ids';
+import {groupPacks} from '../src/model/packs';
 
 const flags = new Set(process.argv.slice(2).filter(argument => argument.startsWith('--')));
 const folderArgument = process.argv.slice(2).find(argument => !argument.startsWith('--'));
@@ -134,12 +137,13 @@ for (const name of files) {
 }
 
 // Logs of a day nobody logged: one sortie per heli and day when asked, the packs counted from the logs.
+const FROM_LOGS = 'From the radio logs';
 const created: Sortie[] = [];
 for (const orphan of orphans) {
   const day = orphan.log.start?.slice(0, 10);
-  const heli = orphan.model
-    ? doc.helis.find(one => simple(one.name).startsWith(simple(orphan.model ?? '')))
-    : undefined;
+  // Of the helis named like the radio's model, one still flying first: a lost one may share its name.
+  const named = orphan.model ? doc.helis.filter(one => simple(one.name).startsWith(simple(orphan.model ?? ''))) : [];
+  const heli = named.find(one => one.status === 'active') ?? named[0];
   if (!flags.has('--create') || !day || !heli) {
     const why = !heli ? `no heli named like "${orphan.model}"` : `no sortie on ${heli.name} that day`;
     lines.push(`  ? ${orphan.log.name}: ${why} (${describe(orphan.log)})`);
@@ -156,14 +160,13 @@ for (const orphan of orphans) {
       crashes: null,
       broken: [],
       skills: [],
-      notes: 'From the radio logs',
+      notes: FROM_LOGS,
       links: [],
       telemetry: [],
       loggedAt: now(),
     };
     created.push(sortie);
   }
-  sortie.packs += 1;
   sortie.telemetry.push(orphan.log);
   series.push(orphan.series);
   lines.push(
@@ -172,14 +175,41 @@ for (const orphan of orphans) {
 }
 
 console.log(lines.length ? lines.join('\n') : '  Nothing new: Flightdown has every log.');
+
+// A sortie counts at least the packs its logs show: one logged by hand may have had more packs than logs, never fewer.
+const counted = (sortie: Sortie) => groupPacks(sortie.telemetry).length;
+// A sortie made from logs flew what its logs say: their time in the air over its packs (one logged by hand keeps its
+// own timer).
+const timed = (sortie: Sortie) =>
+  sortie.notes === FROM_LOGS && sortie.telemetry.length && sortie.telemetry.every(log => log.flying !== undefined)
+    ? Math.round(sortie.telemetry.reduce((sum, log) => sum + (log.flying ?? 0), 0) / Math.max(1, sortie.packs))
+    : sortie.timer;
+const settle = (sortie: Sortie) => {
+  const packs = Math.max(sortie.packs, counted(sortie));
+  return {...sortie, packs, timer: timed({...sortie, packs})};
+};
+for (const sortie of created) Object.assign(sortie, settle(sortie));
+for (const [id, sortie] of touched) touched.set(id, settle(sortie));
+if (flags.has('--recount')) {
+  for (const sortie of doc.sorties) {
+    const current = touched.get(sortie.id) ?? sortie;
+    const settled = settle(current);
+    if (settled.packs === current.packs && settled.timer === current.timer) continue;
+    const day = `${formatDay(current.date, {year: true})} on ${heliName(current.heliId)}`;
+    const timer = (seconds: number | null) => (seconds === null ? '-' : formatTimer(seconds));
+    console.log(`  # ${day}: ${current.packs} × ${timer(current.timer)} → ${settled.packs} × ${timer(settled.timer)}`);
+    touched.set(current.id, settled);
+  }
+}
 const sortiesToWrite = [...touched.values(), ...created];
 if (dryRun) {
-  if (series.length) console.log(`Dry run: would add ${series.length} logs to ${sortiesToWrite.length} sorties.`);
+  if (sortiesToWrite.length)
+    console.log(`Dry run: would add ${series.length} logs and write ${sortiesToWrite.length} sorties.`);
   process.exit(0);
 }
+for (const sortie of sortiesToWrite) await putItem('sorties', sortie);
 if (series.length) {
   for (const one of series) await putSeries(one);
-  for (const sortie of sortiesToWrite) await putItem('sorties', sortie);
   const added = created.reduce((sum, sortie) => sum + sortie.packs * (sortie.timer ?? 0), 0);
   console.log(
     `Added ${series.length} logs to ${sortiesToWrite.length} sorties` +
