@@ -718,6 +718,26 @@ button.list-row:hover {
   gap: 12px;
 }
 
+/* The battery form's packs: number, button, dead, and a remove button for one just added. */
+.pack-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pack-line {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.pack-line-number {
+  font-family: var(--display);
+  font-weight: 600;
+  color: var(--label);
+}
+
 .input {
   width: 100%;
   min-height: 42px;

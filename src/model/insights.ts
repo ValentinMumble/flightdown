@@ -74,13 +74,11 @@ export const estimateCells = (maxVoltage: number) => Math.max(1, Math.ceil(maxVo
  * says.
  */
 export function packOf(heli: Heli | undefined, batteries: Battery[]): {cells?: number; capacity?: number} {
+  const live = (battery: Battery) => battery.packs.filter(pack => !pack.dead).length;
   const battery = heli
     ? batteries
         .filter(one => one.heliIds.includes(heli.id))
-        .sort(
-          (left, right) =>
-            right.count - (right.dead ?? 0) - (left.count - (left.dead ?? 0)) || right.capacity - left.capacity,
-        )[0]
+        .sort((left, right) => live(right) - live(left) || right.capacity - left.capacity)[0]
     : undefined;
   if (battery) return {cells: battery.cells, capacity: battery.capacity};
   const text = heli?.battery ?? '';

@@ -120,7 +120,11 @@ describe('telemetryInsights', () => {
   it('reads a pack from the hangar or from the heli line', () => {
     const heli = {id: 'h', name: 'M2', color: 0, status: 'active' as const, createdAt: '', battery: '3S 750 mAh'};
     expect(packOf(heli, [])).toEqual({cells: 3, capacity: 750});
-    expect(packOf(heli, [{id: 'b', name: 'Big', cells: 6, capacity: 1300, count: 2, heliIds: ['h']}])).toEqual({
+    expect(
+      packOf(heli, [
+        {id: 'b', name: 'Big', cells: 6, capacity: 1300, packs: [{number: 1}, {number: 2}], heliIds: ['h']},
+      ]),
+    ).toEqual({
       cells: 6,
       capacity: 1300,
     });
@@ -148,14 +152,16 @@ describe('sampleAt', () => {
 
 describe('packOf with several kinds of packs', () => {
   const heli = {id: 'h', name: 'M2 EVO', color: 1, status: 'active' as const, createdAt: '2023-01-01'};
+  const numbered = (count: number, dead = 0) =>
+    [...Array(count).keys()].map(index => ({number: index + 1, ...(index < dead && {dead: '2026-11-12'})}));
   const packs = [
-    {id: 'a', name: 'OMPHobby 700', cells: 3, capacity: 700, count: 4, dead: 2, heliIds: ['h']},
-    {id: 'b', name: 'Gens Ace 750', cells: 3, capacity: 750, count: 2, heliIds: ['h']},
-    {id: 'c', name: 'Eachine 500', cells: 3, capacity: 500, count: 1, heliIds: ['h']},
+    {id: 'a', name: 'OMPHobby 700', cells: 3, capacity: 700, packs: numbered(4, 2), heliIds: ['h']},
+    {id: 'b', name: 'Gens Ace 750', cells: 3, capacity: 750, packs: numbered(2), heliIds: ['h']},
+    {id: 'c', name: 'Eachine 500', cells: 3, capacity: 500, packs: numbered(1), heliIds: ['h']},
   ];
 
   it('takes the kind with most live packs, the bigger one on a tie', () => {
     expect(packOf(heli, packs)).toEqual({cells: 3, capacity: 750});
-    expect(packOf(heli, [{...packs[0], dead: 0}, packs[1]])).toEqual({cells: 3, capacity: 700});
+    expect(packOf(heli, [{...packs[0], packs: numbered(4)}, packs[1]])).toEqual({cells: 3, capacity: 700});
   });
 });

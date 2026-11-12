@@ -1,5 +1,16 @@
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
-import {emptyDoc, type Change, type Doc, type Heli, type Kind, type Spot, type TelemetrySeries} from '../types';
+import {
+  emptyDoc,
+  type Battery,
+  type Change,
+  type Doc,
+  type Heli,
+  type Kind,
+  type Pack,
+  type Spot,
+  type TelemetrySeries,
+} from '../types';
+import {today} from '../model/format';
 import {sampleLog} from './sample';
 
 /**
@@ -44,9 +55,32 @@ function forget(key: string) {
   }
 }
 
+/** A kind of pack as kept before its packs were listed one by one: how many, how many dead, their buttons. */
+type CountedBattery = Omit<Battery, 'packs'> & {
+  packs?: Pack[];
+  count?: number;
+  dead?: number;
+  buttons?: number[];
+  buttonsSince?: string;
+};
+
+/** A counted kind's packs one by one: those on buttons first, in their order, the dead ones last (day unknown). */
+function listPacks(battery: CountedBattery): Battery {
+  if (battery.packs) return battery as Battery;
+  const {count = 0, dead = 0, buttons = [], buttonsSince, ...rest} = battery;
+  const total = Math.max(count, buttons.length);
+  const packs = [...Array(total).keys()].map((index): Pack => ({
+    number: index + 1,
+    ...(index < buttons.length && {button: buttons[index], ...(buttonsSince && {since: buttonsSince})}),
+    ...(index >= total - dead && {dead: buttonsSince ?? rest.bought ?? today()}),
+  }));
+  return {...rest, packs};
+}
+
 /** Fills fields added after a log was written, so older logs read like new ones. */
 function upgrade(doc: Partial<Doc>): Doc {
   const full = {...emptyDoc(), ...doc};
+  full.batteries = (full.batteries as CountedBattery[]).map(listPacks);
   full.sorties = full.sorties.map(sortie => ({
     ...sortie,
     broken: sortie.broken ?? [],

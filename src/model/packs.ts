@@ -1,5 +1,6 @@
-import type {Battery, TelemetryLog, TelemetrySeries} from '../types';
+import type {Battery, Pack, Sortie, TelemetryLog, TelemetrySeries} from '../types';
 import {usedMah} from './battery';
+import {today} from './format';
 
 /**
  * Log files this close (seconds from the end of one to the start of the next) are one pack: the radio starts a new file
@@ -118,20 +119,59 @@ export function packName(pack: PackLog, batteries: Battery[]): string | null {
   return buttonPack(pack.packButton ?? 0, batteries, pack.start?.slice(0, 10) ?? '');
 }
 
-/** The kind of pack a 6-position button stands for on a day (else today), and which of them it is (from 0). */
-export function buttonBattery(button: number, batteries: Battery[], day?: string) {
+/**
+ * The pack a 6-position button stood for on a day (else today), and its kind: of the packs that had the button by
+ * then, the one given it last, so a new pack on a dead one's button takes over from the day it got it.
+ */
+export function buttonBattery(button: number, batteries: Battery[], day = today()) {
+  let found: {battery: Battery; pack: Pack} | null = null;
   for (const battery of batteries) {
-    const index = battery.buttons?.indexOf(button) ?? -1;
-    if (index < 0 || (day !== undefined && battery.buttonsSince && day < battery.buttonsSince)) continue;
-    return {battery, index};
+    for (const pack of battery.packs) {
+      if (pack.button !== button || (pack.since && day < pack.since)) continue;
+      if (!found || (pack.since ?? '') > (found.pack.since ?? '')) found = {battery, pack};
+    }
   }
-  return null;
+  return found;
 }
+
+/** A kind's name up to its cells: "OMPHobby" of "OMPHobby 3S 750 mAh 60C". Kinds named alike number their packs as one. */
+export const kindName = (name: string) => name.split(/\s\d+S\s/)[0].trim();
+
+/** A pack's name: its kind's up to the cells, and its number ("OMPHobby #1"). */
+export const packLabel = (battery: Battery, pack: Pack) => `${kindName(battery.name)} #${pack.number}`;
 
 /** The pack a 6-position button stands for ("OMPHobby #1"), on a day, else today. */
 export function buttonPack(button: number, batteries: Battery[], day?: string): string | null {
   const found = buttonBattery(button, batteries, day);
-  return found ? `${found.battery.name.split(/\s\d+S\s/)[0]} #${found.index + 1}` : null;
+  return found ? packLabel(found.battery, found.pack) : null;
+}
+
+/** A kind's packs still holding a charge. */
+export const livePacks = (battery: Battery) => battery.packs.filter(pack => !pack.dead);
+
+/**
+ * Packs flown of each kind (by id): a logged pack goes to the kind its button names; a sortie's other packs (no log,
+ * or a log from before the buttons) are shared out among the kinds its heli had by then, by how many packs each has.
+ */
+export function kindFlights(sorties: Sortie[], batteries: Battery[]) {
+  const flights = new Map<string, number>();
+  const add = (id: string, count: number) => flights.set(id, (flights.get(id) ?? 0) + count);
+  for (const sortie of sorties) {
+    let named = 0;
+    for (const pack of groupPacks(sortie.telemetry)) {
+      const found = buttonBattery(pack.packButton ?? 0, batteries, pack.start?.slice(0, 10) ?? sortie.date);
+      if (!found) continue;
+      add(found.battery.id, 1);
+      named++;
+    }
+    const rest = Math.max(0, sortie.packs - named);
+    const owned = batteries.filter(
+      battery => battery.heliIds.includes(sortie.heliId) && (!battery.bought || sortie.date >= battery.bought),
+    );
+    const sharing = owned.reduce((sum, battery) => sum + battery.packs.length, 0);
+    if (rest && sharing) for (const battery of owned) add(battery.id, (rest * battery.packs.length) / sharing);
+  }
+  return flights;
 }
 
 /** The mAh a pack used, from its joined samples: the radio's count or the current added up. */

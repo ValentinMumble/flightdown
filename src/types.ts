@@ -115,28 +115,32 @@ export interface Spare {
   url?: string;
 }
 
+/** One pack of a kind, for good: it keeps its number, and its logs and charts when it dies. */
+export interface Pack {
+  /** Its number in its kind, never given to another: "Gens Ace #3". */
+  number: number;
+  /** The radio's 6-position button it is picked with before a flight (1 to 6). */
+  button?: number;
+  /** The day it got that button (YYYY-MM-DD): a log on the button is this pack's from then on. */
+  since?: string;
+  /** The day it stopped holding a charge (YYYY-MM-DD): no longer flown, still counted. */
+  dead?: string;
+}
+
+/** A kind of pack (one product), and its packs one by one. */
 export interface Battery {
   id: string;
   name: string;
   cells: number;
   /** mAh */
   capacity: number;
-  /** How many packs of this kind. */
-  count: number;
-  /** Of those, how many no longer hold a charge: still counted, no longer flown. */
-  dead?: number;
+  packs: Pack[];
   heliIds: string[];
   /** YYYY-MM-DD */
   bought?: string;
   notes?: string;
   /** A link to a photo of it, cut out of its white background as the helis' are. */
   photo?: string;
-  /**
-   * The radio's 6-position buttons its packs are picked with before a flight, one a pack ([3, 4]: its first pack on 3,
-   * its second on 4), and the day that began (YYYY-MM-DD): a log names its pack from then on.
-   */
-  buttons?: number[];
-  buttonsSince?: string;
 }
 
 export interface Tip {

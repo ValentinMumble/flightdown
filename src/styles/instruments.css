@@ -1417,6 +1417,15 @@
   align-items: flex-start;
 }
 
+/* A note's chip wraps its title rather than run out of a narrow card. */
+.gear-card .chip {
+  max-width: 100%;
+  flex-shrink: 1;
+  white-space: normal;
+  text-align: left;
+  padding-block: 6px;
+}
+
 .gear-icon {
   width: 46px;
   height: 46px;

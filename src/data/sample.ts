@@ -236,13 +236,21 @@ export function sampleLog(end = addDays(today(), -3)): {doc: Doc; series: Teleme
       {id: 'sp-6', name: 'Linkage rod', heliId: 'h-m2', count: 4, countedAt: counted, min: 2, price: 2.5},
     ],
     batteries: [
-      {id: 'b-1', name: 'Small packs', cells: 3, capacity: 750, count: 6, heliIds: ['h-m2'], bought: start},
+      {
+        id: 'b-1',
+        name: 'Small packs',
+        cells: 3,
+        capacity: 750,
+        packs: [1, 2, 3, 4, 5, 6].map(number => ({number})),
+        heliIds: ['h-m2'],
+        bought: start,
+      },
       {
         id: 'b-2',
         name: 'Old packs',
         cells: 3,
         capacity: 750,
-        count: 2,
+        packs: [{number: 1}, {number: 2}],
         heliIds: ['h-m2'],
         notes: 'Puffy, for hovering only',
       },

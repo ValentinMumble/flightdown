@@ -34,9 +34,11 @@ small monospace labels, one soft green for anything good, a rolling counter of m
   heli breaks (a damage map on a heli drawing), what brings it down (crash causes read from the notes), the fleet's
   history, the skill ladder, the flying season, packs a sortie, spots and hours by heli.
 - **Hangar:** the flight line, the radio and other gear, the helis that left (stamped sold or lost), spare parts whose
-  stock goes down as you log broken parts, packs and their cycles, notes. Each heli has a data plate page and its own
-  chart colour (tap its dot in the Hangar to change it). Helis, radios and packs take a photo link; photos are lifted
-  out of their background (`npm run cutouts`, with Apple's Vision on the Mac; others are cut out in the page).
+  stock goes down as you log broken parts, packs and their cycles (each pack numbered for good, with its button and the
+  day it died: a new pack can take a dead one's button, the dead one keeps its logs and charts), notes. Each heli has a
+  data plate page and its own chart colour (tap its dot in the Hangar to change it). Helis, radios and packs take a
+  photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac; others are
+  cut out in the page).
 - **Radio:** a tab of its own: the TX16S, running the Lua that goes on it (in the browser, with Fengari), its switches
   around the screen where they sit on the radio, each saying what it does on the model where it is set (`roles.ts`,
   written by hand from the model files). Model screens: the M2 EVO's and M4's screens as the radio draws them, from its

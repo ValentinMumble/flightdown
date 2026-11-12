@@ -2,7 +2,7 @@ import {useMemo} from 'react';
 import {CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import type {Sortie} from '../../types';
 import {useStore} from '../../data/store';
-import {buttonBattery, buttonPack, groupPacks} from '../../model/packs';
+import {buttonBattery, groupPacks, packLabel} from '../../model/packs';
 import {formatDay, formatNumber, fromDay, pad} from '../../model/format';
 import {useChartInk, useSeriesColor} from '../colors';
 
@@ -25,7 +25,7 @@ interface Reading {
 /**
  * Each pack's resistance over time, a cell's share in mΩ, named by its 6-position button: read in every log from the
  * voltage drop when the current jumps (the wires and plugs count too, so it reads above a charger's test). It climbs
- * as a pack ages: one at twice its first readings is worn.
+ * as a pack ages: one at twice its first readings is worn. A dead pack keeps its line, faded.
  */
 export function PackResistance({sorties}: {sorties: Sortie[]}) {
   const {doc} = useStore();
@@ -34,13 +34,16 @@ export function PackResistance({sorties}: {sorties: Sortie[]}) {
 
   const packs = useMemo(() => {
     const byName = new Map<string, Reading[]>();
+    const deadOn = new Map<string, string>();
     for (const sortie of sorties) {
       for (const pack of groupPacks(sortie.telemetry)) {
         const values = pack.files.flatMap(file => (file.resistance === undefined ? [] : [file.resistance]));
         if (!values.length) continue;
         const day = pack.start?.slice(0, 10) ?? sortie.date;
-        const name = buttonPack(pack.packButton ?? 0, doc.batteries, day) ?? BEFORE;
-        const cells = buttonBattery(pack.packButton ?? 0, doc.batteries, day)?.battery.cells ?? 3;
+        const found = buttonBattery(pack.packButton ?? 0, doc.batteries, day);
+        const name = found ? packLabel(found.battery, found.pack) : BEFORE;
+        const cells = found?.battery.cells ?? 3;
+        if (found?.pack.dead) deadOn.set(name, found.pack.dead);
         const resistance = values.sort((left, right) => left - right)[Math.floor(values.length / 2)];
         const readings = byName.get(name) ?? [];
         readings.push({day, time: fromDay(day).getTime(), cell: resistance / cells});
@@ -48,7 +51,11 @@ export function PackResistance({sorties}: {sorties: Sortie[]}) {
       }
     }
     return [...byName]
-      .map(([name, readings]) => ({name, readings: readings.sort((left, right) => left.time - right.time)}))
+      .map(([name, readings]) => ({
+        name,
+        dead: deadOn.get(name),
+        readings: readings.sort((left, right) => left.time - right.time),
+      }))
       .sort((left, right) =>
         left.name === BEFORE ? 1 : right.name === BEFORE ? -1 : left.name.localeCompare(right.name),
       );
@@ -114,8 +121,15 @@ export function PackResistance({sorties}: {sorties: Sortie[]}) {
                 data={pack.readings}
                 dataKey="cell"
                 stroke={colorOf(pack.name)}
+                strokeOpacity={pack.dead ? 0.4 : 1}
                 strokeWidth={2}
-                dot={{r: 4, fill: colorOf(pack.name), stroke: ink.surface, strokeWidth: 2}}
+                dot={{
+                  r: 4,
+                  fill: colorOf(pack.name),
+                  fillOpacity: pack.dead ? 0.4 : 1,
+                  stroke: ink.surface,
+                  strokeWidth: 2,
+                }}
                 activeDot={{r: 5}}
                 isAnimationActive={false}
               />
@@ -137,6 +151,7 @@ export function PackResistance({sorties}: {sorties: Sortie[]}) {
               <span className="name-main">{pack.name}</span>
               <small className="name-note">
                 {pack.readings.length} {pack.readings.length === 1 ? 'reading' : 'readings'}
+                {pack.dead && ` · dead ${formatDay(pack.dead, {weekday: false})}`}
               </small>
             </span>
             <span>{formatNumber(first(pack.readings), 0)} mΩ</span>

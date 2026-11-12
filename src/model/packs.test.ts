@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
-import type {TelemetryLog, TelemetrySeries} from '../types';
-import {groupPacks, joinSeries, packUsed} from './packs';
+import type {Battery, Pack, TelemetryLog, TelemetrySeries} from '../types';
+import {buttonPack, groupPacks, joinSeries, packUsed} from './packs';
 
 const file = (id: string, start: string | undefined, duration: number, extra: Partial<TelemetryLog> = {}) =>
   ({id, name: `${id}.csv`, start, duration, samples: duration, ...extra}) as TelemetryLog;
@@ -72,5 +72,38 @@ describe('joinSeries', () => {
     ]);
     expect(joined.channels.capacity).toEqual([100, 368, 368, 596]);
     expect(packUsed(joined)).toBe(596);
+  });
+});
+
+describe('buttonPack', () => {
+  const kind = (id: string, name: string, packs: Pack[]) =>
+    ({id, name, cells: 3, capacity: 700, packs, heliIds: []}) as Battery;
+  const batteries = [
+    kind('omp', 'OMPHobby 3S 750 mAh 60C', [
+      {number: 1, button: 3, since: '2026-11-11', dead: '2026-11-12'},
+      {number: 2, button: 4, since: '2026-11-11'},
+      {number: 3, dead: '2026-11-11'},
+    ]),
+    kind('gens', 'Gens Ace 3S 700 mAh 60C', [
+      {number: 1, button: 1, since: '2026-11-11'},
+      {number: 2, button: 2, since: '2026-11-11', dead: '2026-11-12'},
+    ]),
+    kind('gens-750', 'Gens Ace 3S 750 mAh', [
+      {number: 3, button: 2, since: '2026-11-13'},
+      {number: 4, button: 3, since: '2026-11-13'},
+    ]),
+  ];
+
+  it('names a button by the pack that had it that day, a dead one included', () => {
+    expect(buttonPack(2, batteries, '2026-11-12')).toBe('Gens Ace #2');
+    expect(buttonPack(3, batteries, '2026-11-12')).toBe('OMPHobby #1');
+    expect(buttonPack(2, batteries, '2026-11-10')).toBeNull();
+  });
+
+  it("gives a dead pack's button to the pack given it last", () => {
+    expect(buttonPack(1, batteries, '2026-11-13')).toBe('Gens Ace #1');
+    expect(buttonPack(2, batteries, '2026-11-13')).toBe('Gens Ace #3');
+    expect(buttonPack(3, batteries, '2026-11-13')).toBe('Gens Ace #4');
+    expect(buttonPack(4, batteries, '2026-11-13')).toBe('OMPHobby #2');
   });
 });

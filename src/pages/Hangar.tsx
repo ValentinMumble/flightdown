@@ -21,9 +21,10 @@ import {useSeriesColor} from '../components/colors';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {ago, formatAirtime, formatDay, formatNumber, formatRate, plural, today} from '../model/format';
 import {SERIES_NAMES} from '../model/palette';
-import {groupBy, packsSinceCrash, totals, type GroupTally} from '../model/stats';
+import {groupBy, packsSinceCrash, type GroupTally} from '../model/stats';
 import {brokenRanking, partKey, spareStock} from '../model/parts';
 import {now} from '../model/ids';
+import {kindFlights, livePacks} from '../model/packs';
 import {HeliPhoto} from '../components/HeliPhoto';
 
 const VIEWS = [
@@ -451,7 +452,7 @@ function Spares() {
 function packOrder(helis: Heli[]) {
   const flying = new Set(helis.filter(one => one.status === 'active' || one.status === 'grounded').map(one => one.id));
   const rank = (battery: Battery) =>
-    battery.count > 0 && (battery.dead ?? 0) >= battery.count ? 2 : battery.heliIds.some(id => flying.has(id)) ? 0 : 1;
+    battery.packs.length > 0 && !livePacks(battery).length ? 2 : battery.heliIds.some(id => flying.has(id)) ? 0 : 1;
   return (left: Battery, right: Battery) =>
     rank(left) - rank(right) ||
     right.capacity - left.capacity ||
@@ -463,6 +464,8 @@ function Batteries() {
   const {doc, heli} = useStore();
   const {open} = useOverlay();
   const batteries = useMemo(() => [...doc.batteries].sort(packOrder(doc.helis)), [doc.batteries, doc.helis]);
+  // Packs flown of each kind: by their buttons in the logs, else shared out (kindFlights).
+  const flights = useMemo(() => kindFlights(doc.sorties, doc.batteries), [doc.sorties, doc.batteries]);
   return (
     <>
       <div className="section-head">
@@ -474,16 +477,9 @@ function Batteries() {
       {doc.batteries.length ? (
         <div className="grid grid-auto">
           {batteries.map(battery => {
-            // Packs flown on its helis since it was bought, shared with any other packs for the same helis.
-            const sharing = doc.batteries
-              .filter(other => other.heliIds.some(id => battery.heliIds.includes(id)))
-              .reduce((sum, other) => sum + other.count, 0);
-            const flown = totals(
-              doc.sorties.filter(
-                sortie => battery.heliIds.includes(sortie.heliId) && (!battery.bought || sortie.date >= battery.bought),
-              ),
-            ).packs;
-            const cycles = sharing ? flown / sharing : 0;
+            const cycles = battery.packs.length ? (flights.get(battery.id) ?? 0) / battery.packs.length : 0;
+            const dead = battery.packs.length - livePacks(battery).length;
+            const onButtons = livePacks(battery).filter(pack => pack.button);
             return (
               <button
                 key={battery.id}
@@ -501,8 +497,8 @@ function Batteries() {
                 )}
                 <div className="heli-name">{battery.name}</div>
                 <div className="muted" style={{fontSize: '0.8125rem'}}>
-                  {battery.count} × {battery.cells}S {formatNumber(battery.capacity)} mAh
-                  {battery.dead ? <span className="battery-dead"> · {battery.dead} dead</span> : null}
+                  {battery.packs.length} × {battery.cells}S {formatNumber(battery.capacity)} mAh
+                  {dead ? <span className="battery-dead"> · {dead} dead</span> : null}
                 </div>
                 <div className="figures" style={{marginTop: 10}}>
                   <div>
@@ -519,8 +515,10 @@ function Batteries() {
                   </div>
                 </div>
                 <div className="chips" style={{marginTop: 10}}>
-                  {battery.buttons?.length ? (
-                    <span className="pill label">buttons {battery.buttons.join(' · ')}</span>
+                  {onButtons.length ? (
+                    <span className="pill label">
+                      {onButtons.map(pack => `#${pack.number} on ${pack.button}`).join(' · ')}
+                    </span>
                   ) : null}
                   {battery.heliIds.map(id => (
                     <span key={id} className="pill">
