@@ -13,7 +13,7 @@ import {existsSync} from 'node:fs';
 import {copyFile, mkdir, readdir, readFile, rm, writeFile} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 import {parse} from 'yaml';
-import {EDGETX_WIDGETS, readModel, registeredName, type Card, type CardWidget} from '../src/radio/card';
+import {EDGETX_WIDGETS, readModel, readRadio, registeredName, type Card, type CardWidget} from '../src/radio/card';
 import {widgetName, type WidgetFile} from '../src/radio/widgets';
 
 const root = resolve(import.meta.dirname, '..');
@@ -124,7 +124,15 @@ for (const bitmap of new Set(models.map(model => model.bitmap).filter(Boolean)))
 
 // In the order of KEEP: the heli flown now first.
 models.sort((left, right) => KEEP.indexOf(left.name) - KEEP.indexOf(right.name));
-const result: Card = {from: process.env.CARD_FROM ?? card.replace(`${edgeTx}/`, 'edge-tx/'), models, widgets};
+// The radio's own logic, for every model: its global functions and battery warning.
+const radioFile = await findFile(join(card, 'RADIO'), 'radio.yml');
+const radio = radioFile ? readRadio(parse(await readFile(radioFile, 'utf8'))) : undefined;
+const result: Card = {
+  from: process.env.CARD_FROM ?? card.replace(`${edgeTx}/`, 'edge-tx/'),
+  models,
+  widgets,
+  ...(radio ? {radio} : {}),
+};
 await writeFile(join(target, 'card.json'), `${JSON.stringify(result)}\n`);
 console.log(
   `Card ${result.from}: ${models.length} models, Lua widgets ${widgets.map(widget => widget.name).join(', ')}, ` +

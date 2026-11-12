@@ -47,3 +47,44 @@ const ROLES: Record<string, Record<string, SwitchRole>> = {
 /** A switch's role on a model, if Flightdown knows that model. */
 export const switchRole = (model: string | undefined, name: string): SwitchRole | undefined =>
   model ? ROLES[model]?.[name] : undefined;
+
+/**
+ * The helis' logical switches and channels in a word or two, for the Logic view: the model file only says "L10 = L4 or
+ * L5" and "CH3". Both helis number them the same.
+ */
+const HELI_CONDITIONS: Record<string, string> = {
+  L1: 'IU 1',
+  L2: 'IU 2',
+  L3: 'IU 3',
+  L4: 'Hold',
+  L5: 'Disarmed',
+  L6: 'Rescue',
+  L7: 'Self-level',
+  L10: 'Motor off',
+  L11: 'Rescue in IU 1',
+  L12: 'Rescue in IU 2',
+  L13: 'Rescue in IU 3',
+  L14: 'Held and disarmed',
+  L15: 'Low pack',
+  L16: 'Pack unplugged',
+};
+const HELI_CHANNELS: Record<number, string> = {
+  1: 'Aileron',
+  2: 'Elevator',
+  3: 'Motor',
+  4: 'Tail',
+  5: 'Rescue and level',
+  6: 'Pitch',
+};
+const NAMES: Record<string, {conditions: Record<string, string>; channels: Record<number, string>}> = {
+  'M2 EVO': {conditions: HELI_CONDITIONS, channels: HELI_CHANNELS},
+  M4: {conditions: HELI_CONDITIONS, channels: HELI_CHANNELS},
+};
+
+/** A logical switch's name on a model (L10 is "Motor off"), if Flightdown knows it. */
+export const conditionName = (model: string | undefined, id: string) =>
+  model ? NAMES[model]?.conditions[id] : undefined;
+
+/** A channel's name on a model (CH3 is "Motor"), from 1, if Flightdown knows it. */
+export const channelName = (model: string | undefined, channel: number) =>
+  model ? NAMES[model]?.channels[channel] : undefined;

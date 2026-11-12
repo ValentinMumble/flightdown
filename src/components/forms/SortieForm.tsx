@@ -218,7 +218,7 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
         </div>
       </div>
       {seconds !== null && (
-        <div className="muted" style={{marginTop: -8, fontSize: 13}}>
+        <div className="muted" style={{marginTop: -8, fontSize: '0.8125rem'}}>
           {formatAirtime(packs * seconds, true)} in the air
         </div>
       )}

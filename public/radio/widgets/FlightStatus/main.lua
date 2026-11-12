@@ -12,7 +12,38 @@ local function create(zone, options)
     update(widget, options)
     return widget
 end
+--- SH held down: the rescue. The zone turns red and says RESCUE, as big as fits (it is longer than "IU 2").
+local function drawRescue(x, y, w, h)
+    lcd.drawFilledRectangle(
+        0,
+        0,
+        w,
+        h,
+        lcd.RGB(9051168)
+    )
+    local size = SMLSIZE
+    for ____, bigger in ipairs({DBLSIZE, MIDSIZE, 0}) do
+        local textWidth = lcd.sizeText("RESCUE", bigger)
+        if textWidth <= w - 4 then
+            size = bigger
+            break
+        end
+    end
+    lcd.drawText(
+        x,
+        y,
+        "RESCUE",
+        bit32.bor(
+            size,
+            lcd.RGB(16777215)
+        )
+    )
+end
 local function draw(widget, x, y, w, h)
+    if getValue("sh") > 0 then
+        drawRescue(x, y, w, h)
+        return
+    end
     local isGyroOn = getValue(widget.options.GyroSource) == MAX_VALUE
     if isGyroOn then
         lcd.drawFilledRectangle(

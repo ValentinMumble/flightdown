@@ -1,4 +1,13 @@
-import {useEffect, useId, useMemo, useRef, useState} from 'react';
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+} from 'react';
 import {Activity, ArrowDown, ArrowUp, Download, Minus, Pause, Play, RotateCcw} from 'lucide-react';
 import type {TelemetrySeries} from '../types';
 import {useStore} from '../data/store';
@@ -7,8 +16,11 @@ import {Panel} from '../components/instruments';
 import {cutout} from '../components/HeliPhoto';
 import {buttonPack, groupPacks, joinSeries} from '../model/packs';
 import {formatDay, formatTimer, plural} from '../model/format';
-import {buttonOf} from '../model/telemetry';
+import {buttonOf, isOutput} from '../model/telemetry';
 import {Radio, SCREEN, startLua, type RadioInputs, type WidgetOption, type WidgetRunner} from '../radio/edgetx';
+import {ModelTimers} from '../radio/timers';
+import {describeLogic} from '../radio/logic';
+import {RadioLogic} from '../components/RadioLogic';
 import type {Card} from '../radio/card';
 import {switchRole, type SwitchRole} from '../radio/roles';
 import {mainView, TOP_BAR} from '../radio/layout';
@@ -36,6 +48,8 @@ import {
 import '../styles/radio.css';
 
 type Mode = 'screen' | 'widget';
+/** What the tab shows: a mode, or the model's screens with its logic under them. */
+type Shown = Mode | 'logic';
 
 /** Zones a widget can sit in on the TX16S, measured from EdgeTX: the M2 EVO's first. */
 const ALL_DECORATIONS = {topbar: true, flightMode: true, sliders: true, trims: true, mirrored: false};
@@ -131,6 +145,22 @@ const buttonValue = (button: number) => Math.round(-1024 + (button - 1) * 409.6)
  */
 const restingValue = (name: string) => RESTING[name] ?? (TWO_POSITIONS.includes(name) || name === '6P' ? -1024 : 0);
 
+/** SH springs back: down only while held. */
+const MOMENTARY = ['SH'];
+/** SH is the rescue switch: its cap is red. */
+const RED_CAPS = ['SH'];
+
+/** How many ways a switch goes, as its tag says: 3-way, 2-way, or spring for SH. Empty for anything else. */
+const waysOf = (name: string) =>
+  !/^S[A-H]$/.test(name) ? '' : MOMENTARY.includes(name) ? 'spring' : TWO_POSITIONS.includes(name) ? '2-way' : '3-way';
+
+/** Where a click moves a switch: the other position on a 2-way, the next one down on a 3-way (back up from down). */
+function nextPosition(name: string, value: number) {
+  const positions = TWO_POSITIONS.includes(name) ? POSITIONS.filter(one => one.at !== 0) : POSITIONS;
+  const index = positions.findIndex(one => one.label.toLowerCase() === positionOf(value));
+  return positions[(index + 1) % positions.length];
+}
+
 /** A switch's position from the value the radio reads: up below -512, down above 512, the middle between. */
 const positionOf = (value: number) => (value <= -512 ? 'up' : value >= 512 ? 'down' : 'middle');
 
@@ -144,20 +174,20 @@ const REACH = 27;
 /**
  * A toggle switch as on the radio, seen from the front: a hex nut and its washer, and a metal lever with a round cap
  * that stands up (leaning away, so a little smaller), points straight at you in the middle (the cap big, the lever
- * hidden behind it) or hangs down (leaning in). The top, middle and bottom of it set those positions, a ghost cap showing
- * where on hover; a switch the pack drives moves on its own, its cap lit.
+ * hidden behind it) or hangs down (leaning in). Its tile moves it (see SourceControl), a ghost cap showing where to on
+ * hover; the lever itself is the button a keyboard reaches. A switch the pack drives moves on its own, its cap lit.
  */
 function SwitchLever({
   name,
   value,
-  onChange,
   twoPositions,
+  momentary,
   driven,
 }: {
   name: string;
   value: number;
-  onChange: (value: number) => void;
   twoPositions: boolean;
+  momentary: boolean;
   driven: boolean;
 }) {
   // SVG ids per switch, as a page draws eight of them.
@@ -169,6 +199,7 @@ function SwitchLever({
     down: {reach: REACH, stretch: -1, cap: 1.08},
   }[position];
   const positions = twoPositions ? POSITIONS.filter(one => one.at !== 0) : POSITIONS;
+  const next = nextPosition(name, value);
   const nut = Array.from({length: 6}, (_, corner) => {
     const angle = (Math.PI / 3) * corner + Math.PI / 6;
     return `${(PIVOT.x + 13 * Math.cos(angle)).toFixed(2)},${(PIVOT.y + 13 * Math.sin(angle)).toFixed(2)}`;
@@ -184,9 +215,11 @@ function SwitchLever({
             <stop offset="1" stopColor="#5c6570" />
           </linearGradient>
           <radialGradient id={`${id}-cap`} cx="0.36" cy="0.32" r="0.75">
-            <stop offset="0" stopColor="#ffffff" />
-            <stop offset="0.5" stopColor="#d3dae2" />
-            <stop offset="1" stopColor="#707b87" />
+            {(RED_CAPS.includes(name) ? ['#ffd2d2', '#ff4d4f', '#8a1c20'] : ['#ffffff', '#d3dae2', '#707b87']).map(
+              (color, stop) => (
+                <stop key={color} offset={stop / 2} stopColor={color} />
+              ),
+            )}
           </radialGradient>
           <linearGradient id={`${id}-nut`} x1="0" y1="0" x2="0.6" y2="1">
             <stop offset="0" stopColor="#4b545e" />
@@ -194,20 +227,22 @@ function SwitchLever({
             <stop offset="1" stopColor="#1b1f24" />
           </linearGradient>
         </defs>
-        {positions.map(one => (
-          <circle
-            key={one.label}
-            className={`lever-ghost ${one.label.toLowerCase()}`}
-            cx={PIVOT.x}
-            cy={PIVOT.y + Math.sign(one.at) * REACH}
-            r={one.at === 0 ? 6.5 : 4.4}
-          />
-        ))}
+        <circle
+          className="lever-ghost"
+          cx={PIVOT.x}
+          cy={PIVOT.y + Math.sign(next.at) * REACH}
+          r={next.at === 0 ? 6.5 : 4.4}
+        />
         {positions.map(one => {
           const y = PIVOT.y + Math.sign(one.at) * REACH;
           const on = position === one.label.toLowerCase();
+          // A spring switch does not stay down: its marks there are dashed.
+          const springy = momentary && one.at > 0;
           return (
-            <g key={`notch-${one.label}`} className={on ? 'lever-notch on' : 'lever-notch'}>
+            <g
+              key={`notch-${one.label}`}
+              className={['lever-notch', on && 'on', springy && 'spring'].filter(Boolean).join(' ')}
+            >
               <line x1={PIVOT.x - 15} x2={PIVOT.x - 9} y1={y} y2={y} />
               <line x1={PIVOT.x + 9} x2={PIVOT.x + 15} y1={y} y2={y} />
             </g>
@@ -227,18 +262,14 @@ function SwitchLever({
           <ellipse cx={PIVOT.x - 1.4} cy={PIVOT.y - 1.5} rx={1.5} ry={1.1} className="lever-glint" />
         </g>
       </svg>
-      {!driven &&
-        positions.map(one => (
-          <button
-            key={one.label}
-            type="button"
-            className={`lever-zone ${one.label.toLowerCase()}`}
-            aria-label={one.label}
-            title={`${name} ${one.label.toLowerCase()}`}
-            aria-pressed={positionOf(value) === one.label.toLowerCase()}
-            onClick={() => onChange(one.at)}
-          />
-        ))}
+      {!driven && (
+        <button
+          type="button"
+          className="lever-zone"
+          aria-label={`${name} ${position}`}
+          title={momentary ? 'Hold it down' : `Move it ${next.label.toLowerCase()}`}
+        />
+      )}
     </div>
   );
 }
@@ -288,16 +319,72 @@ function SourceControl({
     : [];
   const reader = hint ? `${label}: ${hint}` : label;
   const title = [role ? `${reader}, ${role.job}` : reader, ...roleLines].join('\n');
+
+  // A switch set by hand moves wherever its tile is clicked, except on the tile's other buttons. SH springs back, so
+  // it stays down only while the pointer, Space or Enter holds it.
+  const switchable = isSwitch(name) && !fromLog;
+  const momentary = MOMENTARY.includes(name);
+  const held = useRef(false);
+  const onOtherControl = (target: EventTarget) =>
+    (target as Element).closest('button:not(.lever-zone), select, input') !== null;
+  const hold = (down: boolean) => {
+    if (held.current === down) return;
+    held.current = down;
+    onChange(down ? 1024 : -1024);
+  };
+  const holdKey = (event: KeyboardEvent, down: boolean) => {
+    if ((event.key === ' ' || event.key === 'Enter') && (event.target as Element).classList.contains('lever-zone')) {
+      hold(down);
+    }
+  };
+  const moves = !switchable
+    ? {}
+    : momentary
+      ? {
+          onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
+            if (event.button !== 0 || onOtherControl(event.target)) return;
+            event.currentTarget.setPointerCapture(event.pointerId);
+            hold(true);
+          },
+          onPointerUp: () => hold(false),
+          onPointerCancel: () => hold(false),
+          onKeyDown: (event: KeyboardEvent) => holdKey(event, true),
+          onKeyUp: (event: KeyboardEvent) => holdKey(event, false),
+          onBlur: () => hold(false),
+        }
+      : {
+          onClick: (event: MouseEvent) => {
+            if (!onOtherControl(event.target)) onChange(nextPosition(name, value).at);
+          },
+        };
   return (
-    <div className={['radio-input', fromLog && 'from-pack', unused && 'unused'].filter(Boolean).join(' ')}>
+    <div
+      className={[
+        'radio-input',
+        fromLog && 'from-pack',
+        unused && 'unused',
+        switchable && 'switchable',
+        switchable && momentary && 'momentary',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      {...moves}
+    >
       <div className="radio-input-head">
         <span className="radio-input-name" title={title}>
           {label}
           {isSwitch(name) && <span className="radio-switch-mark">{POSITION_MARK[positionOf(value)]}</span>}
-          {isSwitch(name) && (
-            <span className="radio-switch-ways">{TWO_POSITIONS.includes(name) ? '2-way' : '3-way'}</span>
+          {/* What it is for, and how many ways it goes as a tag, on a line that wraps rather than cuts. */}
+          {(role || hint || isSwitch(name)) && (
+            <small>
+              {role?.job ?? hint}
+              {isSwitch(name) && (
+                <span className="radio-switch-ways" title={momentary ? 'It springs back up when let go' : undefined}>
+                  {waysOf(name)}
+                </span>
+              )}
+            </small>
           )}
-          {(role || hint) && <small>{role?.job ?? hint}</small>}
         </span>
         {!fromLog && positional && !isSwitch(name) && <span className="radio-value">{value}</span>}
         {channels.length > 0 && isSwitch(name) && (
@@ -317,8 +404,8 @@ function SourceControl({
         <SwitchLever
           name={name}
           value={value}
-          onChange={onChange}
           twoPositions={TWO_POSITIONS.includes(name)}
+          momentary={momentary}
           driven={fromLog}
         />
       ) : fromLog ? (
@@ -369,11 +456,13 @@ function SourceControl({
           aria-label={`${name} from the pack`}
         >
           <option value="">By hand</option>
-          {channels.map(one => (
-            <option key={one} value={one}>
-              Pack: {signalLabel(one)}
-            </option>
-          ))}
+          {channels
+            .filter(one => !isOutput(one))
+            .map(one => (
+              <option key={one} value={one}>
+                Pack: {signalLabel(one)}
+              </option>
+            ))}
         </select>
       )}
     </div>
@@ -396,6 +485,7 @@ export default function RadioView() {
   const saved = useMemo(remembered, []);
   const flying = doc.helis.find(heli => heli.status === 'active') ?? doc.helis[0];
   const [mode, setMode] = useState<Mode>(saved.mode === 'widget' ? 'widget' : 'screen');
+  const [logic, setLogic] = useState(saved.mode === 'logic');
   const [card, setCard] = useState<Card | null>(null);
   const [modelId, setModelId] = useState(saved.model ?? '');
   const [screenIndex, setScreenIndex] = useState(0);
@@ -432,6 +522,15 @@ export default function RadioView() {
     card?.models.find(one => one.screens.some(screen => screen.zones.length));
   const screen = model?.screens[Math.min(screenIndex, (model?.screens.length ?? 1) - 1)];
 
+  // The model's logic in words, for the Logic view, with the radio's own.
+  const logicView = useMemo(() => (model ? describeLogic(model, card?.radio) : null), [model, card?.radio]);
+
+  // The model's timers as the radio runs them: from the start of each pack replayed, else on the clock.
+  const timers = useMemo(
+    () => (mode === 'screen' && model ? new ModelTimers(model, series ? 0 : null) : null),
+    [mode, model, series],
+  );
+
   // What the frame loop reads, always the latest.
   const live = useRef({
     manual,
@@ -443,6 +542,7 @@ export default function RadioView() {
     sensors: [] as string[],
     hints: {} as Record<string, string>,
     outline: false,
+    timers: null as ModelTimers | null,
     last: performance.now(),
   });
   live.current = {
@@ -456,6 +556,7 @@ export default function RadioView() {
         : {...ALL_DECORATIONS, flightMode: false, sliders: false, trims: false},
     sensors: mode === 'screen' ? (model?.sensors ?? []) : [],
     outline: mode === 'widget',
+    timers,
   };
 
   const packs = useMemo(
@@ -484,21 +585,38 @@ export default function RadioView() {
     return telemetry ? (sensors[Number(telemetry[1])] ?? source) : source;
   };
 
+  // A source at a moment of the pack replayed (now unless said), or as set by hand. It reads `live`, so the Lua and the
+  // Logic view both see the latest.
+  const valueAt = (asked: string, second?: number) => {
+    const now = live.current;
+    const source = sourceKey(asked);
+    // A source set by hand stays so, even when the pack has a channel of its name.
+    const bound = now.bindings[source];
+    const channel = bound === undefined ? guessFor(source, now.sensors, now.hints, packSignals(now.series)) : bound;
+    if (channel && now.series) return sourceValue(now.series, channel, second ?? now.replay.at);
+    return now.manual[source] ?? restingValue(source);
+  };
+
+  // The model's logic (timers, logical switches) moved on to now: by the screen's timers and by the Logic view.
+  const logicNow = () => {
+    const {timers: running, series: replayed, replay: at} = live.current;
+    running?.advance(
+      replayed ? at.at : performance.now() / 1000,
+      second => asked => valueAt(asked, replayed ? second : undefined),
+    );
+    return running;
+  };
+
   // The radio and its Lua, once.
   useEffect(() => {
     if (!canvas.current) return;
     // One radio for the screen, even when React mounts the view twice (development): the Lua draws through it.
     if (!radio.current) {
       inputs.current = {
-        value: asked => {
-          const now = live.current;
-          const source = sourceKey(asked);
-          // A source set by hand stays so, even when the pack has a channel of its name.
-          const bound = now.bindings[source];
-          const channel =
-            bound === undefined ? guessFor(source, now.sensors, now.hints, packSignals(now.series)) : bound;
-          if (channel && now.series) return sourceValue(now.series, channel, now.replay.at);
-          return now.manual[source] ?? restingValue(source);
+        value: asked => valueAt(asked),
+        timer: index => {
+          const running = logicNow();
+          return running ? {value: running.value(index), start: running.start(index)} : {value: 0, start: 0};
         },
         model: {name: '', bitmap: ''},
       };
@@ -870,11 +988,28 @@ export default function RadioView() {
       />
     );
   };
-  const chooseMode = (next: Mode) => {
-    setMode(next);
+  const chooseMode = (next: Shown) => {
+    setMode(next === 'widget' ? 'widget' : 'screen');
+    setLogic(next === 'logic');
     remember('mode', next);
     setProblem('');
   };
+
+  // The Logic view: what is on now, where each control sits, the timers and the outputs a replay logged.
+  const showLogic = logic && mode === 'screen' && logicView !== null;
+  const isOnNow = (when: string) =>
+    when === 'TX_BATTERY_LOW'
+      ? valueAt('TX_VOLTAGE') < (card?.radio?.batteryWarning ?? 0)
+      : (logicNow()?.isOn(when) ?? false);
+  const whereNow = (control: string) => {
+    if (/^S[A-H]$/.test(control)) return positionOf(valueAt(control));
+    if (control === '6P') return `button ${buttonOf(valueAt('6P'))}`;
+    if (['S1', 'S2', 'LS', 'RS'].includes(control)) return `${Math.round(valueAt(control) / 10.24)}%`;
+    if (control === 'telemetry') return isOnNow('TELEMETRY_STREAMING') ? 'coming in' : 'none';
+    return '';
+  };
+  const outputNow = (channel: number) =>
+    series?.channels[`ch${channel}`]?.length ? Math.round(1500 + valueAt(`ch(${channel - 1})`) / 2) : null;
 
   const optionTile = (option: WidgetOption) => (
     <label key={option.name} className="radio-input">
@@ -961,12 +1096,13 @@ export default function RadioView() {
       </div>
 
       <div className="radio-bar">
-        <Segmented<Mode>
+        <Segmented<Shown>
           label="Show"
-          value={mode}
+          value={mode === 'widget' ? 'widget' : logic ? 'logic' : 'screen'}
           onChange={chooseMode}
           options={[
             {value: 'screen', label: 'Model screens'},
+            {value: 'logic', label: 'Logic'},
             {value: 'widget', label: 'One widget'},
           ]}
         />
@@ -1114,6 +1250,18 @@ export default function RadioView() {
           <span className="muted">No radio log yet: add one to a sortie to replay it here.</span>
         )}
       </div>
+
+      {/* The logic under the screen and the replay, the whole width: flip a switch or play a pack and watch both. */}
+      {showLogic && (
+        <RadioLogic
+          view={logicView}
+          isOn={isOnNow}
+          where={whereNow}
+          ways={waysOf}
+          timer={index => logicNow()?.value(index) ?? 0}
+          output={outputNow}
+        />
+      )}
 
       {(folded.length > 0 || otherOptions.length > 0) && (
         <details className="radio-more">

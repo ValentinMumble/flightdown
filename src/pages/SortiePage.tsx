@@ -129,7 +129,7 @@ export function SortiePage() {
               </div>
               <div>
                 <div className="figure-label">Spot</div>
-                <div className="figure-value" style={{fontSize: 15}}>
+                <div className="figure-value" style={{fontSize: '0.9375rem'}}>
                   {place ? spotLabel(place) : '–'}
                 </div>
               </div>

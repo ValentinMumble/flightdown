@@ -41,7 +41,7 @@
   align-items: center;
   gap: 10px;
   font-family: var(--display);
-  font-size: 19px;
+  font-size: 1.1875rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -69,7 +69,7 @@
   padding: 0 18px;
   border-radius: 10px;
   font-family: var(--display);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -118,7 +118,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -173,7 +173,7 @@
   justify-content: center;
   gap: 2px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 600;
   color: var(--ink);
   transition: transform 120ms ease;
@@ -234,7 +234,7 @@
     gap: 8px;
     min-width: 0;
     font-family: var(--display);
-    font-size: 17px;
+    font-size: 1.0625rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -307,7 +307,7 @@
 
 .sheet-title {
   font-family: var(--display);
-  font-size: 19px;
+  font-size: 1.1875rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -349,7 +349,7 @@
   transform: translateX(-50%);
   padding: 10px 16px;
   border-radius: 999px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   white-space: nowrap;
   animation: fade 220ms ease;

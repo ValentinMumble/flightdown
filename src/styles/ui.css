@@ -30,7 +30,7 @@
   align-items: center;
   gap: 8px;
   font-family: var(--display);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -49,14 +49,14 @@
 
 .panel-note,
 .card-sub {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
 .readout {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 40px;
+  font-size: 2.5rem;
   line-height: 1;
   letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
@@ -64,7 +64,7 @@
 
 .readout small {
   margin-left: 4px;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--ink-2);
   letter-spacing: 0.06em;
@@ -92,7 +92,7 @@
 
 .caption {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ink-2);
 }
 
@@ -111,7 +111,7 @@
   align-items: center;
   gap: 10px;
   font-family: var(--display);
-  font-size: 28px;
+  font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -119,7 +119,7 @@
 
 .page-sub {
   margin-top: 2px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 
@@ -127,7 +127,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 
@@ -209,7 +209,7 @@
   }
 
   .readout {
-    font-size: 34px;
+    font-size: 2.125rem;
   }
 }
 
@@ -224,7 +224,7 @@
 
 .section-title {
   font-family: var(--display);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -251,7 +251,7 @@
   border-radius: 10px;
   background: var(--panel-3);
   color: var(--ink);
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   white-space: nowrap;
   transition:
@@ -306,7 +306,7 @@
 .button.small {
   min-height: 30px;
   padding: 0 11px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .button.wide {
@@ -361,7 +361,7 @@
   background: transparent;
   color: var(--ink-2);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   text-transform: lowercase;
   white-space: nowrap;
 }
@@ -416,7 +416,7 @@
   border-radius: 9px;
   background: var(--accent);
   color: #04110a;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
 }
 
@@ -467,7 +467,7 @@
   border: 1px solid var(--bezel);
   background: var(--panel-2);
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 550;
   white-space: nowrap;
   flex-shrink: 0;
@@ -503,7 +503,7 @@
   padding: 7px 14px;
   border-radius: 9px;
   font-family: var(--display);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -532,7 +532,7 @@
   gap: 4px;
   padding: 2px 8px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   background: var(--panel-3);
   color: var(--ink-2);
@@ -583,7 +583,7 @@
   background: color-mix(in srgb, var(--tone) 11%, rgba(5, 7, 11, 0.6));
   color: var(--tone);
   font-family: var(--display);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.16em;
@@ -681,7 +681,7 @@ button.list-row:hover {
 
 .row-sub {
   margin-top: 2px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -705,7 +705,7 @@ button.list-row:hover {
 .field > label,
 .field-label {
   font-family: var(--display);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -725,7 +725,7 @@ button.list-row:hover {
   border-radius: var(--radius-small);
   border: 1px solid var(--bezel-strong);
   background: rgba(0, 0, 0, 0.35);
-  font-size: 16px;
+  font-size: 1rem;
   outline: none;
 }
 
@@ -743,7 +743,7 @@ textarea.input {
 select.input {
   min-height: 38px;
   padding: 0 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
   width: auto;
 }
 
@@ -776,7 +776,7 @@ input[type='date'].input {
   flex: 1;
   text-align: center;
   font-family: var(--display);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
 }
 
@@ -790,7 +790,7 @@ input[type='date'].input {
   color: var(--ink);
   text-align: center;
   font-family: var(--font);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -870,7 +870,7 @@ input[type='date'].input {
 }
 
 .small-note {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .search {
@@ -890,7 +890,7 @@ input[type='date'].input {
 .search .input {
   padding-left: 34px;
   min-height: 38px;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 /* Charts */
@@ -909,7 +909,7 @@ input[type='date'].input {
 
 .chart text {
   fill: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-family: var(--display);
 }
 
@@ -918,7 +918,7 @@ input[type='date'].input {
   flex-wrap: wrap;
   gap: 6px 14px;
   margin-top: 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--ink-2);
 }
 
@@ -942,7 +942,7 @@ input[type='date'].input {
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   box-shadow: var(--glass-edge);
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--ink);
   min-width: 140px;
 }
@@ -993,7 +993,7 @@ input[type='date'].input {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .bar-line .name {
@@ -1034,7 +1034,7 @@ input[type='date'].input {
   border-radius: var(--radius-small);
   border: 1px solid rgba(255, 176, 32, 0.3);
   background: var(--caution-soft);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .banner b {
@@ -1048,7 +1048,7 @@ input[type='date'].input {
 }
 
 .empty-emoji {
-  font-size: 36px;
+  font-size: 2.25rem;
   margin-bottom: 8px;
 }
 
@@ -1062,7 +1062,7 @@ input[type='date'].input {
   grid-template-columns: auto 1fr;
   gap: 8px 16px;
   margin: 0;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .kv dt {

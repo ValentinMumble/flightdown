@@ -42,11 +42,23 @@ const DRIVEN_AMPS = 2;
 /** With no current sensor in the log, the throttle stick above this (%) stands for a driven rotor. */
 const DRIVEN_THROTTLE = 15;
 
-/** The signals a pack offers: its channels, and the rotor turning when it logs the current or the throttle. */
+/**
+ * The signals a pack offers: its channels, the rotor turning when it logs the current or the throttle, and the mAh
+ * used when it logs the current (older logs have no mAh sensor: the radio's own is the current added up).
+ */
 export function packSignals(series: TelemetrySeries | null): PackSignal[] {
   if (!series) return [];
   const channels = (Object.keys(series.channels) as Channel[]).filter(channel => series.channels[channel]?.length);
+  if (channels.includes('current') && !channels.includes('capacity')) channels.push('capacity');
   return channels.includes('current') || channels.includes('throttle') ? ['running', ...channels] : channels;
+}
+
+/** The output channel a source names: "ch(0)" as the model files write it (from 0), or "CH1" (from 1). */
+function outputOf(name: string): Channel | null {
+  const fromZero = /^ch\((\d+)\)$/i.exec(name);
+  const fromOne = /^ch(\d+)$/i.exec(name);
+  const number = fromZero ? Number(fromZero[1]) + 1 : fromOne ? Number(fromOne[1]) : 0;
+  return number >= 1 && number <= 8 ? (`ch${number}` as Channel) : null;
 }
 
 /**
@@ -61,6 +73,8 @@ export function guessSignal(name: string, signals: PackSignal[]): PackSignal | '
       ? 'buttons'
       : null;
   if (logged && signals.includes(logged)) return logged;
+  const output = outputOf(name);
+  if (output) return signals.includes(output) ? output : '';
   const rules: [RegExp, PackSignal][] = [
     [/arm|cut|hold|motor|idle/i, 'running'],
     [/^(vfas|rxbt|volt|batt|cell)/i, 'voltage'],
@@ -77,11 +91,28 @@ export function guessSignal(name: string, signals: PackSignal[]): PackSignal | '
 
 /** A channel's sample at a moment of the pack: the last one taken by then. */
 function sampleAt(series: TelemetrySeries, channel: Channel, second: number) {
-  const values = series.channels[channel];
+  const values =
+    channel === 'capacity' && !series.channels.capacity?.length ? usedByCurrent(series) : series.channels[channel];
   if (!values?.length) return null;
   let index = 0;
   while (index < series.time.length - 1 && series.time[index + 1] <= second) index += 1;
   return values[Math.min(index, values.length - 1)];
+}
+
+/** The mAh used by each sample of a pack with no mAh sensor: its current added up, as the radio's mAh sensor does. */
+const consumed = new WeakMap<TelemetrySeries, number[]>();
+function usedByCurrent(series: TelemetrySeries) {
+  const known = consumed.get(series);
+  if (known) return known;
+  const current = series.channels.current ?? [];
+  const used = [0];
+  for (let index = 1; index < Math.min(series.time.length, current.length); index += 1) {
+    const amps = (current[index] + current[index - 1]) / 2;
+    used.push(used[index - 1] + (amps * (series.time[index] - series.time[index - 1])) / 3.6);
+  }
+  const rounded = used.map(Math.round);
+  consumed.set(series, rounded);
+  return rounded;
 }
 
 /**
@@ -102,5 +133,7 @@ export function sourceValue(series: TelemetrySeries, channel: PackSignal, second
   if (/^s[a-h]$/.test(channel)) return Math.round(value) * 1024;
   if (channel === 'throttle') return Math.round((value / 100) * 2048 - 1024);
   if (channel === 'aileron' || channel === 'elevator' || channel === 'rudder') return Math.round(value * 10.24);
+  // Outputs are logged in µs, 1500 the centre and 512 µs each way: the radio reads -1024 to 1024.
+  if (outputOf(channel)) return Math.round((value - 1500) * 2);
   return value;
 }

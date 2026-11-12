@@ -108,7 +108,7 @@ export function DamageMap({sorties}: {sorties: Sortie[]}) {
             ))}
             {!ranked.length && <div className="muted">Nothing broke. Nice.</div>}
             {unplaced > 0 && (
-              <div className="muted" style={{fontSize: 12}}>
+              <div className="muted" style={{fontSize: '0.75rem'}}>
                 {unplaced} more parts not placed on the drawing
               </div>
             )}

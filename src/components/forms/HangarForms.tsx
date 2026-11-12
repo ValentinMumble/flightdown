@@ -278,7 +278,7 @@ export function SpareForm({
             <option key={part} value={part} />
           ))}
         </datalist>
-        <span className="muted" style={{fontSize: 12}}>
+        <span className="muted" style={{fontSize: '0.75rem'}}>
           Name it as you log broken parts: each one logged comes off the stock.
         </span>
       </div>

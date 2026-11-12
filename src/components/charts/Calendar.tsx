@@ -44,12 +44,12 @@ export function Calendar({year, days}: {year: number; days: Map<string, number>}
     <div className="calendar" style={{position: 'relative'}} onMouseLeave={() => setHover(null)}>
       <svg width={width} height={height} role="img" aria-label={`Flying days in ${year}`}>
         {monthStarts.map(({month, week}) => (
-          <text key={month} x={24 + week * (CELL + GAP)} y={10} fontSize={10} fill="var(--muted)">
+          <text key={month} x={24 + week * (CELL + GAP)} y={10} fontSize="0.625rem" fill="var(--muted)">
             {MONTHS[month]}
           </text>
         ))}
         {['Mon', 'Wed', 'Fri'].map((label, index) => (
-          <text key={label} x={0} y={20 + (index * 2 + 1) * (CELL + GAP) - 3} fontSize={9} fill="var(--muted)">
+          <text key={label} x={0} y={20 + (index * 2 + 1) * (CELL + GAP) - 3} fontSize="0.5625rem" fill="var(--muted)">
             {label}
           </text>
         ))}

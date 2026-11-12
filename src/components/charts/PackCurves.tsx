@@ -134,13 +134,13 @@ export function PackCurves({sorties}: {sorties: Sortie[]}) {
               y={3.5}
               stroke="var(--caution)"
               strokeDasharray="4 4"
-              label={{value: 'Land 3.5 V', fill: '#ffb020', fontSize: 11, position: 'insideBottomLeft'}}
+              label={{value: 'Land 3.5 V', fill: '#ffb020', fontSize: '0.6875rem', position: 'insideBottomLeft'}}
             />
             <ReferenceLine
               y={3.3}
               stroke="var(--warning)"
               strokeDasharray="4 4"
-              label={{value: 'Never 3.3 V', fill: '#ff4d4f', fontSize: 11, position: 'insideTopLeft'}}
+              label={{value: 'Never 3.3 V', fill: '#ff4d4f', fontSize: '0.6875rem', position: 'insideTopLeft'}}
             />
             <Tooltip
               cursor={{stroke: ink.axis}}

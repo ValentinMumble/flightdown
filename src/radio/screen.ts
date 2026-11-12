@@ -158,22 +158,26 @@ export function drawBuiltin(radio: Radio, placed: Placed, model: {name: string; 
       radio.drawText(4, h / 2, String(option(0) ?? 'Text'), colors.VCENTER + strong);
       return;
     case 'Outputs': {
+      // Its options, as EdgeTX reads them: the first channel, fill the background, its colour, the text's, the bars'.
+      const first = Math.max(1, Number(option(0)) || 1);
+      const color = (index: number, fallback: number) => {
+        const value = option(index);
+        return value === undefined ? fallback : colorFlag(radio, value);
+      };
+      if (Number(option(1)) === 1) radio.drawFilledRectangle(0, 0, w, h, color(2, colors.COLOR_THEME_SECONDARY3));
+      const text = color(3, ink);
+      const fill = color(4, colors.COLOR_THEME_SECONDARY1);
       const count = Math.max(1, Math.min(8, Math.floor((h - 4) / 14)));
       const bar = Math.min(18, Math.floor((h - 4) / count) - 2);
       for (let index = 0; index < count; index += 1) {
+        const channel = first - 1 + index;
         const top = 2 + index * (bar + 2);
-        const value = radio.getValue(`ch(${index})`);
+        const value = radio.getValue(`ch(${channel})`);
         radio.drawFilledRectangle(2, top, w - 4, bar, colors.COLOR_THEME_SECONDARY2);
         const half = (w - 4) / 2;
         const length = Math.round((Math.max(-1024, Math.min(1024, value)) / 1024) * half);
-        radio.drawFilledRectangle(
-          2 + half + Math.min(0, length),
-          top,
-          Math.abs(length) || 1,
-          bar,
-          colors.COLOR_THEME_ACTIVE,
-        );
-        radio.drawText(6, top + bar / 2, `CH${index + 1}`, small + colors.VCENTER + strong);
+        radio.drawFilledRectangle(2 + half + Math.min(0, length), top, Math.abs(length) || 1, bar, fill);
+        radio.drawText(6, top + bar / 2, `CH${channel + 1}`, small + colors.VCENTER + text);
       }
       return;
     }

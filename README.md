@@ -37,9 +37,14 @@ small monospace labels, one soft green for anything good, a rolling counter of m
   written by hand from the model files). Model screens: the M2 EVO's and M4's screens as the radio draws them,
   from its card, every widget in its zone (EdgeTX's own ones redrawn). One widget: a widget built in
   [edge-tx](https://github.com/ValentinMumble/edge-tx), in a zone of its size, its Lua to edit (kept in the browser,
-  downloadable as `main.lua`). Set the switches and the 6-position buttons by hand, or replay a logged pack: its log drives
-  the sensors, the buttons and the switches (their real positions; in older logs, the arming ones follow the rotor, on
-  while the pack draws 2 A). Widgets read the model's global variables (mAhRe its cell count).
+  downloadable as `main.lua`). Logic: under the screen, the model's logic and the radio's in words, live with the
+  switches and a replay: controls, conditions, what each channel is made of now and why, special and global functions,
+  timers; pick one to light what it reads and what reads it (`logic.ts`). Set the switches by hand (a click on one moves it; SH, the red rescue switch, springs
+  back, down only while held; SF starts in hold) and the 6-position buttons, or replay a logged pack: its log drives
+  the sensors, the buttons, the switches (their real positions; in older logs, the arming ones follow the rotor, on
+  while the pack draws 2 A) and the outputs; a log with no mAh sensor counts the mAh from the current, as the radio
+  does. Widgets read the model's global variables (mAhRe its cell count), and its timers run as on the radio, on its
+  logical switches (`timers.ts`).
 - **Spots:** every flying spot on a satellite map (spots close together share a pin with a count until you zoom in).
   Set a spot's GPS point by tapping the map, pasting coordinates or a Maps link, or from the phone's position; each
   sortie then shows its spot from above.

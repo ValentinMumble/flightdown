@@ -25,7 +25,19 @@ export const CHANNELS = {
   sg: {label: 'Switch SG', unit: '', columns: ['SG']},
   sh: {label: 'Switch SH', unit: '', columns: ['SH']},
   buttons: {label: '6-position buttons', unit: '', columns: ['6P']},
+  // What the radio sends on its first eight channels, in µs (1500 the centre): the Radio tab's Outputs replays them.
+  ch1: {label: 'Output CH1', unit: 'µs', columns: ['CH1']},
+  ch2: {label: 'Output CH2', unit: 'µs', columns: ['CH2']},
+  ch3: {label: 'Output CH3', unit: 'µs', columns: ['CH3']},
+  ch4: {label: 'Output CH4', unit: 'µs', columns: ['CH4']},
+  ch5: {label: 'Output CH5', unit: 'µs', columns: ['CH5']},
+  ch6: {label: 'Output CH6', unit: 'µs', columns: ['CH6']},
+  ch7: {label: 'Output CH7', unit: 'µs', columns: ['CH7']},
+  ch8: {label: 'Output CH8', unit: 'µs', columns: ['CH8']},
 } as const;
+
+/** An output channel of the log: ch1 to ch8. */
+export const isOutput = (channel: string) => /^ch\d$/.test(channel);
 
 /** The 6-position button pressed (1 to 6) from the value logged for them. */
 export const buttonOf = (value: number) => Math.max(1, Math.min(6, Math.round((value + 1024) / 409.6) + 1));

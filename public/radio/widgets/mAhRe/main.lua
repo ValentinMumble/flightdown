@@ -32,8 +32,10 @@
 --  After reset, check cells to verify that they are within VoltageDelta of each other
 --
 -- Edited for edge-tx (2026 November): the pack's size comes from the 6-position button pressed for it (PACKS below,
---  the same as the Pack widget's), not from GV7, and the pack's name shows under the voltage. The checks start again
---  on each new pack, not on a reset switch, and the pack-not-full check reads a pack voltage (VFAS) a cell.
+--  the same as the Pack widget's), not from GV7. The checks start again on each new pack, not on a reset switch,
+--  and the pack-not-full check reads a pack voltage (VFAS) a cell. Its main layout (drawBattery) is redrawn in the
+--  colours of the other widgets: the pack and its volts a cell (NOT FULL when it was not), a bar of what is left
+--  with its %, the mAh left and the pack's volts.
 
 
 -- Description
@@ -197,6 +199,7 @@ local PlayMissingCellWarning = true
 local InconsistentCellVoltageDetected = false
 local ResetDebounced = true
 local PackPowered = false -- a pack's voltage read at the last update, to tell a new pack (updated in reset_if_needed)
+local PackNotFull = false -- the pack was not full when plugged in: shown until the next pack (drawBattery)
 local MaxWatts = "-----"
 local MaxAmps = "-----"
 
@@ -379,6 +382,7 @@ local function check_for_full_battery(voltageSensorValue)
         CheckBatNotFull = false  -- since we have done the check, set to false so it is not ran again
       end
       if playBatNotFullWarning then
+        PackNotFull = true
         playFile(soundDirPath.."BNFull.wav")
         playBatNotFullWarning = false
       end
@@ -502,6 +506,7 @@ local function reset_if_needed()
   if powered and not PackPowered and (mAhSensor == "" or (getValue(mAhSensor) or 0) < 5) then
     print("new pack")
     CheckBatNotFull = true
+    PackNotFull = false
     StartTime = nil
     PlayInconsistentCellWarning = true
     PlayFirstMissingCellWarning = true
@@ -632,59 +637,56 @@ local function drawCellVoltage(wgt, cellResult)
 end
 
 -- ####################################################################
-local function drawBattery(xOrigin, yOrigin, wgt)
-  volts = getCellVoltage(VoltageSensor)
+-- What is left, in the colours of the other widgets on the M2 EVO's screens (the Pack widget's): green, amber under
+-- 35 %, red under 20 %.
+local function leftColor(percent)
+  if percent < 20 then return lcd.RGB(0xff, 0x5a, 0x5f) end
+  if percent < 35 then return lcd.RGB(0xff, 0xb0, 0x20) end
+  return lcd.RGB(0x7c, 0xd6, 0x9a)
+end
 
+-- Volts a cell: amber at 3.5 V (time to land), red at 3.3 V (never lower), as the Pack widget.
+local function cellColor(volts)
+  if volts <= 3.3 then return lcd.RGB(0xff, 0x5a, 0x5f) end
+  if volts <= 3.5 then return lcd.RGB(0xff, 0xb0, 0x20) end
+  return lcd.RGB(0x7c, 0xd6, 0x9a)
+end
+
+-- The battery, redrawn to sit with the other widgets: the pack and its volts a cell (or NOT FULL when it was not full
+-- when plugged in), a bar of what is left with the pack's terminal at its end and the % beside it, then the mAh left
+-- and the pack's volts. Without telemetry, the pack chosen with its size and an empty bar. `top` moves it down.
+local function drawBattery(wgt, top)
+  top = top or 0
+  local width = wgt.zone.w
+  local ink = lcd.RGB(0xee, 0xee, 0xee)
+  local muted = lcd.RGB(0x9a, 0xa3, 0xad)
+  local outline = lcd.RGB(0x5d, 0x65, 0x70)
   local pack = packPlugged()
-  if 0 == volts then
-    lcd.drawText(50, 20, "No telemetry")
-    lcd.drawText(50, 42, pack.name .. ", " .. pack.mah .. " mAh", SMLSIZE + GREY)
+  local volts = getCellVoltage(VoltageSensor)
+  local live = type(volts) == "number" and volts > 0.5
+  local percent = math.max(0, math.min(100, BatRemPer or 0))
 
+  -- With telemetry, the name alone, as the volts a cell share the line (the mAh left come under the bar).
+  lcd.drawText(6, top + 2, live and pack.name or (pack.name .. ", " .. pack.mah .. " mAh"), SMLSIZE + muted)
+  if live and PackNotFull then
+    lcd.drawText(width - 6, top + 2, "NOT FULL", SMLSIZE + BOLD + RIGHT + lcd.RGB(0xff, 0xb0, 0x20))
+  elseif live and (CellCount or 0) > 0 then
+    local cell = volts / CellCount
+    lcd.drawText(width - 6, top + 2, string.format("%.2f V a cell", cell), SMLSIZE + RIGHT + cellColor(cell))
+  end
+
+  local barWidth = width - 76
+  lcd.drawRectangle(6, top + 20, barWidth, 22, outline, 2)
+  lcd.drawFilledRectangle(6 + barWidth, top + 26, 4, 10, outline)
+  if not live then
+    lcd.drawText(6 + math.floor(barWidth / 2), top + 23, "No telemetry", SMLSIZE + CENTER + muted)
     return
   end
-
-    local myBatt = { ["x"] = xOrigin,
-                     ["y"] = yOrigin,
-                     ["w"] = 85,
-                     ["h"] = 35,
-                     ["segments_w"] = 15,
-                     ["color"] = WHITE,
-                     ["cath_w"] = 6,
-                     ["cath_h"] = 20 }
-
-  lcd.setColor(CUSTOM_COLOR, wgt.options.Color)
-
-  if BatRemPer > 0 then -- Don't blink
-    BlinkWhenZero = 0
-  else
-    BlinkWhenZero = BLINK
-  end
-
-  -- fill batt
-  lcd.setColor(CUSTOM_COLOR, getPercentColor(BatRemPer))
-  lcd.drawGauge(wgt.zone.x + myBatt.x, wgt.zone.y + myBatt.y, myBatt.w, myBatt.h, BatRemPer, 100, CUSTOM_COLOR)
-
-  -- draws bat
-  lcd.setColor(CUSTOM_COLOR, WHITE)
-  lcd.drawRectangle(wgt.zone.x + myBatt.x, wgt.zone.y + myBatt.y, myBatt.w, myBatt.h, CUSTOM_COLOR, 2)
-  lcd.drawFilledRectangle(wgt.zone.x + myBatt.x + myBatt.w,
-          --wgt.zone.y + myBatt.h / 2 - myBatt.cath_h / 2,
-          wgt.zone.y + myBatt.y + myBatt.cath_h / 2 - 2.5,
-          myBatt.cath_w,
-          myBatt.cath_h,
-          CUSTOM_COLOR)
-  lcd.drawText(wgt.zone.x + myBatt.x + 20, wgt.zone.y + myBatt.y + 5, string.format("%d%%", BatRemPer), LEFT + MIDSIZE + CUSTOM_COLOR)
-
-    -- draw values
-  lcd.drawText(wgt.zone.x + myBatt.x, wgt.zone.y + myBatt.y + 35,
-          string.format("%d mAh", BatRemainmAh), DBLSIZE + Color + BlinkWhenZero)
-
-  -- draw VFAS
-  lcd.drawText(wgt.zone.x + myBatt.x + myBatt.cath_w + myBatt.w + 15, wgt.zone.y, string.format("%.1f V", volts), DBLSIZE)
-
-  -- the pack plugged in, by its button
-  lcd.drawText(wgt.zone.x + myBatt.x + myBatt.cath_w + myBatt.w + 15, wgt.zone.y + 40, pack.name, SMLSIZE)
-  lcd.drawText(wgt.zone.x + myBatt.x + myBatt.cath_w + myBatt.w + 15, wgt.zone.y + 56, pack.mah .. " mAh", SMLSIZE + GREY)
+  local fill = math.floor((barWidth - 6) * percent / 100)
+  if fill > 0 then lcd.drawFilledRectangle(9, top + 23, fill, 16, leftColor(percent)) end
+  lcd.drawText(width - 6, top + 17, percent .. "%", MIDSIZE + BOLD + RIGHT + leftColor(percent))
+  lcd.drawText(6, top + 50, string.format("%d mAh", math.max(0, BatRemainmAh or 0)), MIDSIZE + BOLD + ink)
+  lcd.drawText(width - 6, top + 50, string.format("%.1f V", volts), MIDSIZE + RIGHT + ink)
 end
 
 -- ####################################################################
@@ -723,7 +725,7 @@ end
 -- ####################################################################
 local function refreshZoneMedium(wgt)
   --- Size is 225x98 1/4th  (no sliders/trim)
-  drawBattery(0,0, wgt)
+  drawBattery(wgt)
 
   --local myBatt = { ["x"] = 0, ["y"] = 0, ["w"] = 85, ["h"] = 35, ["segments_w"] = 15, ["color"] = WHITE, ["cath_w"] = 6, ["cath_h"] = 20 }
   --
@@ -793,7 +795,7 @@ local function refreshZoneXLarge(wgt)
   drawCellVoltage(wgt, cellResult)
 
   -- Draw the bottom-left 1/4 of the screen
-  drawBattery(0, 100, wgt)
+  drawBattery(wgt, 100)
 
   -- Draw the top-right 1/4 of the screen
   --lcd.drawText(wgt.zone.x + 270, wgt.zone.y + -5, string.format("%.2fV", VoltsNow), DBLSIZE + Color)

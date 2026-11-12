@@ -38,6 +38,22 @@ describe('sourceValue', () => {
   it('gives 0 for a channel the pack does not have', () => {
     expect(sourceValue(series, 'current', 1)).toBe(0);
   });
+
+  it('adds up the current into mAh used when the log has no mAh sensor, as the radio does', () => {
+    const flown = {id: 'old', time: [0, 1800, 3600], channels: {current: [1, 1, 1]}};
+    expect(packSignals(flown)).toContain('capacity');
+    expect([0, 1800, 3600].map(second => sourceValue(flown, 'capacity', second))).toEqual([0, 500, 1000]);
+  });
+
+  it('gives the outputs, logged in µs, from -1024 to 1024 whichever way a source names them', () => {
+    const outputs = {id: 'pack', time: [0], channels: {ch1: [1500], ch5: [2012]}};
+    const signals = packSignals(outputs);
+    expect(guessSignal('ch(4)', signals)).toBe('ch5');
+    expect(guessSignal('CH1', signals)).toBe('ch1');
+    expect(guessSignal('ch(2)', signals)).toBe('');
+    expect(sourceValue(outputs, 'ch1', 0)).toBe(0);
+    expect(sourceValue(outputs, 'ch5', 0)).toBe(1024);
+  });
 });
 
 describe('guessSignal', () => {

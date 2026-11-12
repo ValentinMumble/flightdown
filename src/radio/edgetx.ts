@@ -81,6 +81,8 @@ export interface RadioInputs {
   value: (source: string) => number;
   /** The model it is on: its name, picture and global variables (first flight mode, by index). */
   model: {name: string; bitmap: string; globals?: Record<number, number>};
+  /** A model timer as the radio runs it (timers.ts): its value (the time left when it counts down) and start. */
+  timer?: (index: number) => {value: number; start: number};
 }
 
 /**
@@ -178,6 +180,15 @@ export class Radio {
 
   modelGlobal(index: number) {
     return this.inputs.model.globals?.[index] ?? 0;
+  }
+
+  /** A model timer's value; with no model to run it (a widget on its own), the seconds since the page opened. */
+  timerValue(index: number) {
+    return this.inputs.timer?.(Number(index)).value ?? Math.floor(this.getTime() / 100);
+  }
+
+  timerStart(index: number) {
+    return this.inputs.timer?.(Number(index)).start ?? 0;
   }
 
   play(kind: string, what: unknown) {
@@ -610,8 +621,8 @@ function model.getGlobalVariable(index, phase)
 end
 function model.setGlobalVariable(index, phase, value) globalVariables[(phase or 0) * 100 + index] = value end
 function model.getTimer(index)
-  return {value = int(host:getTime()) // 100, start = 0, mode = 1, countdownBeep = 0, minuteBeep = false,
-    persistent = 0, name = ''}
+  return {value = int(host:timerValue(index)), start = int(host:timerStart(index)), mode = 1, countdownBeep = 0,
+    minuteBeep = false, persistent = 0, name = ''}
 end
 function model.getOutput(index)
   return {name = 'CH' .. (index + 1), min = -1000, max = 1000, offset = 0, ppmCenter = 1500, symetrical = 0,

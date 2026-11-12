@@ -58,7 +58,7 @@ export function HeliPage() {
         <div className="data-plate-info">
           <div>
             <div className="panel-label">Data plate</div>
-            <div className="heli-name" style={{fontSize: 30, marginTop: 6}}>
+            <div className="heli-name" style={{fontSize: '1.875rem', marginTop: 6}}>
               {heli.name}
             </div>
             <div className="heli-model">
@@ -201,7 +201,7 @@ export function HeliPage() {
           )}
         </Panel>
       </div>
-      <p className="muted" style={{fontSize: 12}}>
+      <p className="muted" style={{fontSize: '0.75rem'}}>
         {plural(all.flyingDays, 'flying day')} on {heli.name}.
       </p>
     </div>

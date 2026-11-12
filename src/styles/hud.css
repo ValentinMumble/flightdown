@@ -79,7 +79,7 @@
 .rose-letter,
 .stamp {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 0.71875rem;
   font-weight: 500;
   letter-spacing: 0;
   text-transform: lowercase;
@@ -98,7 +98,7 @@
 }
 
 .section-title {
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   color: var(--ink-2);
 }
 
@@ -134,13 +134,13 @@
 }
 
 .page-title {
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .sheet-title {
-  font-size: 19px;
+  font-size: 1.1875rem;
   font-weight: 600;
 }
 
@@ -149,7 +149,7 @@
 }
 
 .logotype {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -167,7 +167,7 @@
 
 .chart text {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 /* Controls: outlines, no fills, the choice made in green. */
@@ -233,7 +233,7 @@
 .soft-key {
   height: 36px;
   padding: 0 12px;
-  font-size: 12.5px;
+  font-size: 0.78125rem;
 }
 
 .soft-key:hover {
@@ -263,7 +263,7 @@
   padding: 0;
   border: 0;
   background: none;
-  font-size: 11.5px;
+  font-size: 0.71875rem;
 }
 
 .stamp::before {
@@ -403,7 +403,7 @@
   gap: 14px;
   margin-top: 10px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .link {
@@ -473,7 +473,7 @@
 .replay-time,
 .replay-readout {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
@@ -495,7 +495,7 @@
 
 .stick.dial figcaption span {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   white-space: nowrap;
 }
 
@@ -540,7 +540,7 @@
 
 .dial-number {
   font-family: var(--mono);
-  font-size: 7.5px;
+  font-size: 0.46875rem;
   fill: var(--ink-2);
   text-anchor: middle;
   dominant-baseline: central;
@@ -554,7 +554,7 @@
 
 .dial-readout {
   font-family: var(--font);
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 600;
   fill: var(--ink);
   text-anchor: middle;
@@ -604,7 +604,7 @@
 
   /* A dial a third of a phone wide: only empty, half and full are numbered, large enough to read. */
   .dial-number {
-    font-size: 10.5px;
+    font-size: 0.65625rem;
   }
 
   .dial-number:not(.key) {

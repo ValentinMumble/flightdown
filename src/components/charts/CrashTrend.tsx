@@ -63,7 +63,7 @@ export function CrashTrend({points}: {points: TrendPoint[]}) {
             style={{filter: `drop-shadow(0 0 6px ${stroke})`}}
             label={({x, y, index}: {x?: number | string; y?: number | string; index?: number}) =>
               index === rows.length - 1 && x !== undefined && y !== undefined ? (
-                <text x={Number(x) + 6} y={Number(y) + 4} fill={ink.ink} fontSize={12} fontWeight={700}>
+                <text x={Number(x) + 6} y={Number(y) + 4} fill={ink.ink} fontSize="0.75rem" fontWeight={700}>
                   {formatRate(latest.per10)}
                 </text>
               ) : null

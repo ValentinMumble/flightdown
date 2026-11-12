@@ -76,7 +76,7 @@ export function HeliCard({heli, tally, wide = false}: {heli: Heli; tally?: Group
             <div className="figure-value">{since}</div>
           </div>
         </div>
-        <div className="muted" style={{fontSize: 13}}>
+        <div className="muted" style={{fontSize: '0.8125rem'}}>
           {tally ? `Last flown ${ago(tally.last)}` : 'Not flown yet'}
         </div>
       </div>
@@ -128,7 +128,7 @@ function Gear() {
                     </span>
                   )}
                   <span className="stack" style={{gap: 6}}>
-                    <span className="heli-name" style={{fontSize: 17}}>
+                    <span className="heli-name" style={{fontSize: '1.0625rem'}}>
                       {item.name}
                     </span>
                     {item.gone && <Stamp status={item.gone} />}
@@ -225,7 +225,7 @@ function Fleet() {
                         ` · ${formatDay(tally.first, {weekday: false, year: true})} to ${formatDay(tally.last, {weekday: false, year: true})}`}
                     </span>
                   </span>
-                  <span className="figure-value" style={{fontSize: 15}}>
+                  <span className="figure-value" style={{fontSize: '0.9375rem'}}>
                     {formatAirtime(tally?.airtime ?? 0)}
                   </span>
                   <Stamp status={heli.status} />
@@ -502,7 +502,7 @@ function Batteries() {
                   </div>
                 )}
                 <div className="heli-name">{battery.name}</div>
-                <div className="muted" style={{fontSize: 13}}>
+                <div className="muted" style={{fontSize: '0.8125rem'}}>
                   {battery.count} × {battery.cells}S {formatNumber(battery.capacity)} mAh
                   {battery.dead ? <span className="battery-dead"> · {battery.dead} dead</span> : null}
                 </div>

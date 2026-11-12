@@ -83,7 +83,7 @@ export function YearLines({years}: {years: Map<number, {day: number; hours: numb
                 label={({x, y, index: point}: {x?: number | string; y?: number | string; index?: number}) => {
                   const last = rows.reduce((found, row, rowIndex) => (row[year] !== undefined ? rowIndex : found), -1);
                   return point === last && x !== undefined && y !== undefined ? (
-                    <text x={Number(x) + 6} y={Number(y) + 4} fill={ink.ink} fontSize={11} fontWeight={700}>
+                    <text x={Number(x) + 6} y={Number(y) + 4} fill={ink.ink} fontSize="0.6875rem" fontWeight={700}>
                       {year}
                     </text>
                   ) : null;

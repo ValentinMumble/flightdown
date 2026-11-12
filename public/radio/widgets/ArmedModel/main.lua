@@ -1,3 +1,15 @@
+-- Lua Library inline imports
+local function __TS__ObjectAssign(target, ...)
+    local sources = {...}
+    for i = 1, #sources do
+        local source = sources[i]
+        for key in pairs(source) do
+            target[key] = source[key]
+        end
+    end
+    return target
+end
+-- End of Lua Library inline imports
 local ____exports = {}
 local name = "ArmedModel"
 local MIN_VALUE = -1024
@@ -30,6 +42,9 @@ local STATES = {safe = {
     blade = 15133165,
     tip = 16694784
 }}
+--- SH held down: the flybarless unit's rescue levels the heli and climbs. Whatever the state, the zone turns red, says
+-- RESCUE and its border blinks fast, as long as SH is held (it springs back).
+local RESCUE = {word = "RESCUE", fill = 9051168, ink = 16777215}
 local function create(zone, options)
     return {
         zone = zone,
@@ -296,7 +311,9 @@ local function draw(widget, width, height)
     local isThrottleActive = getValue(widget.options.ThrottleCutSwitch) == MIN_VALUE
     local live = isArmed and isThrottleActive
     local share = turn(widget, live)
-    local state = STATES[live and "live" or (isArmed and "armed" or "safe")]
+    local rescue = getValue("sh") > 0
+    local armedState = STATES[live and "live" or (isArmed and "armed" or "safe")]
+    local state = rescue and __TS__ObjectAssign({}, armedState, RESCUE) or armedState
     lcd.drawFilledRectangle(
         0,
         0,
@@ -304,7 +321,13 @@ local function draw(widget, width, height)
         height,
         lcd.RGB(state.fill)
     )
-    if live and getTime() % 100 < 60 then
+    local ____rescue_0
+    if rescue then
+        ____rescue_0 = getTime() % 50 < 30
+    else
+        ____rescue_0 = live and getTime() % 100 < 60
+    end
+    if ____rescue_0 then
         lcd.drawRectangle(
             0,
             0,
