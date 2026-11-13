@@ -1516,6 +1516,37 @@
   gap: 6px;
 }
 
+/* Airtime by heli as a ring: a slice a heli, the total in the middle; a slice lights up under the pointer. */
+.donut {
+  display: block;
+  width: 168px;
+  height: 168px;
+  margin: 4px auto 14px;
+}
+
+.donut-slice {
+  outline: none;
+  transition: stroke-width 140ms ease;
+}
+
+.donut-slice:hover,
+.donut-slice:focus-visible {
+  stroke-width: 20px;
+}
+
+.donut-total {
+  fill: var(--ink);
+  font-family: var(--display);
+  font-size: 20px;
+  font-size-adjust: 0.53;
+}
+
+.donut-caption {
+  fill: var(--muted);
+  font-family: var(--mono);
+  font-size: 8px;
+}
+
 /* The recorder's span: the flight only, or the whole log. */
 .lanes-span {
   display: flex;

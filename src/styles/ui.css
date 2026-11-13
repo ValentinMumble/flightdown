@@ -865,30 +865,6 @@ input[type='date'].input {
   cursor: pointer;
 }
 
-/* The Hangar's colour list: a heli, its flying months, its eight colours. */
-.colour-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 16px;
-  padding: 12px 14px;
-  border-left: 3px solid var(--hue);
-}
-
-.colour-row + .colour-row {
-  border-top: 1px solid var(--bezel);
-}
-
-.colour-row .clash {
-  color: var(--caution);
-}
-
-.swatch.current {
-  flex: none;
-  cursor: pointer;
-}
-
 .small-note {
   font-size: 0.8125rem;
 }

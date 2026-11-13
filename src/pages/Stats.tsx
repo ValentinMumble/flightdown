@@ -11,12 +11,11 @@ import {DamageMap} from '../components/charts/DamageMap';
 import {FleetTimeline} from '../components/charts/FleetTimeline';
 import {SeasonRose} from '../components/charts/SeasonRose';
 import {SkillLadder} from '../components/charts/SkillLadder';
-import {useSeriesColor} from '../components/colors';
+import {AirtimeDonut} from '../components/charts/AirtimeDonut';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {ago, formatAirtime, formatDay, formatRate, plural} from '../model/format';
 import {crashTrend, groupBy, sortSorties, totals} from '../model/stats';
 import {CAUSES, crashCauses, milestones, packsPerSortie} from '../model/debrief';
-import {inkOn} from '../model/palette';
 import {addFlips} from '../model/insights';
 import type {Sortie, TurnWay} from '../types';
 
@@ -142,7 +141,6 @@ function FlipTotals({sorties}: {sorties: Sortie[]}) {
 /** The debrief: what the log says about the flying, in the terms a heli pilot counts in. */
 export function Stats() {
   const {doc, heli, spot} = useStore();
-  const color = useSeriesColor();
   const years = useMemo(
     () => [...new Set(doc.sorties.map(sortie => sortie.date.slice(0, 4)))].sort().reverse(),
     [doc.sorties],
@@ -373,34 +371,25 @@ export function Stats() {
             </Panel>
 
             <Panel label="Hours by heli" className="span-5">
-              <div className="split" role="img" aria-label="Share of airtime by heli">
-                {byHeli
-                  .filter(group => group.airtime > 0)
-                  .map(group => {
-                    const share = group.airtime / all.airtime;
-                    const fill = color(heli(group.key)?.color ?? -1);
-                    return (
-                      <div
-                        key={group.key}
-                        title={`${heli(group.key)?.name}: ${formatAirtime(group.airtime)} (${Math.round(share * 100)} %)`}
-                        style={{flex: group.airtime, background: fill, color: inkOn(fill)}}
-                      >
-                        {share > 0.12 ? `${Math.round(share * 100)}%` : ''}
-                      </div>
-                    );
-                  })}
-              </div>
+              <AirtimeDonut groups={byHeli} heli={heli} />
               <div className="heli-table">
-                {byHeli.map(group => (
-                  <Link key={group.key} to={`/helis/${group.key}`} className="heli-table-row">
-                    <span className="name">
-                      <HeliName heli={heli(group.key)} />
-                    </span>
-                    <span className="tabular">{formatAirtime(group.airtime)}</span>
-                    <span className="muted tabular">{plural(group.packs, 'pack')}</span>
-                    <span className="muted tabular">💥 {group.crashes}</span>
-                  </Link>
-                ))}
+                {[...byHeli]
+                  .sort((left, right) => right.airtime - left.airtime)
+                  .map(group => (
+                    <Link key={group.key} to={`/helis/${group.key}`} className="heli-table-row">
+                      <span className="name">
+                        <HeliName heli={heli(group.key)} />
+                      </span>
+                      <span className="tabular">
+                        {formatAirtime(group.airtime)}{' '}
+                        <small className="muted">
+                          {all.airtime ? Math.round((group.airtime / all.airtime) * 100) : 0} %
+                        </small>
+                      </span>
+                      <span className="muted tabular">{plural(group.packs, 'pack')}</span>
+                      <span className="muted tabular">💥 {group.crashes}</span>
+                    </Link>
+                  ))}
               </div>
             </Panel>
           </div>

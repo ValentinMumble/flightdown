@@ -37,14 +37,14 @@ rolling counter of minutes in the air.
   jumps: twice its first reading is worn), and adds up the flips and rolls.
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
   heli breaks (a damage map on a heli drawing), what brings it down (crash causes read from the notes), the fleet's
-  history, the skill ladder, the flying season, packs a sortie, spots and hours by heli.
+  history, the skill ladder, the flying season, packs a sortie, spots, and hours by heli (each heli's share as a ring,
+  in its chart colour).
 - **Hangar:** the flight line, the radio and other gear, the helis that left (stamped sold or lost), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
   the dead one keeps its logs and charts), notes. Helis and packs keep the day they were bought, helis and radios
-  their price. Each heli has a data
-  plate page and its own chart colour (tap its dot in the Hangar to change it). Helis, radios and packs take a photo
-  link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac; others are cut
-  out in the page). Spare parts are hidden for now (`SHOW_SPARES` in `src/pages/Hangar.tsx`).
+  their price. Each heli has a data plate page and its own chart colour (picked in its form). Helis, radios and packs
+  take a photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac;
+  others are cut out in the page). Spare parts are hidden for now (`SHOW_SPARES` in `src/model/parts.ts`).
 - **Radio:** a tab of its own: the TX16S, running the Lua that goes on it (in the browser, with Fengari), its switches
   around the screen where they sit on the radio, each saying what it does on the model where it is set (`roles.ts`,
   written by hand from the model files). Model screens: the M2 EVO's and M4's screens as the radio draws them, from its

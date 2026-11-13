@@ -432,16 +432,6 @@
   color: var(--accent);
 }
 
-/* The colours list: the dots go under the heli's name when the row runs out of room. */
-.colour-row .row-main {
-  flex: 1 1 170px;
-  min-width: 0;
-}
-
-.colour-row .swatches {
-  flex: none;
-}
-
 /* Spots on a phone: the airtime column goes, the name gets the room. */
 @media (max-width: 560px) {
   .spots-list .spot-row {
