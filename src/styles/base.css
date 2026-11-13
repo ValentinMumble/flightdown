@@ -1,47 +1,48 @@
 /*
- * Flightdown looks like an old computer's green screen around a helicopter's cockpit: black glass, phosphor green text
- * that glows a little, a terminal's type, frames marked by corner brackets, faint scanlines; amber and red only for
- * trouble. Dark only. Every colour comes from here (see hud.css for the type).
+ * Flightdown looks like an 80s helicopter cockpit's green displays, made easy to read: a very dark green page (not pure
+ * black, so bright text does not halo), pale green-white text in a reading type, a softer phosphor green kept for
+ * labels, numbers and what is live, a faint glow on big numbers only, frames marked by corner brackets; amber and red
+ * only for trouble. Dark only. Every colour comes from here (see hud.css for the type).
  */
 :root {
   color-scheme: dark;
-  --page: #010402;
-  --panel: #030a05;
-  --panel-2: #051009;
-  --panel-3: #0a1a10;
-  --bezel: rgba(57, 255, 120, 0.16);
-  --bezel-strong: rgba(57, 255, 120, 0.3);
+  --page: #07100b;
+  --panel: #0b1610;
+  --panel-2: #0f1c15;
+  --panel-3: #15261c;
+  --bezel: rgba(110, 220, 150, 0.14);
+  --bezel-strong: rgba(110, 220, 150, 0.26);
   /* The two corner brackets that mark a frame. */
-  --bracket: #2fd66a;
-  /* Phosphor: bright for what matters, dimmer for the rest. */
-  --ink: #b9ffce;
-  --ink-2: #74e09a;
-  --muted: #3f8f5c;
-  --label: #4fd17f;
-  --label-soft: rgba(57, 255, 120, 0.08);
-  /* The brightest green: the tab in use, a choice made, anything live or good. */
-  --accent: #5cff8d;
-  --accent-ink: #001a07;
-  --accent-soft: rgba(92, 255, 141, 0.12);
+  --bracket: #3fae6e;
+  /* Text is pale, nearly white: the green is for what matters. */
+  --ink: #dcebe1;
+  --ink-2: #a9c7b3;
+  --muted: #6f9480;
+  --label: #6fd39a;
+  --label-soft: rgba(110, 220, 150, 0.08);
+  /* A soft phosphor green: the tab in use, a choice made, anything live or good. */
+  --accent: #7ee0a0;
+  --accent-ink: #04140b;
+  --accent-soft: rgba(126, 224, 160, 0.12);
   /* The rotor and the app's mark keep their orange. */
   --brand: #ff7a1a;
-  --good: #5cff8d;
-  --good-soft: rgba(92, 255, 141, 0.12);
-  --caution: #ffb35c;
-  --caution-soft: rgba(255, 179, 92, 0.12);
-  --warning: #ff6b6b;
-  --warning-soft: rgba(255, 107, 107, 0.12);
-  --grid: rgba(57, 255, 120, 0.08);
-  --axis: rgba(57, 255, 120, 0.3);
-  /* A phosphor's glow, on headings and numbers (and fainter on the rest). */
-  --glow: 0 0 6px rgba(92, 255, 141, 0.45);
-  --glow-faint: 0 0 3px rgba(92, 255, 141, 0.22);
+  --good: #7ee0a0;
+  --good-soft: rgba(126, 224, 160, 0.12);
+  --caution: #f0b85a;
+  --caution-soft: rgba(240, 184, 90, 0.12);
+  --warning: #ff8a7a;
+  --warning-soft: rgba(255, 138, 122, 0.12);
+  --grid: rgba(110, 220, 150, 0.07);
+  --axis: rgba(110, 220, 150, 0.24);
+  /* A faint phosphor glow, on headings and big numbers only. */
+  --glow: 0 0 5px rgba(126, 224, 160, 0.3);
+  --glow-faint: none;
   --backdrop: rgba(0, 0, 0, 0.6);
 
   /* Liquid glass (papyrus/design/liquid-glass.md), dark values tinted with the page's green black. */
-  --glass-clear: rgba(2, 14, 6, 0.3);
-  --glass-regular: rgba(2, 12, 6, 0.8);
-  --glass-thick: rgba(3, 14, 7, 0.88);
+  --glass-clear: rgba(7, 16, 11, 0.3);
+  --glass-regular: rgba(7, 16, 11, 0.82);
+  --glass-thick: rgba(11, 22, 16, 0.88);
   --glass-sheen: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 55%);
   --glass-edge:
     inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.06),
@@ -49,10 +50,11 @@
   --lens: rgba(118, 118, 128, 0.24);
   --lens-edge: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 
-  /* A terminal's type: IBM Plex Mono for text, VT323 (a terminal's pixel face) for headings and numbers. */
-  --font: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --display: 'VT323', var(--font);
-  --mono: var(--font);
+  /* IBM Plex Sans to read; Share Tech Mono, an avionics-like display type, for headings and numbers; Plex Mono for
+     the small labels. */
+  --font: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --display: 'Share Tech Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --radius: 4px;
   --radius-small: 3px;
   --dock-height: 62px;
@@ -69,6 +71,8 @@
 /* Every font size is in rem, written for a 16px root: this one size scales all the text. */
 html {
   font-size: 18px;
+  /* Share Tech Mono has one weight: a heading asking for bold keeps it crisp rather than smudged by a fake bold. */
+  font-synthesis-weight: none;
   -webkit-text-size-adjust: 100%;
   background: var(--page);
 }
@@ -80,32 +84,9 @@ body {
   font-family: var(--font);
   font-size: 0.875rem;
   line-height: 1.5;
-  text-shadow: var(--glow-faint);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   background: var(--page);
-}
-
-/* The tube: fine scanlines and darker corners over everything, never in the way of a tap. */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0, 0, 0, 0.16) 3px),
-    radial-gradient(ellipse at center, transparent 62%, rgba(0, 0, 0, 0.38) 100%);
-}
-
-@media (prefers-contrast: more) {
-  body {
-    text-shadow: none;
-  }
-
-  body::after {
-    display: none;
-  }
 }
 
 a {

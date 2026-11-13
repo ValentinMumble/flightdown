@@ -6,7 +6,7 @@ import {damageByZone, ZONES, type Zone} from '../../model/debrief';
  * A part that never broke is a dim green line, like the rest of the screen; a broken one glows orange, hotter the more
  * often it broke.
  */
-const HEAT = ['#2f7a4c', '#9a5a22', '#d06a1c', '#ff7a1a', '#ffad5c'];
+const HEAT = ['#3f7a57', '#9a5a22', '#d06a1c', '#ff7a1a', '#ffad5c'];
 
 /**
  * Where each zone sits on the drawing (the M2 EVO from the side, nose to the left, in thin lines), and where its count

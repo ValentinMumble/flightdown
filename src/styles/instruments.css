@@ -198,11 +198,33 @@
   overflow: hidden;
 }
 
+/* The rotor beside the counter, centred on its drums; the hours under the counter, not counted in the centring. */
 .hobbs-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
   align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
+  column-gap: 18px;
+  row-gap: 6px;
+}
+
+.hobbs-row .meter-stack {
+  display: contents;
+}
+
+.hobbs-row .meter-hours {
+  grid-column: 2;
+}
+
+/* Too narrow for both side by side: the rotor goes above the counter. */
+@media (max-width: 359px) {
+  .hobbs-row {
+    grid-template-columns: auto;
+  }
+
+  .hobbs-row .meter-hours {
+    grid-column: 1;
+  }
 }
 
 /*
@@ -899,7 +921,7 @@
 }
 
 .rose-petal {
-  fill: rgba(124, 255, 178, 0.55);
+  fill: color-mix(in srgb, var(--accent) 55%, transparent);
   stroke: var(--label);
   stroke-width: 1;
   transition: fill 140ms ease;
@@ -943,7 +965,7 @@
   min-height: 2px;
   border-radius: 4px 4px 0 0;
   background: var(--label);
-  box-shadow: 0 0 10px rgba(124, 255, 178, 0.35);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .column-value {
@@ -1144,7 +1166,7 @@
 }
 
 .pack-card[aria-pressed='true'] {
-  border-color: rgba(124, 255, 178, 0.45);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   background: var(--accent-soft);
 }
 
@@ -1538,7 +1560,6 @@
   fill: var(--ink);
   font-family: var(--display);
   font-size: 20px;
-  font-size-adjust: 0.53;
 }
 
 .donut-caption {
@@ -1575,7 +1596,7 @@
   place-items: center;
   color: var(--label);
   background: var(--label-soft);
-  border: 1px solid rgba(124, 255, 178, 0.3);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 /* A radio's or a pack's photo, cut out like the helis', in place of its icon; a photo that cannot be cut out sits
@@ -2062,7 +2083,7 @@
   background: var(--accent);
   border: 2px solid #fff;
   box-shadow:
-    0 0 0 6px rgba(124, 255, 178, 0.25),
+    0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent),
     0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
@@ -2145,7 +2166,7 @@
   border-radius: 50%;
   background: rgba(5, 7, 11, 0.55);
   border: 2px solid var(--accent);
-  box-shadow: 0 0 0 4px rgba(124, 255, 178, 0.15);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent);
   font-size: calc(var(--size) * 0.5);
   line-height: 1;
 }

@@ -87,8 +87,12 @@
 /* The key in use lights up, with a bar under it like a selected page on an MFD. */
 .soft-key[aria-current='page'] {
   color: var(--ink);
-  background: linear-gradient(to bottom, rgba(124, 255, 178, 0.16), rgba(124, 255, 178, 0.04));
-  box-shadow: inset 0 0 0 1px rgba(124, 255, 178, 0.35);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--accent) 16%, transparent),
+    color-mix(in srgb, var(--accent) 4%, transparent)
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .soft-key[aria-current='page']::after {

@@ -281,7 +281,7 @@ export function StickReplay({
                 value={battery.left}
                 max={100}
                 step={25}
-                color={battery.left < 20 ? '#ff6b6b' : battery.left < 40 ? '#ffb35c' : '#7cffb2'}
+                color={battery.left < 20 ? '#ff8a7a' : battery.left < 40 ? '#f0b85a' : '#7ee0a0'}
                 readout={`${formatNumber(battery.left)} %`}
                 label="Battery"
                 number={at => FUEL[at] ?? null}

@@ -4,9 +4,9 @@ A flight log for RC helicopters: every sortie, nice stats, the fleet, and what k
 
 ## What it does
 
-It looks like a helicopter's cockpit on an old computer's green screen: phosphor green on black, a terminal's type
-(VT323 for headings and numbers, IBM Plex Mono for text), square frames marked by corner brackets, faint scanlines, a
-rolling counter of minutes in the air.
+It looks like an 80s helicopter cockpit's green displays, made easy to read: a very dark green page, pale text in IBM
+Plex Sans, a soft phosphor green for labels, numbers and what is live (Share Tech Mono for headings and numbers),
+frames marked by corner brackets, a rolling counter of minutes in the air.
 
 - **Cockpit:** the minute counter on 3D drums (they roll up at each change of tab) beside a rotor that spools up,
   packs per crash on a tape (all time, and the last 20 sorties), the crash-free run in packs and days, the last five

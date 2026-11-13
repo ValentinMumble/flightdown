@@ -367,8 +367,12 @@
 }
 
 .jump-bar button[aria-current='true'] {
-  background: linear-gradient(to bottom, rgba(124, 255, 178, 0.2), rgba(124, 255, 178, 0.06));
-  box-shadow: inset 0 0 0 1px rgba(124, 255, 178, 0.4);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--accent) 20%, transparent),
+    color-mix(in srgb, var(--accent) 6%, transparent)
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
   color: var(--ink);
 }
 
@@ -393,6 +397,25 @@
 /* A toggle chip in the toolbar: as tall as the fields beside it. */
 .toolbar > .chip {
   align-self: stretch;
+}
+
+/* One height for a toolbar's controls, so the search, the menus, the segmented filters and the toggles line up. */
+.toolbar .input,
+.toolbar .segmented,
+.toolbar .chip {
+  height: 40px;
+  min-height: 40px;
+}
+
+.toolbar .segmented {
+  align-items: stretch;
+}
+
+.toolbar .segmented a,
+.toolbar .segmented button {
+  display: inline-flex;
+  align-items: center;
+  padding-block: 0;
 }
 
 /* A page's filters: the toolbar, then the chips under it. */
@@ -478,10 +501,10 @@
 }
 
 .chip[aria-pressed='true'] {
-  border-color: rgba(124, 255, 178, 0.55);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   background: var(--label-soft);
   color: var(--ink);
-  box-shadow: 0 0 12px rgba(124, 255, 178, 0.15);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .segmented {
@@ -513,8 +536,12 @@
 
 .segmented [aria-current='page'],
 .segmented [aria-pressed='true'] {
-  background: linear-gradient(to bottom, rgba(124, 255, 178, 0.2), rgba(124, 255, 178, 0.06));
-  box-shadow: inset 0 0 0 1px rgba(124, 255, 178, 0.4);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--accent) 20%, transparent),
+    color-mix(in srgb, var(--accent) 6%, transparent)
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
   color: var(--ink);
 }
 
@@ -820,7 +847,7 @@ input[type='date'].input {
 }
 
 .stepper:focus-within {
-  border-color: rgba(124, 255, 178, 0.45);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 /* The chip that shows the rest of a list. */

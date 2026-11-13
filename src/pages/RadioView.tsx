@@ -926,7 +926,7 @@ export default function RadioView() {
         if (state.outline) {
           context.save();
           context.setLineDash([3, 3]);
-          context.strokeStyle = 'rgba(124, 255, 178, 0.45)';
+          context.strokeStyle = 'rgba(126, 224, 160, 0.45)';
           context.strokeRect(item.rect.x - 0.5, item.rect.y - 0.5, item.rect.w + 1, item.rect.h + 1);
           context.restore();
         }
