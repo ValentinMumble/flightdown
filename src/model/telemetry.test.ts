@@ -2,7 +2,15 @@ import {describe, expect, it} from 'vitest';
 import type {Sortie} from '../types';
 import {parseCsv} from './csv';
 import {activeSpan, matchSortie, modelFromFileName, readDay, readTelemetry, sampleAt} from './telemetry';
-import {estimateCells, invertedStretches, packOf, telemetryInsights} from './insights';
+import {
+  describeFlips,
+  estimateCells,
+  flipCounts,
+  invertedStretches,
+  packOf,
+  telemetryInsights,
+  turnOvers,
+} from './insights';
 
 /** A made-up EdgeTX log of a 3S pack: hover, then the pack sags and the ESC cuts with the throttle up. */
 function edgeTxLog() {
@@ -187,5 +195,43 @@ describe('activeSpan', () => {
   it('cuts nothing when the motor never runs, or when little would go', () => {
     expect(activeSpan(series(() => false))).toBeNull();
     expect(activeSpan(series(second => second >= 3 && second <= 97))).toBeNull();
+  });
+});
+
+describe('flipCounts', () => {
+  // 20 s at five samples a second, hovering with the pitch at 1400 µs; on the other side of hover past 1628 µs.
+  const time = [...Array(101).keys()].map(index => Math.round(index * 2) / 10);
+  const within = (second: number, from: number, to: number) => second >= from - 0.001 && second <= to + 0.001;
+  const series = {
+    id: 'flips',
+    time,
+    channels: {
+      current: time.map(() => 8),
+      ch6: time.map(second =>
+        within(second, 4, 5) || within(second, 8, 8.6) || within(second, 12, 13) || within(second, 16, 17)
+          ? 1700
+          : 1400,
+      ),
+      // Back through the first pass; none through the second (a dive); forward going over the third, back coming out.
+      elevator: time.map(second =>
+        within(second, 3.6, 5.4) ? -60 : within(second, 11.6, 12.4) ? 50 : within(second, 12.6, 13.4) ? -50 : 0,
+      ),
+      // Right through the fourth: a roll.
+      aileron: time.map(second => (within(second, 15.6, 17.4) ? 70 : 0)),
+    },
+  };
+
+  it('finds the turns over that the cyclic took, not the dives', () => {
+    expect(turnOvers(series).map(turn => `${turn.going}/${turn.coming}`)).toEqual([
+      'back/back',
+      'front/back',
+      'right/right',
+    ]);
+  });
+
+  it('counts whole turns only: over and on round the same way', () => {
+    expect(flipCounts(series)).toEqual({back: 1, right: 1});
+    expect(describeFlips(flipCounts(series))).toBe('1 back flip, 1 roll right');
+    expect(describeFlips({})).toBeNull();
   });
 });

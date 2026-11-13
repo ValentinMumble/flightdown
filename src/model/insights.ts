@@ -1,4 +1,4 @@
-import type {Battery, Heli, TelemetryLog, TelemetrySeries} from '../types';
+import type {Battery, Heli, TelemetryLog, TelemetrySeries, TurnWay} from '../types';
 import {formatNumber, formatTimer} from './format';
 
 export interface Insight {
@@ -16,15 +16,14 @@ const INVERTED_SECONDS = 3;
 const INVERTED_SHARE = 0.25;
 
 /**
- * When the heli flew upside down, from the collective (CH6, logged in µs, 512 each way of 1500). Upright it hovers with
- * the pitch to one side of centre (the side of most of its time under load, whatever the channel's reversal): held well
- * to the other side, the motor under load, for 3 s or more, it is inverted. Upright it would fall: flips, rolls and
- * dives pass through that pitch quicker. Each stretch's start and length, in seconds.
+ * Each time the collective (CH6, logged in µs, 512 each way of 1500) went well to the other side of hover, the motor
+ * under load, as sample indexes: from the first sample there to the first one back (or the log's end). Upright the heli
+ * hovers with the pitch to one side of centre (the side of most of its time under load, whatever the channel's
+ * reversal); past a quarter of the travel the other side, it is on its back, or diving.
  */
-export function invertedStretches(series: TelemetrySeries): {start: number; seconds: number}[] {
+function otherSidePasses(series: TelemetrySeries): {from: number; to: number}[] {
   const pitch = series.channels.ch6 ?? [];
   const current = series.channels.current ?? [];
-  const {time} = series;
   if (!pitch.length || !current.length) return [];
   const loaded = pitch.map((_, index) => (current[index] ?? 0) >= IDLE_AMPS);
   const sides = pitch.filter((_, index) => loaded[index]).map(value => value - 1500);
@@ -32,19 +31,112 @@ export function invertedStretches(series: TelemetrySeries): {start: number; seco
   const hover = sides.sort((left, right) => left - right)[Math.floor(sides.length / 2)];
   if (hover === 0) return [];
   const upright = Math.sign(hover);
-  const stretches: {start: number; seconds: number}[] = [];
+  const passes: {from: number; to: number}[] = [];
   let from = -1;
   for (let index = 0; index <= pitch.length; index += 1) {
-    const inverted = index < pitch.length && loaded[index] && -upright * (pitch[index] - 1500) >= 512 * INVERTED_SHARE;
-    if (inverted && from < 0) from = index;
-    if (!inverted && from >= 0) {
-      // Until the next sample, when it was upright again (or the log's end).
-      const seconds = time[Math.min(index, pitch.length - 1)] - time[from];
-      if (seconds >= INVERTED_SECONDS) stretches.push({start: time[from], seconds});
+    const over = index < pitch.length && loaded[index] && -upright * (pitch[index] - 1500) >= 512 * INVERTED_SHARE;
+    if (over && from < 0) from = index;
+    if (!over && from >= 0) {
+      passes.push({from, to: index});
       from = -1;
     }
   }
-  return stretches;
+  return passes;
+}
+
+/**
+ * When the heli flew upside down: the pitch held to the other side of hover (see otherSidePasses) for 3 s or more.
+ * Upright it would fall: flips, rolls and dives pass through that pitch quicker. Each stretch's start and length, in
+ * seconds.
+ */
+export function invertedStretches(series: TelemetrySeries): {start: number; seconds: number}[] {
+  const {time} = series;
+  return otherSidePasses(series).flatMap(({from, to}) => {
+    // Until the next sample, when it was upright again (or the log's end).
+    const seconds = time[Math.min(to, time.length - 1)] - time[from];
+    return seconds >= INVERTED_SECONDS ? [{start: time[from], seconds}] : [];
+  });
+}
+
+/** Cyclic (% of the stick) under which it says nothing of a turn over's way: no flip without the stick pushed. */
+const FLIP_STICK = 15;
+/** Seconds either side of a moment whose cyclic says which way the heli went over. */
+const FLIP_WINDOW = 0.4;
+
+/** The way the cyclic took the heli over around a sample: the stick held most, or null when too faint to say. */
+function wayAround(series: TelemetrySeries, index: number): TurnWay | null {
+  const {time, channels} = series;
+  const aileron = channels.aileron ?? [];
+  const elevator = channels.elevator ?? [];
+  let rolled = 0;
+  let pitched = 0;
+  let count = 0;
+  for (let at = 0; at < time.length; at += 1) {
+    // A hair over: logged times are not exact (59.4 can read 59.40000001), and a sample left out tips the mean.
+    if (Math.abs(time[at] - time[index]) > FLIP_WINDOW + 0.001) continue;
+    rolled += aileron[at] ?? 0;
+    pitched += elevator[at] ?? 0;
+    count += 1;
+  }
+  rolled /= count || 1;
+  pitched /= count || 1;
+  if (Math.max(Math.abs(rolled), Math.abs(pitched)) < FLIP_STICK) return null;
+  if (Math.abs(rolled) >= Math.abs(pitched)) return rolled > 0 ? 'right' : 'left';
+  return pitched > 0 ? 'front' : 'back';
+}
+
+/**
+ * Every time the heli turned over onto its back and upright again: each pass of the pitch to the other side of hover
+ * (see otherSidePasses, any length), with the way it went over and the way it came back, read from the cyclic around
+ * each end (the elevator back, a back flip; the aileron right, a roll right). A pass with no cyclic going over is a
+ * dive or a pitch pump, not a flip: left out. Too faint a stick coming back means it went on round the same way.
+ */
+export function turnOvers(series: TelemetrySeries): {start: number; end: number; going: TurnWay; coming: TurnWay}[] {
+  const {time} = series;
+  return otherSidePasses(series).flatMap(({from, to}) => {
+    const going = wayAround(series, from);
+    if (!going) return [];
+    const coming = wayAround(series, Math.max(from, to - 1)) ?? going;
+    return [{start: time[from], end: time[Math.min(to, time.length - 1)], going, coming}];
+  });
+}
+
+/**
+ * Whole flips and rolls: over and back round the same way is one (a back flip onto its back, held a while, then on
+ * round upright is one back flip); over one way and back the other is no whole turn.
+ */
+export function flipCounts(series: TelemetrySeries): Partial<Record<TurnWay, number>> {
+  const counts: Partial<Record<TurnWay, number>> = {};
+  for (const turn of turnOvers(series)) {
+    if (turn.going === turn.coming) counts[turn.going] = (counts[turn.going] ?? 0) + 1;
+  }
+  return counts;
+}
+
+const FLIP_WORDS: Record<TurnWay, [string, string]> = {
+  back: ['back flip', 'back flips'],
+  front: ['front flip', 'front flips'],
+  left: ['roll left', 'rolls left'],
+  right: ['roll right', 'rolls right'],
+};
+
+/** Flip counts in words, "10 back flips, 1 front flip, 2 rolls left", or null when there are none. */
+export function describeFlips(counts: Partial<Record<TurnWay, number>> | undefined): string | null {
+  const parts = (['back', 'front', 'left', 'right'] as TurnWay[]).flatMap(way => {
+    const count = counts?.[way] ?? 0;
+    return count ? [`${count} ${FLIP_WORDS[way][count === 1 ? 0 : 1]}`] : [];
+  });
+  return parts.length ? parts.join(', ') : null;
+}
+
+/** Two logs' flip counts added up. */
+export function addFlips(
+  left: Partial<Record<TurnWay, number>> = {},
+  right: Partial<Record<TurnWay, number>> = {},
+): Partial<Record<TurnWay, number>> {
+  const sum: Partial<Record<TurnWay, number>> = {...left};
+  for (const [way, count] of Object.entries(right) as [TurnWay, number][]) sum[way] = (sum[way] ?? 0) + count;
+  return sum;
 }
 
 /**
@@ -227,6 +319,16 @@ export function telemetryInsights(
       tone: 'good',
       icon: '🙃',
       text: `Inverted ${times}: ${total} s in all, the longest ${longest} s (the pitch held past the other side of hover).`,
+    });
+  }
+
+  // Whole flips and rolls, from the turns over and the cyclic through them.
+  const flips = describeFlips(flipCounts(series));
+  if (flips) {
+    insights.push({
+      tone: 'good',
+      icon: '🔄',
+      text: `${flips[0].toUpperCase()}${flips.slice(1)} (whole turns: over onto its back and on round the same way).`,
     });
   }
 

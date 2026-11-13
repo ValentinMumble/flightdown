@@ -347,42 +347,55 @@ export function RotorMark({size = 22, className}: {size?: number; className?: st
   );
 }
 
-/** One blade pointing up from the hub of a 100 × 100 drawing: straight leading edge on the right, the side it moves to. */
-const BLADE = 'M48.2 41 L53.4 41 L53.4 6.6 Q53.4 3.4 50.6 3.5 L48.4 3.8 Q46.6 4.1 46.6 6.6 L46.6 26 Q46.6 31 47.6 36 Z';
-
+/**
+ * One blade pointing up from the hub of a 100 × 100 drawing, in thin lines, long and slim out to the disc's edge: its
+ * root into the hub with the bolt, the blade tapering to a swept tip (straight leading edge on the right, the side it moves to), the spar along that edge,
+ * the trailing edge faint, and a tracking stripe near the tip.
+ */
 function RotorBlade({turn}: {turn: number}) {
   return (
     <g transform={`rotate(${turn} 50 50)`}>
-      <path d={BLADE} className="rotor-blade" />
-      <rect x={52.2} y={7} width={1.2} height={30} rx={0.6} className="rotor-edge" />
-      <rect x={46.6} y={8.2} width={6.8} height={2.4} className="rotor-stripe" />
-      <rect x={45} y={29} width={10} height={14} rx={2.6} className="rotor-metal" />
-      <rect x={55} y={35} width={6} height={3.2} rx={1.6} className="rotor-metal" />
-      <circle cx={61} cy={36.6} r={2} className="rotor-ball" />
-      <circle cx={50} cy={33.5} r={1.7} className="rotor-bolt" />
+      <path
+        d="M48.3 47 L48.3 44.6 Q46.6 42.8 46.6 38.5 L47.2 7.5 Q47.5 3.2 50.2 2 Q53 1.4 53.8 4.6 L53.8 42 Q53.8 44 51.7 44.6 L51.7 47 Z"
+        fill="currentColor"
+        fillOpacity={0.2}
+        strokeWidth={1.1}
+      />
+      <line x1={52.6} y1={9.5} x2={52.6} y2={40} strokeWidth={0.7} strokeOpacity={0.75} />
+      <line x1={48.1} y1={11} x2={47.8} y2={37} strokeWidth={0.5} strokeOpacity={0.4} />
+      <path d="M47.1 7.2 L53.8 7.2 L53.8 9.6 L47 9.6 Z" fill="currentColor" stroke="none" />
+      <circle cx={50} cy={43} r={1} strokeWidth={0.8} />
     </g>
   );
 }
 
 /**
- * The rotor on the airtime panel: blades, grips, pitch links and the head, seen from above. It spools up when the page
- * opens, like a heli on its governor, and the blades blur into a disc as it reaches speed.
+ * The rotor on the airtime panel, seen from above in the app's orange, drawn in thin lines like the replay's heli: two
+ * blades on a plain hub. It spools up when the page opens, like a heli on its governor, and the blades blur into a
+ * disc as it reaches speed.
  */
 export function Rotor() {
   return (
     <span className="rotor" aria-hidden>
       <svg viewBox="0 0 100 100" className="rotor-disc">
-        <circle cx={50} cy={50} r={47} className="rotor-disc-fill" />
-        <circle cx={50} cy={50} r={47} className="rotor-disc-ring" />
+        <circle cx={50} cy={50} r={48.5} className="rotor-disc-fill" />
+        <circle cx={50} cy={50} r={48.5} className="rotor-disc-ring" />
       </svg>
       <span className="rotor-spin">
         <span className="rotor-blur" />
-        <svg viewBox="0 0 100 100" className="rotor-parts">
+        <svg
+          viewBox="0 0 100 100"
+          className="rotor-parts"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <RotorBlade turn={0} />
           <RotorBlade turn={180} />
-          <rect x={43} y={40} width={14} height={20} rx={4} className="rotor-metal-dark" />
-          <circle cx={50} cy={50} r={6.2} className="rotor-metal" />
-          <path d="M50 47.3 L52.35 48.65 L52.35 51.35 L50 52.7 L47.65 51.35 L47.65 48.65 Z" className="rotor-bolt" />
+          <circle cx={50} cy={50} r={4.6} className="rotor-under" strokeWidth={1.2} />
+          <circle cx={50} cy={50} r={4.6} fill="currentColor" fillOpacity={0.18} stroke="none" />
+          <circle cx={50} cy={50} r={1.6} fill="currentColor" stroke="none" />
         </svg>
       </span>
     </span>

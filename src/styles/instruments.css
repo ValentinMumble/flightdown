@@ -266,35 +266,12 @@
 }
 
 .rotor-parts {
-  filter: drop-shadow(0 0 6px rgba(255, 122, 26, 0.45));
+  filter: drop-shadow(0 0 4px rgba(255, 122, 26, 0.5));
 }
 
-.rotor-blade {
-  fill: var(--brand);
-}
-
-.rotor-edge {
-  fill: rgba(255, 255, 255, 0.35);
-}
-
-.rotor-stripe {
-  fill: var(--ink);
-}
-
-.rotor-metal {
-  fill: #c7d0da;
-}
-
-.rotor-metal-dark {
-  fill: #5d6978;
-}
-
-.rotor-ball {
-  fill: #e9eef4;
-}
-
-.rotor-bolt {
-  fill: var(--panel);
+/* What hides the parts below it (the hub over the blades' roots): the page's black. */
+.rotor-under {
+  fill: var(--page);
 }
 
 @keyframes rotor-spool {
@@ -353,6 +330,13 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 16px;
+}
+
+/* The sortie's flips and rolls, a line across under its packs and the ring. */
+.debrief-flips {
+  grid-column: 1 / -1;
+  font-size: 0.875rem;
+  color: var(--ink-2);
 }
 
 .pack-bars {

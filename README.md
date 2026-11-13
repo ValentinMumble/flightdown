@@ -25,14 +25,15 @@ rolling counter of minutes in the air.
   throttle as lanes of one recorder (each reads out at the cursor; the flight only, the quiet start and end cut, or the
   whole log), under it a replay of the sticks with round throttle, current and battery dials (the battery from the pack
   its button names: its charge at rest when plugged in, less the mAh used; a cursor on the lanes) and a small heli that
-  rolls, tilts and turns with the sticks, on its back while inverted, then its figures, a map of the sticks, and what
-  the log says: the pack ran flat, how much of it was used, sag
-  per cell, when 80 % was used (a timer that fits), pack resistance, the radio link, the time upside down (the
-  collective held past the other side of hover under load for 3 s or more, shaded on the lanes). A sortie flown with
-  logs shows its exact air time, each pack as a bar (named by its button, the inverted part in violet) and the share
-  upside down as a ring. `npm run logs` brings them from the plugged-in radio. Debrief compares every pack's voltage
-  under load, and each pack's resistance over time (named by its button, from the voltage drop when the current jumps:
-  twice its first reading is worn).
+  rolls, tilts and turns with the sticks and turns over through each flip the way they took it, then its figures, a
+  map of the sticks, and what the log says: the pack ran flat, how much of it was used, sag per cell, when 80 % was
+  used (a timer that fits), pack resistance, the radio link, the time upside down (the collective held past the other
+  side of hover under load for 3 s or more, shaded on the lanes), the flips and rolls (back, front, left, right: whole
+  turns, over onto its back and on round the same way, the way read from the cyclic). A sortie flown with logs shows
+  its exact air time, each pack as a bar (named by its button, the inverted part in violet), the share upside down as
+  a ring, and its flips and rolls. `npm run logs` brings them from the plugged-in radio. Debrief compares every pack's
+  voltage under load, and each pack's resistance over time (named by its button, from the voltage drop when the current
+  jumps: twice its first reading is worn).
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
   heli breaks (a damage map on a heli drawing), what brings it down (crash causes read from the notes), the fleet's
   history, the skill ladder, the flying season, packs a sortie, spots and hours by heli.
@@ -61,8 +62,8 @@ rolling counter of minutes in the air.
 - **Spots:** every flying spot on a satellite map (spots close together share a pin with a count until you zoom in).
   Set a spot's GPS point by tapping the map, pasting coordinates or a Maps link, or from the phone's position; each
   sortie then shows its spot from above.
-- **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`): Cockpit, Sorties, Debrief, Hangar and
-  More (Radio, Spots, Settings), with a round log button; swipe sideways to change tab. Add it to the home screen: it opens like an app, with the 🚁 icon, and offline at the field.
+- **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`): Cockpit, Sorties, Radio, Hangar and More
+  (Debrief, Spots, Settings), with a round log button; swipe sideways to change tab. Add it to the home screen: it opens like an app, with the 🚁 icon, and offline at the field.
 
 Visitors see a made-up log, or keep their own in their browser.
 

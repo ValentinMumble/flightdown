@@ -2,7 +2,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {Pause, Play, RotateCcw} from 'lucide-react';
 import type {TelemetrySeries} from '../../types';
 import {sampleAt} from '../../model/telemetry';
-import {invertedStretches} from '../../model/insights';
+import {turnOvers} from '../../model/insights';
 import {INVERTED} from '../PackTimes';
 import {batteryAt, usedMah} from '../../model/battery';
 import {formatNumber, formatTimer} from '../../model/format';
@@ -14,6 +14,11 @@ const TRAIL = 1.5;
 const SPEEDS = [1, 2, 4];
 /** Degrees the small heli rolls, tilts and turns a percent of stick: 35° rolled at full aileron. */
 const ROLL = 0.35;
+/**
+ * Seconds the small heli takes to turn over, centred on when the pitch crosses to the other side: about a flip's or a
+ * roll's time on a small 3D heli.
+ */
+const FLIP = 0.6;
 const TILT = 0.3;
 const TURN = 0.35;
 
@@ -139,7 +144,26 @@ export function StickReplay({
   const end = time[time.length - 1] ?? 0;
   const [second, setSecond] = useState(start);
   // Upside down: a badge while the replay is inside one of these.
-  const upsideDown = useMemo(() => invertedStretches(series), [series]);
+  // Every turn over (see turnOvers): each half, going over and coming back, turns the heli 180° about the axis and the
+  // way its cyclic took it. They add up: two back halves are one back flip, all the way round.
+  const turns = useMemo(() => turnOvers(series), [series]);
+  const flips = useMemo(
+    () =>
+      turns.flatMap(turn =>
+        (
+          [
+            [turn.start, turn.going],
+            [turn.end, turn.coming],
+          ] as const
+        ).map(([middle, way]) => ({
+          from: middle - FLIP / 2,
+          to: middle + FLIP / 2,
+          rolled: way === 'left' || way === 'right',
+          degrees: way === 'right' || way === 'front' ? 180 : -180,
+        })),
+      ),
+    [turns],
+  );
   // The current dial ends just past the flight's highest draw, which a bug marks.
   const peakCurrent = useMemo(() => Math.max(0, ...(series.channels.current ?? [0])), [series]);
   const amps = currentScale(peakCurrent);
@@ -187,13 +211,21 @@ export function StickReplay({
   const hasLeft = Boolean(channels.rudder?.length && channels.throttle?.length);
   const battery = batteryAt(series, used, second, {...pack, capacity});
   const spent = used ? sampleAt(time, used, second) : null;
-  const inverted = upsideDown.some(stretch => second >= stretch.start && second <= stretch.start + stretch.seconds);
-  // The heli seen from behind: rolled by the aileron, tilted by the elevator, turned by the rudder, on its back when
-  // inverted (a perspective, so a tilt shows).
+  const inverted = turns.some(turn => second >= turn.start && second <= turn.end);
+  // The heli seen from behind: rolled by the aileron, tilted by the elevator, turned by the rudder, and turned over
+  // through each flip the way the sticks took it (a perspective, so a tilt shows).
   const roll = at('aileron', second) * ROLL;
   const tilt = at('elevator', second) * TILT;
   const turn = channels.rudder?.length ? at('rudder', second) * TURN : 0;
-  const attitude = `perspective(360px) rotateZ(${(inverted ? 180 : 0) + roll}deg) rotateX(${tilt}deg) rotateY(${turn}deg)`;
+  // How far each turn over has gone by now (all of it once past, none before).
+  let rolledOver = 0;
+  let flippedOver = 0;
+  for (const flip of flips) {
+    const done = Math.min(1, Math.max(0, (second - flip.from) / (flip.to - flip.from))) * flip.degrees;
+    if (flip.rolled) rolledOver += done;
+    else flippedOver += done;
+  }
+  const attitude = `perspective(360px) rotateZ(${rolledOver + roll}deg) rotateX(${flippedOver + tilt}deg) rotateY(${turn}deg)`;
   const readout = [
     channels.voltage?.length && `${formatNumber(at('voltage', second), 2)} V`,
     spent !== null && `${formatNumber(spent)} mAh used`,

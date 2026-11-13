@@ -27,12 +27,13 @@ import {Settings} from './pages/Settings';
 import {Spots} from './pages/Spots';
 import {useTabSwipe} from './components/useTabSwipe';
 
+/** The views, in the order of the wide screens' bar and the phone's dock. */
 const TABS = [
   {to: '/', label: 'Cockpit', icon: Gauge},
   {to: '/sorties', label: 'Sorties', icon: BookOpen},
-  {to: '/stats', label: 'Debrief', icon: Radar},
-  {to: '/hangar', label: 'Hangar', icon: Warehouse},
   {to: '/radio', label: 'Radio', icon: RadioTower},
+  {to: '/hangar', label: 'Hangar', icon: Warehouse},
+  {to: '/stats', label: 'Debrief', icon: Radar},
   {to: '/spots', label: 'Spots', icon: MapPin},
 ];
 
@@ -99,7 +100,7 @@ function CockpitBar() {
 }
 
 /**
- * The phone dock: liquid glass, four tabs and More (Radio, Spots, Settings in a menu above it), a lens under the open
+ * The phone dock: liquid glass, four tabs and More (Debrief, Spots, Settings in a menu above it), a lens under the open
  * tab, and the round log button beside it. A page from the menu has no lens: More takes the accent instead.
  */
 function Dock() {

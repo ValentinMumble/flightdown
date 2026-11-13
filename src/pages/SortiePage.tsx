@@ -15,7 +15,7 @@ import {InvertedRing, PackBars, packTimes} from '../components/PackTimes';
 import {formatAirtime, formatDay, formatTimer, plural} from '../model/format';
 import {airtime, loggedTimes, sortSorties} from '../model/stats';
 import {readTelemetry} from '../model/telemetry';
-import {packOf} from '../model/insights';
+import {addFlips, describeFlips, packOf} from '../model/insights';
 import {parseCsv} from '../model/csv';
 import {hasLocation} from '../model/geo';
 
@@ -64,6 +64,8 @@ export function SortiePage() {
   const place = spot(sortie.spotId);
   const pack = packOf(one, doc.batteries);
   const logged = sortie ? loggedTimes(sortie) !== null : false;
+  // Its whole flips and rolls, every log's added up.
+  const flips = describeFlips(sortie.telemetry.reduce((sum, log) => addFlips(sum, log.flips), {}));
   // Every size of pack this heli flies, to pick from in a replay.
   const packs = [
     ...new Set(
@@ -154,6 +156,11 @@ export function SortiePage() {
                     inverted={sortie.telemetry.reduce((sum, log) => sum + (log.inverted ?? 0), 0)}
                     air={airtime(sortie)}
                   />
+                )}
+                {flips && (
+                  <p className="debrief-flips">
+                    <span aria-hidden>🔄</span> {flips}
+                  </p>
                 )}
               </div>
             )}

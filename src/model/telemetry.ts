@@ -1,7 +1,7 @@
 import type {Sortie, TelemetryLog, TelemetrySeries} from '../types';
 import {pad} from './format';
 import {newId} from './ids';
-import {invertedStretches, packResistance} from './insights';
+import {flipCounts, invertedStretches, packResistance} from './insights';
 
 /** From this current the motor works under load: the heli is in the air (2 A, as the radio's Session widget). */
 const FLYING_AMPS = 2;
@@ -233,8 +233,9 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     if (running[index]) flying += time[index] - time[index - 1];
   }
 
-  // Upside down, read from every sample before they are thinned.
+  // Upside down, and the whole flips and rolls, read from every sample before they are thinned.
   const upsideDown = invertedStretches({id: '', time, channels}).reduce((sum, stretch) => sum + stretch.seconds, 0);
+  const flips = flipCounts({id: '', time, channels});
 
   const id = newId();
   const clock = Math.floor(firstClock);
@@ -267,6 +268,7 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     ...(packButton !== undefined && {packButton}),
     ...((channels.ch3?.length || currents.length) && {flying: Math.round(flying)}),
     ...(channels.ch6?.length && currents.length && {inverted: Math.round(upsideDown)}),
+    ...(Object.keys(flips).length > 0 && {flips}),
     ...(resistance !== null && {resistance: Math.round(resistance)}),
   };
   return {log, series};

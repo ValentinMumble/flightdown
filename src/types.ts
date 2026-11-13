@@ -44,6 +44,9 @@ export interface BrokenPart {
 }
 
 /** What one EdgeTX log says, kept with its sortie. Its samples are stored apart (see TelemetrySeries). */
+/** A way to turn over: a flip back or forward on the elevator, a roll (a side flip) left or right on the aileron. */
+export type TurnWay = 'back' | 'front' | 'left' | 'right';
+
 export interface TelemetryLog {
   id: string;
   /** The file it came from. */
@@ -65,6 +68,8 @@ export interface TelemetryLog {
   flying?: number;
   /** Seconds upside down: the collective held past the other side of hover under load (see invertedStretches). */
   inverted?: number;
+  /** Whole flips and rolls, by the way they went (see flipCounts). */
+  flips?: Partial<Record<TurnWay, number>>;
   /** The pack's resistance (mΩ, the whole pack) from the voltage drop when the current jumps: it climbs with age. */
   resistance?: number;
 }
