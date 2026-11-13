@@ -4,7 +4,7 @@ import {ChevronRight, LocateFixed, Plus, Trash, X} from 'lucide-react';
 import type {Battery, Gear, GearGone, Heli, HeliStatus, Pack, Spare, Spot, Tip} from '../../types';
 import {useStore} from '../../data/store';
 import {newId, now} from '../../model/ids';
-import {formatDay, formatTimer, parseTimer, plural, today} from '../../model/format';
+import {formatDay, formatTimer, parsePrice, parseTimer, plural, today} from '../../model/format';
 import {formatLocation, hasLocation, parseLocation, type LatLng} from '../../model/geo';
 import {SERIES_NAMES} from '../../model/palette';
 import {brokenRanking, spareStock} from '../../model/parts';
@@ -50,6 +50,7 @@ export function HeliForm({heli}: {heli?: Heli}) {
   const [slot, setSlot] = useState(heli?.color ?? [0, 1, 2, 3, 4, 5, 6, 7].find(index => !used.has(index)) ?? 0);
   const [status, setStatus] = useState<HeliStatus>(heli?.status ?? 'active');
   const [acquired, setAcquired] = useState(heli?.acquired ?? '');
+  const [price, setPrice] = useState(heli?.price ? String(heli.price) : '');
   const [timer, setTimer] = useState(heli?.timer ? formatTimer(heli.timer) : '');
   const [battery, setBattery] = useState(heli?.battery ?? '');
   const [photo, setPhoto] = useState(heli?.photo ?? '');
@@ -65,6 +66,7 @@ export function HeliForm({heli}: {heli?: Heli}) {
       color: slot,
       status,
       ...(acquired && {acquired}),
+      ...(parsePrice(price) && {price: parsePrice(price)}),
       ...(parseTimer(timer) && {timer: parseTimer(timer)!}),
       ...(battery.trim() && {battery: battery.trim()}),
       ...(photo.trim() && {photo: photo.trim()}),
@@ -155,7 +157,7 @@ export function HeliForm({heli}: {heli?: Heli}) {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="heli-acquired">In the hangar since</label>
+          <label htmlFor="heli-acquired">Bought</label>
           <input
             id="heli-acquired"
             className="input"
@@ -164,6 +166,17 @@ export function HeliForm({heli}: {heli?: Heli}) {
             onChange={event => setAcquired(event.target.value)}
           />
         </div>
+      </div>
+      <div className="field">
+        <label htmlFor="heli-price">Price (€)</label>
+        <input
+          id="heli-price"
+          className="input"
+          inputMode="decimal"
+          placeholder="999"
+          value={price}
+          onChange={event => setPrice(event.target.value)}
+        />
       </div>
       <div className="field-row">
         <div className="field">
@@ -849,6 +862,7 @@ export function GearForm({gear}: {gear?: Gear}) {
   const [category, setCategory] = useState<Gear['category']>(gear?.category ?? 'radio');
   const [details, setDetails] = useState(gear?.details ?? '');
   const [since, setSince] = useState(gear?.since ?? '');
+  const [price, setPrice] = useState(gear?.price ? String(gear.price) : '');
   const [notes, setNotes] = useState(gear?.notes ?? '');
   const [gone, setGone] = useState<GearGone | undefined>(gear?.gone);
   const [photo, setPhoto] = useState(gear?.photo ?? '');
@@ -866,6 +880,7 @@ export function GearForm({gear}: {gear?: Gear}) {
           ...(gone && {gone}),
           ...(details.trim() && {details: details.trim()}),
           ...(since && {since}),
+          ...(parsePrice(price) && {price: parsePrice(price)}),
           ...(notes.trim() && {notes: notes.trim()}),
           ...(photo.trim() && {photo: photo.trim()}),
         });
@@ -927,15 +942,28 @@ export function GearForm({gear}: {gear?: Gear}) {
           onChange={event => setDetails(event.target.value)}
         />
       </div>
-      <div className="field">
-        <label htmlFor="gear-since">Since</label>
-        <input
-          id="gear-since"
-          className="input"
-          type="date"
-          value={since}
-          onChange={event => setSince(event.target.value)}
-        />
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="gear-since">Since</label>
+          <input
+            id="gear-since"
+            className="input"
+            type="date"
+            value={since}
+            onChange={event => setSince(event.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="gear-price">Price (€)</label>
+          <input
+            id="gear-price"
+            className="input"
+            inputMode="decimal"
+            placeholder="459"
+            value={price}
+            onChange={event => setPrice(event.target.value)}
+          />
+        </div>
       </div>
       <div className="field">
         <label htmlFor="gear-photo">Photo link</label>

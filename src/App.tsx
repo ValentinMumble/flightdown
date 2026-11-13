@@ -1,8 +1,9 @@
-import {useEffect} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Link, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType} from 'react-router';
 import {
   BookOpen,
   CloudOff,
+  Ellipsis,
   Gauge,
   MapPin,
   Plus,
@@ -34,6 +35,10 @@ const TABS = [
   {to: '/radio', label: 'Radio', icon: RadioTower},
   {to: '/spots', label: 'Spots', icon: MapPin},
 ];
+
+/** The phone dock's tabs: the first four; the others, and Settings, go in its More menu. */
+const DOCK_TABS = TABS.slice(0, 4);
+const MORE = [...TABS.slice(4), {to: '/settings', label: 'Settings', icon: SettingsIcon}];
 
 function isActive(to: string, pathname: string) {
   if (to === '/') return pathname === '/';
@@ -93,16 +98,54 @@ function CockpitBar() {
   );
 }
 
-/** The phone dock: liquid glass, a lens under the open tab, and the round log button beside it. */
+/**
+ * The phone dock: liquid glass, four tabs and More (Radio, Spots, Settings in a menu above it), a lens under the open
+ * tab, and the round log button beside it. A page from the menu has no lens: More takes the accent instead.
+ */
 function Dock() {
   const {pathname} = useLocation();
   const logSortie = useLogSortie();
-  const current = TABS.findIndex(({to}) => isActive(to, pathname));
+  const [menu, setMenu] = useState(false);
+  const row = useRef<HTMLDivElement>(null);
+  const current = DOCK_TABS.findIndex(({to}) => isActive(to, pathname));
+  const inMore = MORE.some(({to}) => isActive(to, pathname));
+
+  // The menu closes on a page change, a tap elsewhere or Escape.
+  useEffect(() => setMenu(false), [pathname]);
+  useEffect(() => {
+    if (!menu) return;
+    const away = (event: PointerEvent) => {
+      if (!row.current?.contains(event.target as Node)) setMenu(false);
+    };
+    const escape = (event: KeyboardEvent) => event.key === 'Escape' && setMenu(false);
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [menu]);
+
   return (
-    <div className="dock-row phone-only">
-      <nav className="dock glass" aria-label="Flightdown" style={{['--count' as string]: TABS.length}}>
+    <div className="dock-row phone-only" ref={row}>
+      {menu && (
+        <nav className="dock-menu" aria-label="More">
+          {MORE.map(({to, label, icon: Icon}) => (
+            <Link
+              key={to}
+              to={to}
+              className="dock-menu-item"
+              aria-current={isActive(to, pathname) ? 'page' : undefined}
+            >
+              <Icon size={19} strokeWidth={1.8} />
+              {label}
+            </Link>
+          ))}
+        </nav>
+      )}
+      <nav className="dock glass" aria-label="Flightdown" style={{['--count' as string]: DOCK_TABS.length + 1}}>
         {current >= 0 && <div className="dock-lens" aria-hidden style={{['--index' as string]: current}} />}
-        {TABS.map(({to, label, icon: Icon}, index) => (
+        {DOCK_TABS.map(({to, label, icon: Icon}, index) => (
           <Link
             key={to}
             to={to}
@@ -114,6 +157,16 @@ function Dock() {
             {label}
           </Link>
         ))}
+        <button
+          type="button"
+          className="dock-tab"
+          aria-expanded={menu}
+          aria-current={inMore ? 'page' : undefined}
+          onClick={() => setMenu(open => !open)}
+        >
+          <Ellipsis size={22} strokeWidth={1.8} />
+          More
+        </button>
       </nav>
       <button className="dock-plus glass" aria-label="Log a sortie" onClick={logSortie}>
         <Plus size={26} strokeWidth={2.2} />
@@ -122,13 +175,13 @@ function Dock() {
   );
 }
 
-/** On a phone, a sideways swipe on a tab's own page moves to the next or previous tab (see useTabSwipe). */
+/** On a phone, a sideways swipe on a dock tab's own page moves to the next or previous one (see useTabSwipe). */
 function useSwipeTabs() {
   const {pathname} = useLocation();
   const navigate = useNavigate();
-  const index = TABS.findIndex(({to}) => to === pathname);
-  useTabSwipe(TABS.length, index, next => {
-    navigate(TABS[next].to);
+  const index = DOCK_TABS.findIndex(({to}) => to === pathname);
+  useTabSwipe(DOCK_TABS.length, index, next => {
+    navigate(DOCK_TABS[next].to);
     window.scrollTo({top: 0});
   });
 }

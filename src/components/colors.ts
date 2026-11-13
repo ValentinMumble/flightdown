@@ -15,11 +15,11 @@ export function useRamp() {
 /** Grid, axis and ink colours for charts, in step with the CSS tokens. */
 export function useChartInk() {
   return {
-    grid: 'rgba(124, 255, 178, 0.06)',
-    axis: 'rgba(150, 200, 175, 0.2)',
-    muted: '#6f7f78',
-    surface: '#0a0d0f',
-    ink: '#edf5f0',
-    label: '#6d9a82',
+    grid: 'rgba(57, 255, 120, 0.08)',
+    axis: 'rgba(57, 255, 120, 0.3)',
+    muted: '#3f8f5c',
+    surface: '#030a05',
+    ink: '#b9ffce',
+    label: '#4fd17f',
   };
 }

@@ -4,8 +4,9 @@ A flight log for RC helicopters: every sortie, nice stats, the fleet, and what k
 
 ## What it does
 
-It looks like a helicopter's cockpit seen through a head-up display: near-black, frames marked by corner brackets,
-small monospace labels, one soft green for anything good, a rolling counter of minutes in the air.
+It looks like a helicopter's cockpit on an old computer's green screen: phosphor green on black, a terminal's type
+(VT323 for headings and numbers, IBM Plex Mono for text), square frames marked by corner brackets, faint scanlines, a
+rolling counter of minutes in the air.
 
 - **Cockpit:** the minute counter on 3D drums (they roll up at each change of tab) beside a rotor that spools up,
   packs per crash on a tape (all time, and the last 20 sorties), the crash-free run in packs and days, the last three
@@ -21,7 +22,8 @@ small monospace labels, one soft green for anything good, a rolling counter of m
 - **Telemetry:** add EdgeTX logs (the radio's `LOGS` folder) to a sortie. It shows a card per pack, named by the
   6-position button pressed for it (packs get buttons in the Hangar; files a few seconds apart are one pack, the radio
   splits a log when the link drops, unless their buttons differ), and for the chosen pack: voltage, current, signal and
-  throttle as lanes of one recorder (each reads out at the cursor), a map of the sticks and a replay of them with round
+  throttle as lanes of one recorder (each reads out at the cursor; the flight only, the quiet start and end cut, or the
+  whole log), a map of the sticks and a replay of them with round
   throttle, current and battery dials (the battery from the pack its button names: its charge at rest when plugged in,
   less the mAh used; with a cursor on the lanes), and what the log says: the pack ran flat, how much of it was used, sag
   per cell, when 80 % was used (a timer that fits), pack resistance, the radio link, the time upside down (the
@@ -33,12 +35,13 @@ small monospace labels, one soft green for anything good, a rolling counter of m
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
   heli breaks (a damage map on a heli drawing), what brings it down (crash causes read from the notes), the fleet's
   history, the skill ladder, the flying season, packs a sortie, spots and hours by heli.
-- **Hangar:** the flight line, the radio and other gear, the helis that left (stamped sold or lost), spare parts whose
-  stock goes down as you log broken parts, packs and their cycles (each pack numbered for good, with its button and the
-  day it died: a new pack can take a dead one's button, the dead one keeps its logs and charts), notes. Each heli has a
-  data plate page and its own chart colour (tap its dot in the Hangar to change it). Helis, radios and packs take a
-  photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac; others are
-  cut out in the page).
+- **Hangar:** the flight line, the radio and other gear, the helis that left (stamped sold or lost), packs and their
+  cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
+  the dead one keeps its logs and charts), notes. Helis and packs keep the day they were bought, helis and radios
+  their price. Each heli has a data
+  plate page and its own chart colour (tap its dot in the Hangar to change it). Helis, radios and packs take a photo
+  link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac; others are cut
+  out in the page). Spare parts are hidden for now (`SHOW_SPARES` in `src/pages/Hangar.tsx`).
 - **Radio:** a tab of its own: the TX16S, running the Lua that goes on it (in the browser, with Fengari), its switches
   around the screen where they sit on the radio, each saying what it does on the model where it is set (`roles.ts`,
   written by hand from the model files). Model screens: the M2 EVO's and M4's screens as the radio draws them, from its
@@ -57,8 +60,8 @@ small monospace labels, one soft green for anything good, a rolling counter of m
 - **Spots:** every flying spot on a satellite map (spots close together share a pin with a count until you zoom in).
   Set a spot's GPS point by tapping the map, pasting coordinates or a Maps link, or from the phone's position; each
   sortie then shows its spot from above.
-- **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`) with a round log button; swipe sideways to
-  change tab. Add it to the home screen: it opens like an app, with the 🚁 icon, and offline at the field.
+- **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`): Cockpit, Sorties, Debrief, Hangar and
+  More (Radio, Spots, Settings), with a round log button; swipe sideways to change tab. Add it to the home screen: it opens like an app, with the 🚁 icon, and offline at the field.
 
 Visitors see a made-up log, or keep their own in their browser.
 

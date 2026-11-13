@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {Sortie} from '../types';
 import {parseCsv} from './csv';
-import {matchSortie, modelFromFileName, readDay, readTelemetry, sampleAt} from './telemetry';
+import {activeSpan, matchSortie, modelFromFileName, readDay, readTelemetry, sampleAt} from './telemetry';
 import {estimateCells, invertedStretches, packOf, telemetryInsights} from './insights';
 
 /** A made-up EdgeTX log of a 3S pack: hover, then the pack sags and the ESC cuts with the throttle up. */
@@ -163,5 +163,29 @@ describe('packOf with several kinds of packs', () => {
   it('takes the kind with most live packs, the bigger one on a tie', () => {
     expect(packOf(heli, packs)).toEqual({cells: 3, capacity: 750});
     expect(packOf(heli, [{...packs[0], packs: numbered(4)}, packs[1]])).toEqual({cells: 3, capacity: 700});
+  });
+});
+
+describe('activeSpan', () => {
+  // A log of 100 s: the motor (CH3) cut at 1000 µs with the pack drawing nothing, running from 30 s to 60 s.
+  const series = (running: (second: number) => boolean) => {
+    const time = [...Array(101).keys()];
+    return {
+      id: 'log',
+      time,
+      channels: {
+        ch3: time.map(second => (running(second) ? 1500 : 1000)),
+        current: time.map(second => (running(second) ? 8 : 0)),
+      },
+    };
+  };
+
+  it('keeps the flight and 5 s either side of it', () => {
+    expect(activeSpan(series(second => second >= 30 && second <= 60))).toEqual({from: 25, to: 65});
+  });
+
+  it('cuts nothing when the motor never runs, or when little would go', () => {
+    expect(activeSpan(series(() => false))).toBeNull();
+    expect(activeSpan(series(second => second >= 3 && second <= 97))).toBeNull();
   });
 });

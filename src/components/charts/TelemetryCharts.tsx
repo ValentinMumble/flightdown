@@ -11,7 +11,7 @@ import {
   YAxis,
 } from 'recharts';
 import type {TelemetrySeries} from '../../types';
-import {CHANNELS, type Channel} from '../../model/telemetry';
+import {activeSpan, CHANNELS, type Channel} from '../../model/telemetry';
 import {invertedStretches, telemetryInsights} from '../../model/insights';
 import {INVERTED} from '../PackTimes';
 import {StickMap} from './StickMap';
@@ -40,7 +40,7 @@ const reading = (channel: Channel, value: number) =>
 /**
  * One pack's log as a flight data recorder: a thin lane a sensor, stacked on one time axis, each with its own scale
  * (never two on one chart) and its reading at the shared cursor, the time upside down as pale bands across them, then
- * the sticks.
+ * the sticks. It shows the flight only (the quiet start and end cut, see activeSpan), or the whole log on demand.
  */
 export function TelemetryCharts({
   series,
@@ -58,23 +58,37 @@ export function TelemetryCharts({
   const ink = useChartInk();
   // The replay's moment, shown as a cursor on every trace.
   const [cursor, setCursor] = useState<number | null>(null);
+  const span = useMemo(() => activeSpan(series), [series]);
+  const [whole, setWhole] = useState(false);
+  // The samples drawn: the flight only, unless the whole log is asked for. Times stay the log's own.
+  const shown = useMemo(() => {
+    if (!span || whole) return series;
+    const keep = series.time.map(second => second >= span.from && second <= span.to);
+    return {
+      ...series,
+      time: series.time.filter((_, index) => keep[index]),
+      channels: Object.fromEntries(
+        Object.entries(series.channels).map(([key, values]) => [key, values.filter((_, index) => keep[index])]),
+      ),
+    };
+  }, [series, span, whole]);
 
   const rows = useMemo(
     () =>
-      series.time.map((second, index) =>
+      shown.time.map((second, index) =>
         Object.fromEntries([
           ['time', second],
-          ...Object.entries(series.channels).map(([key, values]) => [key, values[index]]),
+          ...Object.entries(shown.channels).map(([key, values]) => [key, values[index]]),
         ]),
       ),
-    [series],
+    [shown],
   );
 
   const insights = useMemo(() => telemetryInsights({mAh}, series, pack), [mAh, series, pack]);
   // Upside down: a pale band across every lane, named on the top one.
   const inverted = useMemo(() => invertedStretches(series), [series]);
 
-  const channels = ORDER.filter(channel => series.channels[channel]?.length);
+  const channels = ORDER.filter(channel => shown.channels[channel]?.length);
   return (
     <>
       {insights.length > 0 && (
@@ -89,12 +103,24 @@ export function TelemetryCharts({
           ))}
         </div>
       )}
+      {span && (
+        <div className="lanes-span">
+          <button type="button" className="chip" aria-pressed={!whole} onClick={() => setWhole(current => !current)}>
+            Flight only
+          </button>
+          <span className="muted tabular">
+            {whole
+              ? `The whole log, ${formatTimer(series.time[series.time.length - 1] - series.time[0])}`
+              : `${formatTimer(span.from)} to ${formatTimer(span.to)} of ${formatTimer(series.time[series.time.length - 1])}`}
+          </span>
+        </div>
+      )}
       <div className="telemetry-lanes">
         {channels.map((channel, index) => {
           const {label, unit} = CHANNELS[channel];
           const stroke = TRACE[channel] ?? '#e8eef5';
           const last = index === channels.length - 1;
-          const values = (series.channels[channel] ?? []).filter(value => channel !== 'voltage' || value >= NO_VOLTAGE);
+          const values = (shown.channels[channel] ?? []).filter(value => channel !== 'voltage' || value >= NO_VOLTAGE);
           const low = values.length ? Math.min(...values) : 0;
           const high = values.length ? Math.max(...values) : 0;
           return (
@@ -110,7 +136,7 @@ export function TelemetryCharts({
                 <ResponsiveContainer>
                   <AreaChart
                     data={rows}
-                    syncId={`telemetry-${series.id}`}
+                    syncId={`telemetry-${shown.id}`}
                     margin={{top: 4, right: 6, bottom: 0, left: 0}}
                   >
                     <CartesianGrid vertical={false} stroke={ink.grid} />
@@ -166,7 +192,7 @@ export function TelemetryCharts({
                         }
                       />
                     ))}
-                    {cursor !== null && <ReferenceLine x={cursor} stroke="#7cffb2" strokeWidth={1.5} />}
+                    {cursor !== null && <ReferenceLine x={cursor} stroke="#5cff8d" strokeWidth={1.5} />}
                     <Area
                       type="monotone"
                       dataKey={channel}
@@ -186,8 +212,8 @@ export function TelemetryCharts({
           );
         })}
       </div>
-      <StickMap series={series} />
-      <StickReplay series={series} pack={pack} packs={packs} onTime={setCursor} />
+      <StickMap series={shown} />
+      <StickReplay series={shown} pack={pack} packs={packs} onTime={setCursor} />
     </>
   );
 }

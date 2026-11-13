@@ -19,7 +19,7 @@ import {BatteryForm, GearForm, HeliForm, SpareForm, TipForm} from '../components
 import {Stamp} from '../components/instruments';
 import {useSeriesColor} from '../components/colors';
 import {VisitorBanner} from '../components/VisitorBanner';
-import {ago, formatAirtime, formatDay, formatNumber, formatRate, plural, today} from '../model/format';
+import {ago, formatAirtime, formatDay, formatNumber, formatPrice, formatRate, plural, today} from '../model/format';
 import {SERIES_NAMES} from '../model/palette';
 import {groupBy, packsSinceCrash, type GroupTally} from '../model/stats';
 import {brokenRanking, partKey, spareStock} from '../model/parts';
@@ -27,14 +27,15 @@ import {now} from '../model/ids';
 import {kindFlights, livePacks} from '../model/packs';
 import {HeliPhoto} from '../components/HeliPhoto';
 
+/** Spare parts, hidden for now: their tab and page come back when this is true. */
+const SHOW_SPARES = false;
+
 const VIEWS = [
   {to: '/hangar', label: 'Fleet', view: undefined},
-  {to: '/hangar/spares', label: 'Spares', view: 'spares'},
+  ...(SHOW_SPARES ? [{to: '/hangar/spares', label: 'Spares', view: 'spares'}] : []),
   {to: '/hangar/batteries', label: 'Batteries', view: 'batteries'},
   {to: '/hangar/notes', label: 'Notes', view: 'notes'},
 ];
-
-/** The radio's screen, with its Lua engine: loaded with the tab, not with the app. */
 
 /** A heli on the flight line: its picture lit in its colour, its stamp, its numbers. */
 export function HeliCard({heli, tally, wide = false}: {heli: Heli; tally?: GroupTally; wide?: boolean}) {
@@ -132,9 +133,14 @@ function Gear() {
                     </span>
                     {item.gone && <Stamp status={item.gone} />}
                     {item.details && <span className="muted">{item.details}</span>}
-                    {item.since && (
-                      <span className="pill label" style={{alignSelf: 'flex-start'}}>
-                        Since {formatDay(item.since, {weekday: false, year: true})}
+                    {(item.since || item.price !== undefined) && (
+                      <span className="chips">
+                        {item.since && (
+                          <span className="pill label">
+                            Since {formatDay(item.since, {weekday: false, year: true})}
+                          </span>
+                        )}
+                        {item.price !== undefined && <span className="pill label">{formatPrice(item.price)}</span>}
                       </span>
                     )}
                     {item.notes && <span className="caption">{item.notes}</span>}
@@ -499,6 +505,7 @@ function Batteries() {
                 <div className="muted" style={{fontSize: '0.8125rem'}}>
                   {battery.packs.length} × {battery.cells}S {formatNumber(battery.capacity)} mAh
                   {dead ? <span className="battery-dead"> · {dead} dead</span> : null}
+                  {battery.bought && ` · bought ${formatDay(battery.bought, {weekday: false, year: true})}`}
                 </div>
                 <div className="figures" style={{marginTop: 10}}>
                   <div>
@@ -598,7 +605,15 @@ export function Hangar() {
           </Link>
         ))}
       </nav>
-      {view === 'spares' ? <Spares /> : view === 'batteries' ? <Batteries /> : view === 'notes' ? <Notes /> : <Fleet />}
+      {view === 'spares' && SHOW_SPARES ? (
+        <Spares />
+      ) : view === 'batteries' ? (
+        <Batteries />
+      ) : view === 'notes' ? (
+        <Notes />
+      ) : (
+        <Fleet />
+      )}
     </div>
   );
 }

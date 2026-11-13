@@ -82,7 +82,9 @@ export const hours = (seconds: number) => Math.round(seconds / 360) / 10;
 /** A pack's flight time: "4:30". */
 export function formatTimer(seconds: number | null | undefined) {
   if (seconds == null) return '?';
-  return `${Math.floor(seconds / 60)}:${pad(Math.round(seconds % 60))}`;
+  // Whole seconds first, so 119.6 s reads 2:00, never 1:60.
+  const whole = Math.round(seconds);
+  return `${Math.floor(whole / 60)}:${pad(whole % 60)}`;
 }
 
 /** "4:30", "4.5", "4" (minutes) or "270s" to seconds; null when it says nothing. */
@@ -103,6 +105,15 @@ export function plural(count: number, one: string, many = `${one}s`) {
 
 export function formatNumber(value: number, digits = 0) {
   return value.toLocaleString('en-GB', {minimumFractionDigits: digits, maximumFractionDigits: digits});
+}
+
+/** A price in euros: "€999", "€6.50". */
+export const formatPrice = (price: number) => `€${formatNumber(price, Number.isInteger(price) ? 0 : 2)}`;
+
+/** A price typed in a field ("999", "6,50"), when there is one. */
+export function parsePrice(text: string) {
+  const price = Number(text.replace(',', '.').replace(/[^\d.]/g, ''));
+  return price > 0 ? price : undefined;
 }
 
 /** One decimal under ten, none above: "4.1", "12". */

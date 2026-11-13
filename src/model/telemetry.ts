@@ -138,6 +138,41 @@ function thin(time: number[], channels: Record<string, number[]>) {
  * Reads an EdgeTX log (a CSV from the radio's LOGS folder, or the same table pasted in a sheet): the summary kept
  * with the sortie, and the samples kept apart for its charts.
  */
+/**
+ * Whether the motor runs at each sample: its output (CH3) away from where it sits cut (its value while the pack draws
+ * nothing), as the radio's PACK timer counts it; in a log with no outputs, the pack under load, as the Session widget
+ * counts it.
+ */
+export function motorRunning(channels: TelemetrySeries['channels']): boolean[] {
+  const motor = channels.ch3;
+  const currents = channels.current ?? [];
+  if (motor?.length) {
+    const idle = currents.length ? motor.filter((_, index) => (currents[index] ?? 0) < 0.5) : [];
+    const cut = mostFrequent(idle.length ? idle : [motor[0]]);
+    return motor.map(value => Math.abs(value - cut) > MOTOR_SLACK);
+  }
+  return currents.map(value => value >= FLYING_AMPS);
+}
+
+/** Seconds kept before the motor first runs and after it last stops, when a log's quiet start and end are cut. */
+const SPAN_MARGIN = 5;
+
+/**
+ * The part of a log where something happens: from a few seconds before the motor first runs to a few seconds after it
+ * last stops. Null when the motor never runs, or when cutting the rest would save under 10 seconds.
+ */
+export function activeSpan(series: TelemetrySeries): {from: number; to: number} | null {
+  const running = motorRunning(series.channels);
+  const first = running.indexOf(true);
+  if (first < 0 || !series.time.length) return null;
+  const last = running.lastIndexOf(true);
+  const start = series.time[0];
+  const end = series.time[series.time.length - 1];
+  const from = Math.max(start, series.time[first] - SPAN_MARGIN);
+  const to = Math.min(end, series.time[last] + SPAN_MARGIN);
+  return from - start + (end - to) >= 10 ? {from, to} : null;
+}
+
 export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog; series: TelemetrySeries} | null {
   const headerIndex = rows.findIndex(row => row && isTelemetryHeader(row));
   if (headerIndex < 0) return null;
@@ -191,20 +226,11 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     mAh = Math.round(used);
   }
   if (!channels.capacity?.some(value => value > 0)) delete channels.capacity;
-  // In the air: the motor on, its output (CH3) away from where it sits cut (its value while the pack draws nothing),
-  // as the radio's PACK timer counts it; a log with no outputs counts the motor under load, as the Session widget does.
-  const motor = channels.ch3;
+  // In the air: each sample with the motor running, as the radio's PACK timer counts it.
+  const running = motorRunning(channels);
   let flying = 0;
-  if (motor?.length) {
-    const idle = currents.length ? motor.filter((_, index) => (currents[index] ?? 0) < 0.5) : [];
-    const cut = mostFrequent(idle.length ? idle : [motor[0]]);
-    for (let index = 1; index < motor.length; index += 1) {
-      if (Math.abs(motor[index] - cut) > MOTOR_SLACK) flying += time[index] - time[index - 1];
-    }
-  } else {
-    for (let index = 1; index < currents.length; index += 1) {
-      if (currents[index] >= FLYING_AMPS) flying += time[index] - time[index - 1];
-    }
+  for (let index = 1; index < running.length; index += 1) {
+    if (running[index]) flying += time[index] - time[index - 1];
   }
 
   // Upside down, read from every sample before they are thinned.
@@ -239,7 +265,7 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     ...(currents.length && {maxCurrent: round(Math.max(...currents)), avgCurrent: round(average(currents))}),
     ...(signals.length && {minRssi: Math.min(...signals)}),
     ...(packButton !== undefined && {packButton}),
-    ...((motor?.length || currents.length) && {flying: Math.round(flying)}),
+    ...((channels.ch3?.length || currents.length) && {flying: Math.round(flying)}),
     ...(channels.ch6?.length && currents.length && {inverted: Math.round(upsideDown)}),
     ...(resistance !== null && {resistance: Math.round(resistance)}),
   };

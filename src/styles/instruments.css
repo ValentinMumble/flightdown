@@ -1417,6 +1417,16 @@
   align-items: flex-start;
 }
 
+/* The recorder's span: the flight only, or the whole log. */
+.lanes-span {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 0.8125rem;
+}
+
 /* A note's chip wraps its title rather than run out of a narrow card. */
 .gear-card .chip {
   max-width: 100%;

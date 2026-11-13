@@ -1,11 +1,11 @@
 /*
- * The HUD layer: the cockpit's layout with a head-up display's restraint. It comes last, so it settles the frames and
+ * The screen layer: the cockpit's layout on an old computer's green screen. It comes last, so it settles the frames and
  * the type of every component in one place:
- * - frames are near-empty, a hairline marked by two corner brackets (top left, bottom right);
- * - labels are small lowercase monospace, in a muted green;
- * - headings and numbers are the system's type, white, tabular;
- * - one soft green marks the tab in use, a choice made and anything good; no glows anywhere.
- * The minute counter keeps its own face (instruments.css).
+ * - frames are near-empty and square, a hairline marked by two corner brackets (top left, bottom right);
+ * - labels are small lowercase monospace, in a dimmer green;
+ * - headings and numbers are the terminal's pixel type (VT323), bright and glowing, tabular;
+ * - the brightest green marks the tab in use, a choice made and anything good.
+ * The minute counter keeps its own face (instruments.css). The dock and the sheets stay liquid glass.
  */
 
 /* Frames */
@@ -102,7 +102,7 @@
   color: var(--ink-2);
 }
 
-/* Headings and numbers: the system's type, white, tabular. */
+/* Headings and numbers: the terminal's pixel type, glowing, sized up to the x-height of the text around them. */
 .page-title,
 .topbar-title,
 .sheet-title,
@@ -127,16 +127,38 @@
 .spot-row > :not(:first-child),
 .button.solid,
 .chart text {
-  font-family: var(--font);
+  font-family: var(--display);
+  font-size-adjust: 0.53;
   letter-spacing: normal;
   text-transform: none;
   font-variant-numeric: tabular-nums;
+  text-shadow: var(--glow);
 }
 
+/* A page's title in capitals, the cursor blinking after it. */
 .page-title {
   font-size: 1.625rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.page-title::after {
+  content: '█';
+  margin-left: 0.15em;
+  animation: cursor 1.1s steps(1) infinite;
+}
+
+@keyframes cursor {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-title::after {
+    animation: none;
+  }
 }
 
 .sheet-title {
@@ -162,7 +184,7 @@
 .readout.caution,
 .readout.warning,
 .readout.accent {
-  text-shadow: none;
+  text-shadow: 0 0 6px currentColor;
 }
 
 .chart text {
@@ -632,4 +654,29 @@
 
 .battery-dead {
   color: var(--warning);
+}
+
+/* Square corners, as on a terminal; the dock and its round log button keep the glass guideline's capsule. */
+.panel,
+.card,
+.button,
+.chip,
+.pill,
+.input,
+.segmented,
+.segmented a,
+.segmented button,
+.icon-button,
+.tooltip {
+  border-radius: var(--radius-small);
+}
+
+.panel::before,
+.card::before {
+  border-top-left-radius: 0;
+}
+
+.panel::after,
+.card::after {
+  border-bottom-right-radius: 0;
 }

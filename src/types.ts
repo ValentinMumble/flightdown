@@ -11,8 +11,10 @@ export interface Heli {
   /** Its slot in the chart palette (0 to 7): the heli keeps its colour in every chart. */
   color: number;
   status: HeliStatus;
-  /** Day it joined the fleet (YYYY-MM-DD). */
+  /** Day it was bought (YYYY-MM-DD), else its first sortie's. */
   acquired?: string;
+  /** What it cost, in euros. */
+  price?: number;
   /** Flight time of one pack, in seconds: the next sortie starts with it. */
   timer?: number;
   /** The packs it flies on, in words ("3S 450 mAh"). */
@@ -164,6 +166,8 @@ export interface Gear {
   details?: string;
   /** YYYY-MM-DD */
   since?: string;
+  /** What it cost, in euros. */
+  price?: number;
   notes?: string;
   /** A link to a photo of it, cut out of its white background as the helis' are. */
   photo?: string;

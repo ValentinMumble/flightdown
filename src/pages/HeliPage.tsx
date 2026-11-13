@@ -9,7 +9,7 @@ import {HeliForm, SpareForm} from '../components/forms/HangarForms';
 import {AirtimeChart} from '../components/charts/AirtimeChart';
 import {DamageMap} from '../components/charts/DamageMap';
 import {useSeriesColor} from '../components/colors';
-import {formatAirtime, formatDay, formatRate, formatTimer, plural} from '../model/format';
+import {formatAirtime, formatDay, formatPrice, formatRate, formatTimer, plural} from '../model/format';
 import {daysSinceCrash, monthly, packsSinceCrash, sortSorties, totals} from '../model/stats';
 import {spareStock} from '../model/parts';
 import {HeliPhoto} from '../components/HeliPhoto';
@@ -66,6 +66,14 @@ export function HeliPage() {
             </div>
           </div>
           <Stamp status={heli.status} />
+          {(heli.acquired || heli.price !== undefined) && (
+            <div className="chips">
+              {heli.acquired && (
+                <span className="pill label">Bought {formatDay(heli.acquired, {weekday: false, year: true})}</span>
+              )}
+              {heli.price !== undefined && <span className="pill label">{formatPrice(heli.price)}</span>}
+            </div>
+          )}
           <div className="readout accent">
             {formatAirtime(all.airtime)}
             <small>in the air</small>

@@ -203,6 +203,50 @@
   transform: scale(0.94);
 }
 
+/* The More menu: regular glass above the dock's end, a row a view. */
+.dock-menu {
+  position: absolute;
+  right: calc(var(--dock-height) + 8px);
+  bottom: calc(100% + 8px);
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border-radius: 20px;
+  background-color: var(--glass-regular);
+  background-image: var(--glass-sheen);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--glass-edge);
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+.dock-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.dock-menu-item:active {
+  background: var(--lens);
+}
+
+.dock-menu-item[aria-current='page'] {
+  color: var(--accent);
+}
+
+button.dock-tab {
+  border: 0;
+  background: none;
+  padding: 0;
+}
+
 @media (max-width: 860px) {
   .cockpit-bar {
     display: none;
@@ -376,6 +420,7 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .glass,
+  .dock-menu,
   .sheet,
   .topbar,
   .cockpit-bar {
