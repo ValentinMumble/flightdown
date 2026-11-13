@@ -9,9 +9,10 @@ It looks like a helicopter's cockpit on an old computer's green screen: phosphor
 rolling counter of minutes in the air.
 
 - **Cockpit:** the minute counter on 3D drums (they roll up at each change of tab) beside a rotor that spools up,
-  packs per crash on a tape (all time, and the last 20 sorties), the crash-free run in packs and days, the last three
-  sorties, the helis on the flight line, airtime over the two years up to the last sortie and the next rung of the
-  skill ladder.
+  packs per crash on a tape (all time, and the last 20 sorties), the crash-free run in packs and days, the last five
+  sorties beside the helis on the flight line, the live packs by their buttons (flights, last flown, resistance, tiring
+  or worn against their first reading and the freshest pack's) beside the next rung of the skill ladder, and airtime
+  month by month over the two years up to the last sortie.
 - **Sorties:** every sortie as a flight strip, a month at a time. Search notes, parts, places and days; filter by
   heli, spot, crashes, a broken part or sorties with a radio log (behind one Filters button on a phone).
 - **Photos:** they stay in Apple Photos, in an iCloud shared album with its public website on (its link goes in
@@ -33,7 +34,7 @@ rolling counter of minutes in the air.
   its exact air time, each pack as a bar (named by its button, the inverted part in violet), the share upside down as
   a ring, and its flips and rolls. `npm run logs` brings them from the plugged-in radio. Debrief compares every pack's
   voltage under load, and each pack's resistance over time (named by its button, from the voltage drop when the current
-  jumps: twice its first reading is worn).
+  jumps: twice its first reading is worn), and adds up the flips and rolls.
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
   heli breaks (a damage map on a heli drawing), what brings it down (crash causes read from the notes), the fleet's
   history, the skill ladder, the flying season, packs a sortie, spots and hours by heli.

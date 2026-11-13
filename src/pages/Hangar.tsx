@@ -22,13 +22,10 @@ import {VisitorBanner} from '../components/VisitorBanner';
 import {ago, formatAirtime, formatDay, formatNumber, formatPrice, formatRate, plural, today} from '../model/format';
 import {SERIES_NAMES} from '../model/palette';
 import {groupBy, packsSinceCrash, type GroupTally} from '../model/stats';
-import {brokenRanking, partKey, spareStock} from '../model/parts';
+import {brokenRanking, partKey, SHOW_SPARES, spareStock} from '../model/parts';
 import {now} from '../model/ids';
 import {kindFlights, livePacks} from '../model/packs';
 import {HeliPhoto} from '../components/HeliPhoto';
-
-/** Spare parts, hidden for now: their tab and page come back when this is true. */
-const SHOW_SPARES = false;
 
 const VIEWS = [
   {to: '/hangar', label: 'Fleet', view: undefined},

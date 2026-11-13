@@ -482,7 +482,7 @@ export function BatteryForm({battery}: {battery?: Battery}) {
                 aria-pressed={Boolean(pack.dead)}
                 onClick={() => toggleDead(pack.number)}
               >
-                {pack.dead ? `Dead since ${formatDay(pack.dead, {weekday: false})}` : 'Dead'}
+                {pack.dead ? `Dead since ${formatDay(pack.dead, {weekday: false})}` : 'Mark as dead'}
               </button>
               {!savedPack(pack.number) && (
                 <button

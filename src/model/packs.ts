@@ -174,6 +174,49 @@ export function kindFlights(sorties: Sortie[], batteries: Battery[]) {
   return flights;
 }
 
+/** A pack's record from the logs: how often and when it flew, and its resistance (a cell's share, mΩ). */
+export interface PackRecord {
+  battery: Battery;
+  pack: Pack;
+  /** "Gens Ace #3". */
+  label: string;
+  /** Packs flown on it that a log names by its button. */
+  flights: number;
+  /** The day it last flew, by the logs (YYYY-MM-DD). */
+  last?: string;
+  /** Its first resistance reading and its latest: twice the first is worn. */
+  first?: number;
+  latest?: number;
+}
+
+/** Every pack's record, from the logs that name it by its button, oldest sortie first. */
+export function packRecords(sorties: Sortie[], batteries: Battery[]): PackRecord[] {
+  const records = new Map<string, PackRecord>();
+  const key = (battery: Battery, pack: Pack) => `${battery.id}#${pack.number}`;
+  for (const battery of batteries) {
+    for (const pack of battery.packs)
+      records.set(key(battery, pack), {battery, pack, label: packLabel(battery, pack), flights: 0});
+  }
+  for (const sortie of [...sorties].sort((left, right) => left.date.localeCompare(right.date))) {
+    for (const flown of groupPacks(sortie.telemetry)) {
+      const day = flown.start?.slice(0, 10) ?? sortie.date;
+      const found = buttonBattery(flown.packButton ?? 0, batteries, day);
+      const record = found && records.get(key(found.battery, found.pack));
+      if (!found || !record) continue;
+      record.flights += 1;
+      record.last = day;
+      const readings = flown.files.flatMap(file =>
+        file.resistance === undefined ? [] : [file.resistance / found.battery.cells],
+      );
+      if (!readings.length) continue;
+      const median = readings.sort((left, right) => left - right)[Math.floor(readings.length / 2)];
+      record.first ??= median;
+      record.latest = median;
+    }
+  }
+  return [...records.values()];
+}
+
 /** The mAh a pack used, from its joined samples: the radio's count or the current added up. */
 export function packUsed(series: TelemetrySeries) {
   const used = usedMah(series);

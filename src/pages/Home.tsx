@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import {Link} from 'react-router';
-import {ChevronRight, Settings as SettingsIcon} from 'lucide-react';
+import {ChevronRight} from 'lucide-react';
 import {useStore} from '../data/store';
 import {Empty, PageHeader, useOverlay} from '../components/ui';
 import {FlightStrip} from '../components/SortieRow';
@@ -10,12 +10,16 @@ import {VisitorBanner} from '../components/VisitorBanner';
 import {AirtimeChart} from '../components/charts/AirtimeChart';
 import {SkillLadder} from '../components/charts/SkillLadder';
 import {useSeriesColor} from '../components/colors';
-import {ago, formatAirtime, formatDay, formatMonth, formatRate, plural, today} from '../model/format';
+import {ago, formatAirtime, formatDay, formatMonth, formatNumber, formatRate, plural, today} from '../model/format';
 import {daysSinceCrash, groupBy, monthly, monthOf, packsSinceCrash, sortSorties, streaks, totals} from '../model/stats';
-import {spareStock} from '../model/parts';
+import {SHOW_SPARES, spareStock} from '../model/parts';
+import {packRecords} from '../model/packs';
 import {HeliPhoto} from '../components/HeliPhoto';
 
-/** The cockpit: the instruments a pilot glances at before going out to fly. */
+/**
+ * The cockpit: the instruments a pilot glances at before going out to fly: the airtime and the crash gauges, the last
+ * sorties beside the helis ready to fly, the packs beside the skills, then the airtime month by month.
+ */
 export function Home() {
   const {doc} = useStore();
   const {open} = useOverlay();
@@ -35,9 +39,17 @@ export function Home() {
   const flightLine = doc.helis.filter(heli => heli.status === 'active' || heli.status === 'grounded');
   const last = sorties[sorties.length - 1];
   const best = runs.longestCrashFree?.packs ?? 0;
-  const newest = [...sorties].reverse();
-  const lastThree = newest.slice(0, 3);
-  const latest = newest.slice(3, 8);
+  const newest = [...sorties].reverse().slice(0, 5);
+  // The packs that fly the flight line, the live ones by their buttons: how often, how lately, how worn.
+  const lineIds = new Set(flightLine.map(heli => heli.id));
+  const lineBatteries = doc.batteries.filter(battery => battery.heliIds.some(id => lineIds.has(id)));
+  const records = packRecords(sorties, lineBatteries);
+  const rack = records
+    .filter(record => !record.pack.dead)
+    .sort((left, right) => (left.pack.button ?? 7) - (right.pack.button ?? 7) || left.label.localeCompare(right.label));
+  const deadPacks = records.length - rack.length;
+  // The freshest pack flown: the lowest latest resistance, what the others compare to.
+  const freshest = Math.min(...rack.flatMap(record => (record.latest === undefined ? [] : [record.latest])));
   const logSortie = () => open(<SortieForm />);
   const ppc = all.packsPerCrash;
   const sinceCrash = daysSinceCrash(sorties);
@@ -51,11 +63,6 @@ export function Home() {
         title="Cockpit"
         phone={{title: 'Flightdown', icon: <RotorMark size={20} className="accent-mark" />}}
         sub={sorties.length ? `Flying since ${formatDay(sorties[0].date, {weekday: false, year: true})}` : undefined}
-        actions={
-          <Link to="/settings" className="icon-button phone-only" aria-label="Settings">
-            <SettingsIcon size={18} />
-          </Link>
-        }
       />
       <VisitorBanner />
 
@@ -143,14 +150,19 @@ export function Home() {
           note={last ? `The latest ${ago(last.date)}` : undefined}
           className="span-7"
           action={
-            <button className="button small solid" onClick={logSortie}>
-              Log a sortie
-            </button>
+            <span className="panel-actions">
+              <button className="button small solid" onClick={logSortie}>
+                Log a sortie
+              </button>
+              <Link to="/sorties" className="button small ghost">
+                All <ChevronRight size={14} />
+              </Link>
+            </span>
           }
         >
           {last ? (
             <div className="strip-board">
-              {lastThree.map(sortie => (
+              {newest.map(sortie => (
                 <FlightStrip key={sortie.id} sortie={sortie} large />
               ))}
             </div>
@@ -193,7 +205,7 @@ export function Home() {
                           <span className="figure-value">{tally ? ago(tally.last) : '–'}</span>
                         </span>
                       </span>
-                      {low > 0 && <span className="pill caution">{plural(low, 'spare')} to buy</span>}
+                      {SHOW_SPARES && low > 0 && <span className="pill caution">{plural(low, 'spare')} to buy</span>}
                     </span>
                   </Link>
                 );
@@ -205,15 +217,54 @@ export function Home() {
         </Panel>
 
         <Panel
-          label="Airtime"
-          note={
-            lastMonthIsThisMonth
-              ? 'The last two years, month by month'
-              : `The two years up to the last sortie, in ${formatMonth(lastMonth, true)}`
-          }
+          label="Packs"
+          note={`The live ones by their buttons, their resistance a cell's share against their first reading and the freshest pack's${deadPacks ? `; ${plural(deadPacks, 'dead pack')} left out` : ''}`}
           className="span-8"
+          action={
+            <Link to="/hangar/batteries" className="button small ghost">
+              Hangar <ChevronRight size={14} />
+            </Link>
+          }
         >
-          <AirtimeChart months={months} short />
+          {rack.length ? (
+            <div className="spot-table">
+              <div className="spot-row head">
+                <span>Pack</span>
+                <span>Flights</span>
+                <span>Last flown</span>
+                <span>Resistance</span>
+              </div>
+              {rack.map(record => {
+                // Twice its own first reading, or twice the freshest pack's, is worn; half again is tiring.
+                const change =
+                  record.first && record.latest
+                    ? Math.max(record.latest / record.first, record.latest / freshest)
+                    : null;
+                const worn = change !== null && change >= 2;
+                const tiring = change !== null && change >= 1.5;
+                return (
+                  <div key={`${record.battery.id}#${record.pack.number}`} className="spot-row">
+                    <span className="name">
+                      <span className="name-main">{record.label}</span>
+                      <small className="name-note">
+                        {record.pack.button ? `button ${record.pack.button}` : 'no button'}
+                      </small>
+                    </span>
+                    <span>{record.flights || '–'}</span>
+                    <span>{record.last ? ago(record.last) : 'not yet'}</span>
+                    <span className="rack-resistance">
+                      {record.latest !== undefined ? `${formatNumber(record.latest, 0)} mΩ` : '–'}
+                      {tiring && (
+                        <span className={`pill ${worn ? 'critical' : 'caution'}`}>{worn ? 'worn' : 'tiring'}</span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <Empty>No packs for the flight line yet: add them in the Hangar, a button each.</Empty>
+          )}
         </Panel>
 
         <Panel
@@ -228,23 +279,17 @@ export function Home() {
           <SkillLadder sorties={sorties} compact />
         </Panel>
 
-        {latest.length > 0 && (
-          <Panel
-            label="Earlier sorties"
-            className="span-12"
-            action={
-              <Link to="/sorties" className="button small ghost">
-                Every sortie <ChevronRight size={14} />
-              </Link>
-            }
-          >
-            <div className="strip-board">
-              {latest.map(sortie => (
-                <FlightStrip key={sortie.id} sortie={sortie} />
-              ))}
-            </div>
-          </Panel>
-        )}
+        <Panel
+          label="Airtime by month"
+          note={
+            lastMonthIsThisMonth
+              ? 'The last two years, month by month'
+              : `The two years up to the last sortie, in ${formatMonth(lastMonth, true)}`
+          }
+          className="span-12"
+        >
+          <AirtimeChart months={months} short />
+        </Panel>
       </div>
     </div>
   );

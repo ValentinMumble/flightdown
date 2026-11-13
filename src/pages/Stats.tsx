@@ -17,6 +17,8 @@ import {ago, formatAirtime, formatDay, formatRate, plural} from '../model/format
 import {crashTrend, groupBy, sortSorties, totals} from '../model/stats';
 import {CAUSES, crashCauses, milestones, packsPerSortie} from '../model/debrief';
 import {inkOn} from '../model/palette';
+import {addFlips} from '../model/insights';
+import type {Sortie, TurnWay} from '../types';
 
 /** The debrief's sections, each from the panel that opens it. */
 const SECTIONS = [
@@ -24,6 +26,7 @@ const SECTIONS = [
   {id: 'crashes', label: 'Crashes'},
   {id: 'fleet', label: 'Fleet'},
   {id: 'packs', label: 'Packs'},
+  {id: 'flips', label: 'Flips'},
   {id: 'skills', label: 'Skills'},
   {id: 'spots', label: 'Spots'},
 ];
@@ -90,6 +93,49 @@ function JumpBar() {
         </button>
       ))}
     </nav>
+  );
+}
+
+/** Flip counts by the way they went. */
+type Flips = Partial<Record<TurnWay, number>>;
+
+const FLIP_LABELS: [TurnWay, string][] = [
+  ['back', 'Back flips'],
+  ['front', 'Front flips'],
+  ['left', 'Rolls left'],
+  ['right', 'Rolls right'],
+];
+
+/** The flips and rolls of the sorties shown, every log's added up, and the sortie that had the most. */
+function FlipTotals({sorties}: {sorties: Sortie[]}) {
+  const logged = sorties.filter(sortie => sortie.telemetry.length > 0);
+  if (!logged.length) {
+    return <div className="muted">No radio log in this period: flips and rolls are counted from the logs.</div>;
+  }
+  const each = logged.map(sortie => ({
+    sortie,
+    flips: sortie.telemetry.reduce<Flips>((sum, log) => addFlips(sum, log.flips), {}),
+  }));
+  const total = each.reduce<Flips>((sum, one) => addFlips(sum, one.flips), {});
+  const count = (flips: Flips) => Object.values(flips).reduce((sum, value) => sum + (value ?? 0), 0);
+  const most = each.reduce((best, one) => (count(one.flips) > count(best.flips) ? one : best));
+  return (
+    <>
+      <div className="figures">
+        {FLIP_LABELS.map(([way, label]) => (
+          <div key={way}>
+            <div className="figure-label">{label}</div>
+            <div className="figure-value">{total[way] ?? 0}</div>
+          </div>
+        ))}
+      </div>
+      <p className="caption">
+        From {plural(logged.length, 'sortie')} with logs
+        {count(most.flips) > 0 &&
+          `; the most in one, ${count(most.flips)} on ${formatDay(most.sortie.date, {weekday: false, year: true})}`}
+        . A whole turn goes over onto its back and on round the same way.
+      </p>
+    </>
   );
 }
 
@@ -256,9 +302,13 @@ export function Stats() {
               id="resistance"
               label="Pack resistance"
               note="Each pack by its button, a cell's share: it climbs as a pack ages, and twice its first reading is worn"
-              className="span-12"
+              className="span-8"
             >
               <PackResistance sorties={sorties} />
+            </Panel>
+
+            <Panel id="flips" label="Flips and rolls" note="Whole turns, read from the radio's logs" className="span-4">
+              <FlipTotals sorties={sorties} />
             </Panel>
 
             <Panel id="skills" label="Skill ladder" note="Manoeuvres in the order they are learnt" className="span-4">

@@ -1,5 +1,8 @@
 import type {BrokenPart, Sortie, Spare} from '../types';
 
+/** Spare parts, hidden for now: the Hangar's Spares tab and the Cockpit's spares to buy come back when this is true. */
+export const SHOW_SPARES = false;
+
 /** Two spellings of one part match: "Main Shaft " is "main shaft", "Main blades" is "main blade". */
 export function partKey(name: string) {
   return name
