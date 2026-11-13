@@ -16,6 +16,18 @@ const INVERTED_SECONDS = 3;
 const INVERTED_SHARE = 0.25;
 
 /**
+ * The side of centre the collective (CH6) sits at in a hover, upright: the side of most of its time under load,
+ * whatever the channel's reversal. 1 or -1, or 0 when the log cannot say (no pitch, no load).
+ */
+export function hoverSide(series: TelemetrySeries): number {
+  const pitch = series.channels.ch6 ?? [];
+  const current = series.channels.current ?? [];
+  const sides = pitch.filter((_, index) => (current[index] ?? 0) >= IDLE_AMPS).map(value => value - 1500);
+  if (!sides.length) return 0;
+  return Math.sign(sides.sort((left, right) => left - right)[Math.floor(sides.length / 2)]);
+}
+
+/**
  * Each time the collective (CH6, logged in µs, 512 each way of 1500) went well to the other side of hover, the motor
  * under load, as sample indexes: from the first sample there to the first one back (or the log's end). Upright the heli
  * hovers with the pitch to one side of centre (the side of most of its time under load, whatever the channel's
@@ -24,13 +36,9 @@ const INVERTED_SHARE = 0.25;
 function otherSidePasses(series: TelemetrySeries): {from: number; to: number}[] {
   const pitch = series.channels.ch6 ?? [];
   const current = series.channels.current ?? [];
-  if (!pitch.length || !current.length) return [];
+  const upright = hoverSide(series);
+  if (!upright) return [];
   const loaded = pitch.map((_, index) => (current[index] ?? 0) >= IDLE_AMPS);
-  const sides = pitch.filter((_, index) => loaded[index]).map(value => value - 1500);
-  if (!sides.length) return [];
-  const hover = sides.sort((left, right) => left - right)[Math.floor(sides.length / 2)];
-  if (hover === 0) return [];
-  const upright = Math.sign(hover);
   const passes: {from: number; to: number}[] = [];
   let from = -1;
   for (let index = 0; index <= pitch.length; index += 1) {

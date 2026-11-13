@@ -12,6 +12,8 @@ import {FleetTimeline} from '../components/charts/FleetTimeline';
 import {SeasonRose} from '../components/charts/SeasonRose';
 import {SkillLadder} from '../components/charts/SkillLadder';
 import {AirtimeDonut} from '../components/charts/AirtimeDonut';
+import {PackHealth} from '../components/charts/PackHealth';
+import {PowerCurve} from '../components/charts/PowerCurve';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {ago, formatAirtime, formatDay, formatRate, plural} from '../model/format';
 import {crashTrend, groupBy, sortSorties, totals} from '../model/stats';
@@ -26,6 +28,7 @@ const SECTIONS = [
   {id: 'fleet', label: 'Fleet'},
   {id: 'packs', label: 'Packs'},
   {id: 'flips', label: 'Flips'},
+  {id: 'health', label: 'Health'},
   {id: 'skills', label: 'Skills'},
   {id: 'spots', label: 'Spots'},
 ];
@@ -307,6 +310,24 @@ export function Stats() {
 
             <Panel id="flips" label="Flips and rolls" note="Whole turns, read from the radio's logs" className="span-4">
               <FlipTotals sorties={sorties} />
+            </Panel>
+
+            <Panel
+              id="health"
+              label="Pack health"
+              note="Each pack's resistance from its first flight to its latest, its trend, and the flights left before it is worn at that rate"
+              className="span-12"
+            >
+              <PackHealth sorties={sorties} />
+            </Panel>
+
+            <Panel
+              id="curve"
+              label="Power curve"
+              note="Current against collective, a cloud a pack: one that needs more for the same pitch stands out"
+              className="span-12"
+            >
+              <PowerCurve sorties={sorties} />
             </Panel>
 
             <Panel id="skills" label="Skill ladder" note="Manoeuvres in the order they are learnt" className="span-4">

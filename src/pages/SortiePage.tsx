@@ -16,6 +16,8 @@ import {formatAirtime, formatDay, formatTimer, plural} from '../model/format';
 import {airtime, loggedTimes, sortSorties} from '../model/stats';
 import {readTelemetry} from '../model/telemetry';
 import {addFlips, describeFlips, packOf} from '../model/insights';
+import {packDebrief} from '../model/cockpit';
+import {packRecords} from '../model/packs';
 import {parseCsv} from '../model/csv';
 import {hasLocation} from '../model/geo';
 
@@ -162,6 +164,20 @@ export function SortiePage() {
                     <span aria-hidden>🔄</span> {flips}
                   </p>
                 )}
+                <div className="pack-debrief">
+                  {packDebrief(sortie, doc.batteries, packRecords(doc.sorties, doc.batteries)).map(pack => (
+                    <div key={pack.name} className="pack-debrief-row">
+                      <span className="pack-debrief-name">{pack.name}</span>
+                      <span className="pack-debrief-notes">
+                        {pack.notes.map(note => (
+                          <span key={note.text} className={`pill ${note.tone === 'warning' ? 'critical' : note.tone}`}>
+                            {note.text}
+                          </span>
+                        ))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {sortie.skills.length > 0 && (

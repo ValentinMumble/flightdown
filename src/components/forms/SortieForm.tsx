@@ -215,6 +215,12 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
             Crashes {crashes === null && <span className="muted">(not counted)</span>}
           </span>
           <Stepper value={crashes ?? 0} onChange={setCrashes} label="crash" />
+          {/* Not counted yet: the stepper cannot go below 0, so a clean sortie is said here. */}
+          {crashes === null && (
+            <button type="button" className="chip" style={{alignSelf: 'flex-start'}} onClick={() => setCrashes(0)}>
+              No crash
+            </button>
+          )}
         </div>
       </div>
       {seconds !== null && (

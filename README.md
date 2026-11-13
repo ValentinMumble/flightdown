@@ -24,25 +24,30 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   6-position button pressed for it (packs get buttons in the Hangar; files a few seconds apart are one pack, the radio
   splits a log when the link drops, unless their buttons differ), and for the chosen pack: voltage, current, signal and
   throttle as lanes of one recorder (each reads out at the cursor; the flight only, the quiet start and end cut, or the
-  whole log), under it a replay of the sticks with round throttle, current and battery dials (the battery from the pack
-  its button names: its charge at rest when plugged in, less the mAh used; a cursor on the lanes) and a small heli that
-  rolls, tilts and turns with the sticks and turns over through each flip the way they took it, then its figures, a
-  map of the sticks, and what the log says: the pack ran flat, how much of it was used, sag per cell, when 80 % was
-  used (a timer that fits), pack resistance, the radio link, the time upside down (the collective held past the other
-  side of hover under load for 3 s or more, shaded on the lanes), the flips and rolls (back, front, left, right: whole
-  turns, over onto its back and on round the same way, the way read from the cyclic). A sortie flown with logs shows
-  its exact air time, each pack as a bar (named by its button, the inverted part in violet), the share upside down as
-  a ring, and its flips and rolls. `npm run logs` brings them from the plugged-in radio. Debrief compares every pack's
-  voltage under load, and each pack's resistance over time (named by its button, from the voltage drop when the current
-  jumps: twice its first reading is worn), and adds up the flips and rolls.
+  whole log; its exceedances marked along the top), under it a replay of the sticks with throttle, power and battery
+  dials (the power with a mark for what the pack could still give before a cell drops to 3.3 V, from its resistance;
+  the battery from its charge at rest when plugged in, less the mAh used) and an attitude ball (banked and pitched by
+  the sticks, turned over through each flip the way they took it, the small heli fixed in its middle), then a caution
+  panel (LOW VOLT, HIGH AMP, DEEP, LINK, NOT FULL, PACK WORN, STRIKE, RESCUE, INVERTED, each lit amber, red or green
+  with why), its figures, what the log says (the pack ran flat, how much of it was used, sag per cell, when 80 % was
+  used, pack resistance, the radio link, the time upside down, the flips and rolls: whole turns, the way read from the
+  cyclic), its exceedance events as flight data monitoring lists them (over current, a cell under 3.3 V, the link low,
+  past 85 % of the pack, a strike: the current jumping then the motor stopping), and a map of the sticks. A sortie
+  flown with logs shows its exact air time, each pack as a bar (named by its button, the inverted part in violet) with
+  a word or two on it (too deep, sagged, past its rating, flown hard, tiring or worn, or within its limits), the share
+  upside down as a ring, and its flips and rolls. `npm run logs` brings them from the plugged-in radio.
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
   heli breaks (a damage map on a heli drawing), what brings it down (crash causes read from the notes), the fleet's
-  history, the skill ladder, the flying season, packs a sortie, spots, and hours by heli (each heli's share as a ring,
-  in its chart colour).
+  history, the skill ladder, the flying season, packs a sortie, spots, hours by heli (each heli's share as a ring, in
+  its chart colour), every pack's voltage under load, each pack's resistance over time (twice its first reading is
+  worn), the flips and rolls added up, pack health (resistance first to latest, its trend a flight, the flights left
+  before it is worn at that rate, mAh a flight, lowest cell) and the power curve (current against collective, a cloud
+  a pack and the line they all make).
 - **Hangar:** the flight line, the radio and other gear, the helis that left (stamped sold or lost), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
   the dead one keeps its logs and charts), notes. Helis and packs keep the day they were bought, helis and radios
-  their price. Each heli has a data plate page and its own chart colour (picked in its form). Helis, radios and packs
+  their price. Each heli has a data plate page (with each part's time since it last broke there, against how long it
+  lasts) and its own chart colour (picked in its form). Helis, radios and packs
   take a photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac;
   others are cut out in the page). Spare parts are hidden for now (`SHOW_SPARES` in `src/model/parts.ts`).
 - **Radio:** a tab of its own: the TX16S, running the Lua that goes on it (in the browser, with Fengari), its switches
@@ -64,7 +69,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   Set a spot's GPS point by tapping the map, pasting coordinates or a Maps link, or from the phone's position; each
   sortie then shows its spot from above.
 - **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`): Cockpit, Sorties, Radio, Hangar and More
-  (Debrief, Spots, Settings), with a round log button; swipe sideways to change tab. Add it to the home screen: it opens like an app, with the 🚁 icon, and offline at the field.
+  (Debrief, Spots, Settings), with a round log button; swipe sideways to change tab. Add it to the home screen: it
+  opens like an app, with the 🚁 icon, and offline at the field.
 
 Visitors see a made-up log, or keep their own in their browser.
 

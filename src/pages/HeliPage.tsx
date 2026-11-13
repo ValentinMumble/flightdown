@@ -11,7 +11,8 @@ import {DamageMap} from '../components/charts/DamageMap';
 import {useSeriesColor} from '../components/colors';
 import {formatAirtime, formatDay, formatPrice, formatRate, formatTimer, plural} from '../model/format';
 import {daysSinceCrash, monthly, packsSinceCrash, sortSorties, totals} from '../model/stats';
-import {spareStock} from '../model/parts';
+import {SHOW_SPARES, spareStock} from '../model/parts';
+import {partTimes} from '../model/cockpit';
 import {HeliPhoto} from '../components/HeliPhoto';
 
 /** One heli: its data plate, its months, where it breaks, its spares, its setup and its sorties. */
@@ -25,6 +26,8 @@ export function HeliPage() {
   const all = useMemo(() => totals(sorties), [sorties]);
   const months = useMemo(() => monthly(sorties), [sorties]);
   const spares = doc.spares.filter(spare => spare.heliId === id || !spare.heliId);
+  // Each part's time since it last broke here, the most due first.
+  const parts = useMemo(() => (id ? partTimes(doc.sorties, id) : []), [doc.sorties, id]);
   const tips = doc.tips.filter(tip => tip.heliId === id);
 
   if (!heli) {
@@ -122,40 +125,75 @@ export function HeliPage() {
           <DamageMap sorties={sorties} />
         </Panel>
 
-        <Panel
-          label="Spares"
-          className="span-5"
-          action={
-            <button className="button small" onClick={() => open(<SpareForm heliId={heli.id} />)}>
-              <Plus size={14} /> Add
-            </button>
-          }
-        >
-          {spares.length ? (
-            <div className="bar-list">
-              {spares.map(spare => {
-                const stock = spareStock(spare, doc.sorties);
+        <Panel label="Part times" note="Since each part last broke, against how long it lasts here" className="span-5">
+          {parts.length ? (
+            <div className="part-times">
+              {parts.slice(0, 8).map(part => {
+                const share = part.every ? part.since / part.every : 0;
                 return (
-                  <button
-                    key={spare.id}
-                    className="bar-line plain-button"
-                    onClick={() => open(<SpareForm spare={spare} />)}
-                  >
-                    <span className="name">
-                      {spare.name}
-                      {!spare.heliId && <span className="muted">· any heli</span>}
-                    </span>
-                    <span className={`pill ${stock <= 0 ? 'critical' : stock < spare.min ? 'caution' : 'good'}`}>
-                      {Math.max(0, stock)} in stock
-                    </span>
-                  </button>
+                  <div key={part.key} className="part-time">
+                    <div className="bar-line">
+                      <span className="name">{part.name}</span>
+                      <span className="value">{formatAirtime(part.since)}</span>
+                    </div>
+                    <div className="bar-track">
+                      <div
+                        className="bar-fill"
+                        style={{
+                          width: `${Math.min(100, share * 100)}%`,
+                          background: share >= 1 ? 'var(--caution)' : 'var(--accent)',
+                        }}
+                      />
+                    </div>
+                    <div className="muted part-time-note">
+                      {plural(part.packsSince, 'pack')} since {formatDay(part.last, {weekday: false, year: true})} ·
+                      lasts ~{formatAirtime(part.every)} · broke {part.breaks}×
+                    </div>
+                  </div>
                 );
               })}
             </div>
           ) : (
-            <Empty emoji="🧰">No spares for it.</Empty>
+            <Empty emoji="🛠️">Nothing broke on it yet.</Empty>
           )}
         </Panel>
+
+        {SHOW_SPARES && (
+          <Panel
+            label="Spares"
+            className="span-5"
+            action={
+              <button className="button small" onClick={() => open(<SpareForm heliId={heli.id} />)}>
+                <Plus size={14} /> Add
+              </button>
+            }
+          >
+            {spares.length ? (
+              <div className="bar-list">
+                {spares.map(spare => {
+                  const stock = spareStock(spare, doc.sorties);
+                  return (
+                    <button
+                      key={spare.id}
+                      className="bar-line plain-button"
+                      onClick={() => open(<SpareForm spare={spare} />)}
+                    >
+                      <span className="name">
+                        {spare.name}
+                        {!spare.heliId && <span className="muted">· any heli</span>}
+                      </span>
+                      <span className={`pill ${stock <= 0 ? 'critical' : stock < spare.min ? 'caution' : 'good'}`}>
+                        {Math.max(0, stock)} in stock
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <Empty emoji="🧰">No spares for it.</Empty>
+            )}
+          </Panel>
+        )}
 
         {months.length > 0 && (
           <Panel label="Airtime" note="Month by month" className="span-12">

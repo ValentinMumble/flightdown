@@ -187,6 +187,10 @@ export interface PackRecord {
   /** Its first resistance reading and its latest: twice the first is worn. */
   first?: number;
   latest?: number;
+  /** Every flight's resistance (a cell's share, mΩ), mAh used and lowest cell (V), oldest first. */
+  readings: number[];
+  mahs: number[];
+  lows: number[];
 }
 
 /** Every pack's record, from the logs that name it by its button, oldest sortie first. */
@@ -195,7 +199,15 @@ export function packRecords(sorties: Sortie[], batteries: Battery[]): PackRecord
   const key = (battery: Battery, pack: Pack) => `${battery.id}#${pack.number}`;
   for (const battery of batteries) {
     for (const pack of battery.packs)
-      records.set(key(battery, pack), {battery, pack, label: packLabel(battery, pack), flights: 0});
+      records.set(key(battery, pack), {
+        battery,
+        pack,
+        label: packLabel(battery, pack),
+        flights: 0,
+        readings: [],
+        mahs: [],
+        lows: [],
+      });
   }
   for (const sortie of [...sorties].sort((left, right) => left.date.localeCompare(right.date))) {
     for (const flown of groupPacks(sortie.telemetry)) {
@@ -205,6 +217,10 @@ export function packRecords(sorties: Sortie[], batteries: Battery[]): PackRecord
       if (!found || !record) continue;
       record.flights += 1;
       record.last = day;
+      if (flown.mAh !== undefined) record.mahs.push(flown.mAh);
+      if (flown.minVoltage !== undefined && flown.minVoltage > 0.5) {
+        record.lows.push(flown.minVoltage / found.battery.cells);
+      }
       const readings = flown.files.flatMap(file =>
         file.resistance === undefined ? [] : [file.resistance / found.battery.cells],
       );
@@ -212,6 +228,7 @@ export function packRecords(sorties: Sortie[], batteries: Battery[]): PackRecord
       const median = readings.sort((left, right) => left - right)[Math.floor(readings.length / 2)];
       record.first ??= median;
       record.latest = median;
+      record.readings.push(median);
     }
   }
   return [...records.values()];

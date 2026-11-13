@@ -354,6 +354,32 @@
   gap: 16px;
 }
 
+/* The sortie's packs in a word or two each, under the bars: a row a pack, its notes as pills. */
+.pack-debrief {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pack-debrief-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  font-size: 0.8125rem;
+}
+
+.pack-debrief-name {
+  color: var(--ink-2);
+}
+
+.pack-debrief-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 /* The sortie's flips and rolls, a line across under its packs and the ring. */
 .debrief-flips {
   grid-column: 1 / -1;
@@ -1465,47 +1491,92 @@
   align-items: flex-start;
 }
 
-/* The replay's small heli, seen from behind in a dial's round frame with a horizon: it rolls, tilts and turns with
-   the sticks, and turns over (violet) while inverted. */
-.attitude-frame {
+/*
+ * The replay's attitude indicator: a ball of sky and ground behind a round window, banked and pitched by the sticks
+ * and turned over through each flip, a fixed bank scale around it, the small heli fixed in the middle as the aircraft
+ * symbol (it turns violet while inverted).
+ */
+.adi {
   position: relative;
   width: 140px;
   height: 140px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--bezel-strong);
+  background: var(--panel-2);
+}
+
+.adi-ball {
+  position: absolute;
+  left: -70px;
+  top: -70px;
+  width: 280px;
+  height: 280px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--accent) 7%, var(--panel-2)) 50%,
+    color-mix(in srgb, var(--accent) 24%, var(--panel)) 50%
+  );
+  transition: transform 0.12s linear;
+}
+
+.adi-horizon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1.5px solid var(--accent);
+}
+
+.adi-rung {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* The bank pointer, on the ball at the top of the window: it swings along the fixed scale. */
+.adi-pointer {
+  position: absolute;
+  left: 50%;
+  top: 73px;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--accent);
+}
+
+.adi-scale {
+  position: absolute;
+  inset: 0;
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.adi-heli {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  border: 1px solid var(--bezel-strong);
-  background: radial-gradient(circle, var(--panel-2) 0%, var(--page) 72%);
-}
-
-.attitude-frame::before {
-  content: '';
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  top: 50%;
-  border-top: 1px dashed var(--bezel-strong);
-}
-
-.attitude-heli {
-  width: 112px;
-  height: 112px;
-  color: var(--accent);
-  filter: drop-shadow(0 0 3px currentColor);
-  transition:
-    transform 0.12s linear,
-    color 0.2s;
+  color: var(--ink);
+  filter: drop-shadow(0 0 3px var(--page));
 }
 
 /* Named in full: the sticks' own rule (.stick svg, and the phone's) would size it like a stick box. */
-.stick.attitude .attitude-heli svg {
+.stick.attitude .adi-heli svg {
   display: block;
+  width: 70px;
+  height: 70px;
+}
+
+.stick.attitude .adi-scale {
   width: 100%;
   height: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .attitude-heli {
+  .adi-ball {
     transition: none;
   }
 }
@@ -1566,6 +1637,208 @@
   fill: var(--muted);
   font-family: var(--mono);
   font-size: 8px;
+}
+
+/*
+ * The caution and warning panel: a grid of labelled lights, dark when off, lit amber for a caution, red for a
+ * warning, green for an advisory, as a cockpit's annunciator panel.
+ */
+.caution-panel {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--bezel);
+}
+
+.caution-lights {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+
+.caution-light {
+  display: grid;
+  place-items: center;
+  min-height: 34px;
+  padding: 4px 6px;
+  border: 1px solid var(--bezel-strong);
+  border-radius: var(--radius-small);
+  background: var(--panel);
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  opacity: 0.55;
+}
+
+.caution-light.advisory,
+.caution-light.caution,
+.caution-light.warning {
+  opacity: 1;
+  color: var(--page);
+  font-weight: 600;
+}
+
+.caution-light.advisory {
+  background: var(--good);
+  border-color: var(--good);
+}
+
+.caution-light.caution {
+  background: var(--caution);
+  border-color: var(--caution);
+}
+
+.caution-light.warning {
+  background: var(--warning);
+  border-color: var(--warning);
+}
+
+.caution-why {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+.caution-why b {
+  font-family: var(--display);
+  font-weight: 400;
+  margin-right: 6px;
+}
+
+.caution-why .caution b {
+  color: var(--caution);
+}
+
+.caution-why .warning b {
+  color: var(--warning);
+}
+
+.caution-why .advisory b {
+  color: var(--good);
+}
+
+/* The events as marks along the top of the recorder, at their time and as long as they lasted. */
+.event-strip {
+  position: relative;
+  height: 8px;
+  margin-bottom: 4px;
+}
+
+.event-mark {
+  position: absolute;
+  top: 0;
+  height: 6px;
+  border-radius: 2px;
+}
+
+.event-mark.caution {
+  background: var(--caution);
+}
+
+.event-mark.warning {
+  background: var(--warning);
+}
+
+.event-list {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8125rem;
+}
+
+.event-row {
+  display: grid;
+  grid-template-columns: 44px 104px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+
+.event-kind {
+  font-family: var(--display);
+}
+
+.event-kind.caution {
+  color: var(--caution);
+}
+
+.event-kind.warning {
+  color: var(--warning);
+}
+
+/* Debrief's pack health: a row a pack, the dead ones faded. */
+.health-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.health-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(110px, 1fr) repeat(4, minmax(60px, 0.6fr));
+  gap: 12px;
+  align-items: center;
+  padding: 9px 0;
+  border-top: 1px solid var(--bezel);
+  font-size: 0.875rem;
+}
+
+.health-row.head {
+  border-top: 0;
+  font-family: var(--mono);
+  font-size: 0.71875rem;
+  color: var(--label);
+  text-transform: lowercase;
+}
+
+.health-row > :not(:first-child) {
+  font-family: var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+.health-row.dead {
+  opacity: 0.5;
+}
+
+.health-row small.caution {
+  color: var(--caution);
+}
+
+.health-row small.warning {
+  color: var(--warning);
+}
+
+/* On a phone: the pack, its resistance, and the flights left. */
+@media (max-width: 560px) {
+  .health-row {
+    grid-template-columns: minmax(0, 1fr) minmax(96px, auto) minmax(64px, auto);
+  }
+
+  .health-row > :nth-child(3),
+  .health-row > :nth-child(5),
+  .health-row > :nth-child(6) {
+    display: none;
+  }
+}
+
+/* A heli's part times: a part a line, its bar towards how long it lasts there (amber once past). */
+.part-times {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.part-time .bar-track {
+  margin: 5px 0 3px;
+}
+
+.part-time-note {
+  font-size: 0.75rem;
 }
 
 /* The recorder's span: the flight only, or the whole log. */

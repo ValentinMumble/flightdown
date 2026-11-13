@@ -2,7 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {Trash} from 'lucide-react';
 import type {TelemetryLog, TelemetrySeries} from '../types';
 import {useStore} from '../data/store';
-import {buttonBattery, groupPacks, joinSeries, packName, packUsed} from '../model/packs';
+import {buttonBattery, groupPacks, joinSeries, packName, packRecords, packUsed} from '../model/packs';
 import {formatTimer, plural} from '../model/format';
 import {TelemetryCharts} from './charts/TelemetryCharts';
 
@@ -48,6 +48,7 @@ export function TelemetryPacks({
 }) {
   const {doc, loadSeries} = useStore();
   const flights = useMemo(() => groupPacks(logs), [logs]);
+  const records = useMemo(() => packRecords(doc.sorties, doc.batteries), [doc.sorties, doc.batteries]);
   // Each file's samples once loaded, null when they could not be read.
   const [loaded, setLoaded] = useState<Record<string, TelemetrySeries | null>>({});
   const [chosen, setChosen] = useState(0);
@@ -95,6 +96,23 @@ export function TelemetryPacks({
   // The pack its button names, its size and cells; else the heli's usual one.
   const named = buttonBattery(flight.packButton ?? 0, doc.batteries, flight.start?.slice(0, 10));
   const flightPack = named ? {cells: named.battery.cells, capacity: named.battery.capacity} : pack;
+  // The pack's resistance from this log (the whole pack, Ω), for the power margin, and how worn that is against its
+  // first reading and the freshest pack's (a cell's share each), for the caution panel.
+  const readings = flight.files.flatMap(file => (file.resistance === undefined ? [] : [file.resistance]));
+  const ohms = readings.length
+    ? readings.sort((left, right) => left - right)[Math.floor(readings.length / 2)] / 1000
+    : undefined;
+  const record =
+    named && records.find(one => one.battery.id === named.battery.id && one.pack.number === named.pack.number);
+  const freshest = Math.min(...records.filter(one => !one.pack.dead && one.latest).map(one => one.latest!));
+  const cellMilliohms = ohms !== undefined && named ? (ohms * 1000) / named.battery.cells : undefined;
+  const wear =
+    cellMilliohms === undefined
+      ? undefined
+      : Math.max(
+          record?.first ? cellMilliohms / record.first : 1,
+          Number.isFinite(freshest) ? cellMilliohms / freshest : 1,
+        );
   // A pack its button names has its size: the replay offers no other to pick.
   const figures = [
     {label: 'Used', value: used !== undefined ? `${used} mAh` : undefined},
@@ -190,6 +208,8 @@ export function TelemetryPacks({
             mAh={used}
             pack={flightPack}
             packs={named ? [] : packs}
+            ohms={ohms}
+            wear={wear}
             summary={summary}
             details={details}
           />

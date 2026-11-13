@@ -8,6 +8,8 @@ import {StickMap} from './StickMap';
 import {formatTimer} from '../../model/format';
 import {useChartInk} from '../colors';
 import {StickReplay} from './StickReplay';
+import {cautions, exceedances} from '../../model/cockpit';
+import {CautionPanel, EventList, EventStrip} from './FlightMonitor';
 
 /** Avionics colours, a sensor each, as on a multi-function display. */
 const TRACE: Partial<Record<Channel, string>> = {
@@ -40,6 +42,8 @@ export function TelemetryCharts({
   packs = [],
   summary,
   details,
+  ohms,
+  wear,
 }: {
   series: TelemetrySeries;
   /** The mAh the pack used, for the notes. */
@@ -51,6 +55,10 @@ export function TelemetryCharts({
   summary?: ReactNode;
   /** The pack's file (its name, when it started, how to remove it), at the end. */
   details?: ReactNode;
+  /** The pack's resistance from this log (the whole pack, Ω), for the replay's power margin. */
+  ohms?: number;
+  /** Its resistance against its first reading or the freshest pack's, for the caution panel. */
+  wear?: number;
 }) {
   const ink = useChartInk();
   // The replay's moment, a line across every lane: moved in CSS (--cursor, 0 to 1 along the time axis), so the
@@ -99,6 +107,9 @@ export function TelemetryCharts({
   );
 
   const insights = useMemo(() => telemetryInsights({mAh}, series, pack), [mAh, series, pack]);
+  // The whole log's exceedances and caution lights (not only the part shown).
+  const events = useMemo(() => exceedances(series, pack), [series, pack]);
+  const lights = useMemo(() => cautions(series, pack, wear), [series, pack, wear]);
   // Upside down: a pale band across every lane, named on the top one.
   const inverted = useMemo(() => invertedStretches(series), [series]);
 
@@ -127,6 +138,7 @@ export function TelemetryCharts({
         </div>
       )}
       <div className="telemetry-lanes" ref={lanes}>
+        <EventStrip events={events} first={first} last={last} />
         {channels.map((channel, index) => {
           const {label, unit} = CHANNELS[channel];
           const stroke = TRACE[channel] ?? '#e8eef5';
@@ -218,7 +230,8 @@ export function TelemetryCharts({
           );
         })}
       </div>
-      <StickReplay key={shown.time[0]} series={shown} pack={pack} packs={packs} onTime={moveCursor} />
+      <StickReplay key={shown.time[0]} series={shown} pack={pack} packs={packs} ohms={ohms} onTime={moveCursor} />
+      <CautionPanel lights={lights} />
       {summary}
       {insights.length > 0 && (
         <div className="insights">
@@ -232,6 +245,7 @@ export function TelemetryCharts({
           ))}
         </div>
       )}
+      <EventList events={events} />
       <StickMap series={shown} />
       {details}
     </>

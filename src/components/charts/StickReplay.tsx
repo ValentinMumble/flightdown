@@ -3,6 +3,7 @@ import {Pause, Play, RotateCcw} from 'lucide-react';
 import type {TelemetrySeries} from '../../types';
 import {sampleAt} from '../../model/telemetry';
 import {turnOvers} from '../../model/insights';
+import {availablePower} from '../../model/cockpit';
 import {INVERTED} from '../PackTimes';
 import {batteryAt, usedMah} from '../../model/battery';
 import {formatNumber, formatTimer} from '../../model/format';
@@ -12,7 +13,7 @@ const SIZE = 150;
 /** The trail behind each stick: this many seconds, a point every tenth of one. */
 const TRAIL = 1.5;
 const SPEEDS = [1, 2, 4];
-/** Degrees the small heli rolls, tilts and turns a percent of stick: 35° rolled at full aileron. */
+/** Degrees the attitude ball banks and pitches a percent of stick: 35° banked at full aileron. */
 const ROLL = 0.35;
 /**
  * Seconds the small heli takes to turn over, centred on when the pitch crosses to the other side: about a flip's or a
@@ -20,7 +21,10 @@ const ROLL = 0.35;
  */
 const FLIP = 0.6;
 const TILT = 0.3;
-const TURN = 0.35;
+/** The attitude ball's pitch scale: pixels a degree. */
+const PITCH_PX = 1.2;
+/** The bank scale's ticks, in degrees either side of level. */
+const BANK_TICKS = [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60];
 
 /**
  * A small heli seen from behind, in thin lines like a vector screen's: the rotor's disc, its blades tapering out from
@@ -107,9 +111,9 @@ function Gimbal({points, color, label}: {points: {x: number; y: number}[]; color
   );
 }
 
-/** A round top for the current dial just above the flight's peak, in at most six steps of 1, 2, 5, 10, 20 or 50 A. */
-function currentScale(peak: number) {
-  const step = [1, 2, 5, 10, 20, 50].find(size => Math.ceil(peak / size) <= 6) ?? 100;
+/** A round top for the power dial just above the flight's peak, in at most six steps of 10 to 500 W. */
+function powerScale(peak: number) {
+  const step = [10, 20, 50, 100, 200, 500].find(size => Math.ceil(peak / size) <= 6) ?? 1000;
   return {step, max: Math.max(1, Math.ceil(peak / step)) * step};
 }
 
@@ -130,10 +134,13 @@ export function StickReplay({
   series,
   pack = {},
   packs = [],
+  ohms,
   onTime,
 }: {
   series: TelemetrySeries;
   pack?: {cells?: number; capacity?: number};
+  /** The pack's resistance (the whole pack, Ω), read from this log: what the power margin is worked out from. */
+  ohms?: number;
   /** The pack sizes the heli flies (mAh): the log does not say which one this flight used, so it can be picked. */
   packs?: number[];
   onTime: (second: number | null) => void;
@@ -164,9 +171,12 @@ export function StickReplay({
       ),
     [turns],
   );
-  // The current dial ends just past the flight's highest draw, which a bug marks.
-  const peakCurrent = useMemo(() => Math.max(0, ...(series.channels.current ?? [0])), [series]);
-  const amps = currentScale(peakCurrent);
+  // The power dial ends just past the flight's highest draw.
+  const peakPower = useMemo(() => {
+    const {voltage = [], current = []} = series.channels;
+    return Math.max(0, ...current.map((amps, index) => amps * (voltage[index] ?? 0)));
+  }, [series]);
+  const watts = powerScale(peakPower);
   const used = useMemo(() => usedMah(series), [series]);
   const [capacity, setCapacity] = useState(pack.capacity);
   const [playing, setPlaying] = useState(false);
@@ -212,11 +222,10 @@ export function StickReplay({
   const battery = batteryAt(series, used, second, {...pack, capacity});
   const spent = used ? sampleAt(time, used, second) : null;
   const inverted = turns.some(turn => second >= turn.start && second <= turn.end);
-  // The heli seen from behind: rolled by the aileron, tilted by the elevator, turned by the rudder, and turned over
-  // through each flip the way the sticks took it (a perspective, so a tilt shows).
+  // The attitude ball: banked against the aileron, its horizon down as the nose comes up (the elevator back), and
+  // turned over through each flip the way the sticks took it.
   const roll = at('aileron', second) * ROLL;
   const tilt = at('elevator', second) * TILT;
-  const turn = channels.rudder?.length ? at('rudder', second) * TURN : 0;
   // How far each turn over has gone by now (all of it once past, none before).
   let rolledOver = 0;
   let flippedOver = 0;
@@ -225,7 +234,12 @@ export function StickReplay({
     if (flip.rolled) rolledOver += done;
     else flippedOver += done;
   }
-  const attitude = `perspective(360px) rotateZ(${rolledOver + roll}deg) rotateX(${flippedOver + tilt}deg) rotateY(${turn}deg)`;
+  const ball = `perspective(400px) rotateZ(${-(rolledOver + roll)}deg) rotateX(${flippedOver}deg) translateY(${-tilt * PITCH_PX}px)`;
+  // The power drawn now, and what the pack could still give before a cell drops to 3.3 V.
+  const amps = at('current', second);
+  const volts = at('voltage', second);
+  const power = amps * volts;
+  const available = availablePower(volts, amps, ohms, pack.cells);
   const readout = [
     channels.voltage?.length && `${formatNumber(at('voltage', second), 2)} V`,
     spent !== null && `${formatNumber(spent)} mAh used`,
@@ -258,20 +272,23 @@ export function StickReplay({
               </figcaption>
             </figure>
           ) : null}
-          {channels.current?.length ? (
+          {channels.current?.length && channels.voltage?.length ? (
             <figure className="stick dial">
               <Dial
-                value={at('current', second)}
-                max={amps.max}
-                step={amps.step}
+                value={power}
+                max={watts.max}
+                step={watts.step}
                 color="#ffb020"
-                readout={`${formatNumber(at('current', second), 1)} A`}
-                label="Current"
-                bug={peakCurrent}
+                readout={`${formatNumber(power)} W`}
+                label="Power"
+                bug={available ?? undefined}
               />
               <figcaption>
-                <b>Current</b>
-                <span>peak {formatNumber(peakCurrent, 1)} A</span>
+                <b>Power</b>
+                <span>
+                  {formatNumber(amps, 1)} A
+                  {available !== null && ` · ${formatNumber(Math.max(0, available - power))} W spare`}
+                </span>
               </figcaption>
             </figure>
           ) : null}
@@ -296,8 +313,34 @@ export function StickReplay({
             </figure>
           )}
           <figure className="stick attitude">
-            <div className="attitude-frame" aria-hidden>
-              <div className="attitude-heli" style={{transform: attitude, color: inverted ? INVERTED : undefined}}>
+            <div className="adi" aria-hidden>
+              <div className="adi-ball" style={{transform: ball}}>
+                <span className="adi-horizon" />
+                {[-20, -10, 10, 20].map(degrees => (
+                  <span
+                    key={degrees}
+                    className="adi-rung"
+                    style={{top: `calc(50% - ${degrees * PITCH_PX}px)`, width: Math.abs(degrees) === 10 ? 30 : 48}}
+                  />
+                ))}
+                <span className="adi-pointer" />
+              </div>
+              <svg viewBox="0 0 140 140" className="adi-scale">
+                {BANK_TICKS.map(degrees => {
+                  const radians = ((degrees - 90) * Math.PI) / 180;
+                  const inner = degrees % 30 === 0 ? 58 : 62;
+                  return (
+                    <line
+                      key={degrees}
+                      x1={70 + Math.cos(radians) * inner}
+                      y1={70 + Math.sin(radians) * inner}
+                      x2={70 + Math.cos(radians) * 68}
+                      y2={70 + Math.sin(radians) * 68}
+                    />
+                  );
+                })}
+              </svg>
+              <div className="adi-heli" style={inverted ? {color: INVERTED} : undefined}>
                 <RearView />
               </div>
             </div>
