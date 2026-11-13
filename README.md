@@ -23,9 +23,10 @@ rolling counter of minutes in the air.
   6-position button pressed for it (packs get buttons in the Hangar; files a few seconds apart are one pack, the radio
   splits a log when the link drops, unless their buttons differ), and for the chosen pack: voltage, current, signal and
   throttle as lanes of one recorder (each reads out at the cursor; the flight only, the quiet start and end cut, or the
-  whole log), a map of the sticks and a replay of them with round
-  throttle, current and battery dials (the battery from the pack its button names: its charge at rest when plugged in,
-  less the mAh used; with a cursor on the lanes), and what the log says: the pack ran flat, how much of it was used, sag
+  whole log), under it a replay of the sticks with round throttle, current and battery dials (the battery from the pack
+  its button names: its charge at rest when plugged in, less the mAh used; a cursor on the lanes) and a small heli that
+  rolls, tilts and turns with the sticks, on its back while inverted, then its figures, a map of the sticks, and what
+  the log says: the pack ran flat, how much of it was used, sag
   per cell, when 80 % was used (a timer that fits), pack resistance, the radio link, the time upside down (the
   collective held past the other side of hover under load for 3 s or more, shaded on the lanes). A sortie flown with
   logs shows its exact air time, each pack as a bar (named by its button, the inverted part in violet) and the share

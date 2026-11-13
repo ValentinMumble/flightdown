@@ -624,6 +624,12 @@
     height: auto;
   }
 
+  /* The small heli: a row of its own under the three dials, centred. */
+  .dial-row .attitude {
+    grid-column: 1 / -1;
+    align-items: center;
+  }
+
   /* A dial a third of a phone wide: only empty, half and full are numbered, large enough to read. */
   .dial-number {
     font-size: 0.65625rem;

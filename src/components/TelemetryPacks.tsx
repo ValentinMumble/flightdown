@@ -33,7 +33,7 @@ function Sparkline({series, low, high}: {series?: TelemetrySeries | null; low: n
 
 /**
  * A sortie's telemetry, a pack at a time: a card for each pack flown (files a few seconds apart joined into one), and
- * under them the chosen pack's figures, notes, traces, stick map and replay.
+ * under them the chosen pack's recorder, figures, notes, stick map and replay, and its file.
  */
 export function TelemetryPacks({
   logs,
@@ -95,6 +95,7 @@ export function TelemetryPacks({
   // The pack its button names, its size and cells; else the heli's usual one.
   const named = buttonBattery(flight.packButton ?? 0, doc.batteries, flight.start?.slice(0, 10));
   const flightPack = named ? {cells: named.battery.cells, capacity: named.battery.capacity} : pack;
+  // A pack its button names has its size: the replay offers no other to pick.
   const figures = [
     {label: 'Used', value: used !== undefined ? `${used} mAh` : undefined},
     {label: 'Lowest voltage', value: flight.minVoltage !== undefined ? `${flight.minVoltage} V` : undefined},
@@ -102,6 +103,52 @@ export function TelemetryPacks({
     {label: 'Average current', value: flight.avgCurrent !== undefined ? `${flight.avgCurrent} A` : undefined},
     {label: 'Weakest signal', value: flight.minRssi !== undefined ? `${flight.minRssi} dB` : undefined},
   ].filter(figure => figure.value);
+
+  const summary = (
+    <div className="figures telemetry-figures">
+      {figures.map(figure => (
+        <div key={figure.label}>
+          <div className="figure-label">{figure.label}</div>
+          <div className="figure-value">{figure.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+  const details = (
+    <div className="telemetry-file">
+      <div className="telemetry-head">
+        <div>
+          <div className="row-title">
+            {flight.files.length > 1 ? `One pack in ${flight.files.length} files` : flight.files[0].name}
+          </div>
+          <div className="row-sub">
+            {flight.start ? `Started ${flight.start.slice(11, 16)} · ` : ''}
+            {formatTimer(flight.duration)} recorded · {plural(flight.samples, 'sample')}
+          </div>
+        </div>
+        {flight.files.length === 1 && (
+          <button className="icon-button" aria-label="Remove this log" onClick={() => onRemove(flight.files[0].id)}>
+            <Trash size={15} />
+          </button>
+        )}
+      </div>
+      {flight.files.length > 1 && (
+        <div className="pack-files">
+          {flight.files.map(file => (
+            <div key={file.id} className="pack-file">
+              <span className="pack-file-name">{file.name}</span>
+              <span className="muted tabular">
+                {file.start?.slice(11, 19)} · {formatTimer(file.duration)}
+              </span>
+              <button className="icon-button" aria-label={`Remove ${file.name}`} onClick={() => onRemove(file.id)}>
+                <Trash size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -132,51 +179,26 @@ export function TelemetryPacks({
       )}
 
       <div className="telemetry-log">
-        <div className="telemetry-head">
-          <div>
-            <div className="row-title">
-              {flight.files.length > 1 ? `One pack in ${flight.files.length} files` : flight.files[0].name}
-            </div>
-            <div className="row-sub">
-              {flight.start ? `Started ${flight.start.slice(11, 16)} · ` : ''}
-              {formatTimer(flight.duration)} recorded · {plural(flight.samples, 'sample')}
-            </div>
-          </div>
-          {flight.files.length === 1 && (
-            <button className="icon-button" aria-label="Remove this log" onClick={() => onRemove(flight.files[0].id)}>
-              <Trash size={15} />
-            </button>
-          )}
-        </div>
-        {flight.files.length > 1 && (
-          <div className="pack-files">
-            {flight.files.map(file => (
-              <div key={file.id} className="pack-file">
-                <span className="pack-file-name">{file.name}</span>
-                <span className="muted tabular">
-                  {file.start?.slice(11, 19)} · {formatTimer(file.duration)}
-                </span>
-                <button className="icon-button" aria-label={`Remove ${file.name}`} onClick={() => onRemove(file.id)}>
-                  <Trash size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="figures telemetry-figures">
-          {figures.map(figure => (
-            <div key={figure.label}>
-              <div className="figure-label">{figure.label}</div>
-              <div className="figure-value">{figure.value}</div>
-            </div>
-          ))}
-        </div>
         {series === undefined ? (
           <div className="muted">Loading the samples…</div>
         ) : series === null ? (
           <div className="muted">The samples of this pack could not be read.</div>
         ) : (
-          <TelemetryCharts key={series.id} series={series} mAh={used} pack={flightPack} packs={packs} />
+          <TelemetryCharts
+            key={series.id}
+            series={series}
+            mAh={used}
+            pack={flightPack}
+            packs={named ? [] : packs}
+            summary={summary}
+            details={details}
+          />
+        )}
+        {!series && (
+          <>
+            {summary}
+            {details}
+          </>
         )}
       </div>
     </>

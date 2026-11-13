@@ -1,15 +1,5 @@
-import {useMemo, useState} from 'react';
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ReferenceArea,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import {useCallback, useMemo, useRef, useState, type ReactNode} from 'react';
+import {Area, AreaChart, CartesianGrid, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import type {TelemetrySeries} from '../../types';
 import {activeSpan, CHANNELS, type Channel} from '../../model/telemetry';
 import {invertedStretches, telemetryInsights} from '../../model/insights';
@@ -40,13 +30,16 @@ const reading = (channel: Channel, value: number) =>
 /**
  * One pack's log as a flight data recorder: a thin lane a sensor, stacked on one time axis, each with its own scale
  * (never two on one chart) and its reading at the shared cursor, the time upside down as pale bands across them, then
- * the sticks. It shows the flight only (the quiet start and end cut, see activeSpan), or the whole log on demand.
+ * the replay of the sticks, its figures and notes, the stick map, and its file. It shows the flight only (the quiet start and end cut, see
+ * activeSpan), or the whole log on demand.
  */
 export function TelemetryCharts({
   series,
   mAh,
   pack,
   packs = [],
+  summary,
+  details,
 }: {
   series: TelemetrySeries;
   /** The mAh the pack used, for the notes. */
@@ -54,10 +47,15 @@ export function TelemetryCharts({
   pack?: {cells?: number; capacity?: number};
   /** Every pack size the heli flies (mAh). */
   packs?: number[];
+  /** The pack's figures, under the lanes. */
+  summary?: ReactNode;
+  /** The pack's file (its name, when it started, how to remove it), at the end. */
+  details?: ReactNode;
 }) {
   const ink = useChartInk();
-  // The replay's moment, shown as a cursor on every trace.
-  const [cursor, setCursor] = useState<number | null>(null);
+  // The replay's moment, a line across every lane: moved in CSS (--cursor, 0 to 1 along the time axis), so the
+  // charts are not drawn again on each frame of the replay.
+  const lanes = useRef<HTMLDivElement>(null);
   const span = useMemo(() => activeSpan(series), [series]);
   const [whole, setWhole] = useState(false);
   // The samples drawn: the flight only, unless the whole log is asked for. Times stay the log's own.
@@ -72,6 +70,22 @@ export function TelemetryCharts({
       ),
     };
   }, [series, span, whole]);
+
+  const first = shown.time[0] ?? 0;
+  const last = shown.time[shown.time.length - 1] ?? 0;
+  const moveCursor = useCallback(
+    (second: number | null) => {
+      const node = lanes.current;
+      if (!node) return;
+      if (second === null || last <= first) {
+        delete node.dataset.cursor;
+        return;
+      }
+      node.dataset.cursor = '';
+      node.style.setProperty('--cursor', String(Math.min(1, Math.max(0, (second - first) / (last - first)))));
+    },
+    [first, last],
+  );
 
   const rows = useMemo(
     () =>
@@ -91,31 +105,28 @@ export function TelemetryCharts({
   const channels = ORDER.filter(channel => shown.channels[channel]?.length);
   return (
     <>
-      {insights.length > 0 && (
-        <div className="insights">
-          {insights.map(insight => (
-            <div key={insight.text} className={`insight ${insight.tone}`}>
-              <span className="insight-icon" aria-hidden>
-                {insight.icon}
-              </span>
-              <span>{insight.text}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {span && (
+      {(span || inverted.length > 0) && (
         <div className="lanes-span">
-          <button type="button" className="chip" aria-pressed={!whole} onClick={() => setWhole(current => !current)}>
-            Flight only
-          </button>
-          <span className="muted tabular">
-            {whole
-              ? `The whole log, ${formatTimer(series.time[series.time.length - 1] - series.time[0])}`
-              : `${formatTimer(span.from)} to ${formatTimer(span.to)} of ${formatTimer(series.time[series.time.length - 1])}`}
-          </span>
+          {span && (
+            <button type="button" className="chip" aria-pressed={!whole} onClick={() => setWhole(current => !current)}>
+              Flight only
+            </button>
+          )}
+          {span && (
+            <span className="muted tabular">
+              {whole
+                ? `The whole log, ${formatTimer(series.time[series.time.length - 1] - series.time[0])}`
+                : `${formatTimer(span.from)} to ${formatTimer(span.to)} of ${formatTimer(series.time[series.time.length - 1])}`}
+            </span>
+          )}
+          {inverted.length > 0 && (
+            <span className="lane-legend">
+              <i style={{background: INVERTED}} aria-hidden /> inverted
+            </span>
+          )}
         </div>
       )}
-      <div className="telemetry-lanes">
+      <div className="telemetry-lanes" ref={lanes}>
         {channels.map((channel, index) => {
           const {label, unit} = CHANNELS[channel];
           const stroke = TRACE[channel] ?? '#e8eef5';
@@ -185,14 +196,8 @@ export function TelemetryCharts({
                         fillOpacity={0.14}
                         stroke="none"
                         ifOverflow="hidden"
-                        label={
-                          index === 0
-                            ? {value: 'inverted', position: 'insideTopLeft', fill: INVERTED, fontSize: 10}
-                            : undefined
-                        }
                       />
                     ))}
-                    {cursor !== null && <ReferenceLine x={cursor} stroke="#5cff8d" strokeWidth={1.5} />}
                     <Area
                       type="monotone"
                       dataKey={channel}
@@ -207,13 +212,28 @@ export function TelemetryCharts({
                     />
                   </AreaChart>
                 </ResponsiveContainer>
+                <div className="lane-cursor" aria-hidden />
               </div>
             </div>
           );
         })}
       </div>
+      <StickReplay key={shown.time[0]} series={shown} pack={pack} packs={packs} onTime={moveCursor} />
+      {summary}
+      {insights.length > 0 && (
+        <div className="insights">
+          {insights.map(insight => (
+            <div key={insight.text} className={`insight ${insight.tone}`}>
+              <span className="insight-icon" aria-hidden>
+                {insight.icon}
+              </span>
+              <span>{insight.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <StickMap series={shown} />
-      <StickReplay series={shown} pack={pack} packs={packs} onTime={setCursor} />
+      {details}
     </>
   );
 }
