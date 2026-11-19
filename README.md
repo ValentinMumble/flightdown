@@ -70,7 +70,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   sortie then shows its spot from above.
 - **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`): Cockpit, Sorties, Radio, Hangar and More
   (Debrief, Spots, Settings), with a round log button; swipe sideways to change tab. Add it to the home screen: it
-  opens like an app, with the 🚁 icon, and offline at the field.
+  opens like an app, with the 🚁 icon, at once and offline at the field (as in `papyrus/guidelines/web-apps.md`),
+  and reloads into a new deploy by itself.
 
 Visitors see a made-up log, or keep their own in their browser.
 
