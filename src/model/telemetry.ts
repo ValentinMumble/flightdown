@@ -39,6 +39,8 @@ export const CHANNELS = {
   sh: {label: 'Switch SH', unit: '', columns: ['SH']},
   // "6P" until EdgeTX 2.12, which logs the TX16S's knobs and buttons as P1, P2 (the buttons) and P3.
   buttons: {label: '6-position buttons', unit: '', columns: ['6P', 'P2']},
+  // The S1 knob, -1024 to 1024 as the radio reads it: P1 since EdgeTX 2.12 (S1 before).
+  s1: {label: 'S1 knob', unit: '', columns: ['P1', 'S1']},
   // What the radio sends on its first eight channels, in µs (1500 the centre): the Radio tab's Outputs replays them.
   ch1: {label: 'Output CH1', unit: 'µs', columns: ['CH1']},
   ch2: {label: 'Output CH2', unit: 'µs', columns: ['CH2']},

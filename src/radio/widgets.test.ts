@@ -68,6 +68,12 @@ describe('guessSignal', () => {
     expect(guessSignal('mAh', signals)).toBe('capacity');
   });
 
+  it('turns the S1 knob as the pack logged it', () => {
+    const logged = {id: 'pack', time: [0, 1], channels: {voltage: [12, 12], s1: [-10, 512]}};
+    expect(guessSignal('S1', packSignals(logged))).toBe('s1');
+    expect(sourceValue(logged, 's1', 1)).toBe(512);
+  });
+
   it('leaves a source set by hand when the pack has nothing for it', () => {
     expect(guessSignal('RSSI', signals)).toBe('');
     expect(guessSignal('SA', signals)).toBe('');

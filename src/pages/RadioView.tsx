@@ -184,8 +184,8 @@ const restingValue = (name: string) => RESTING[name] ?? (TWO_POSITIONS.includes(
 
 /** SH springs back: down only while held. */
 const MOMENTARY = ['SH'];
-/** What a pack replayed drives again when chosen, whatever was moved by hand: the sticks and the 6-position buttons. */
-const FROM_THE_PACK = ['Ail', 'Ele', 'Thr', 'Rud', '6P'];
+/** What a pack replayed drives again when chosen, whatever was moved by hand: the sticks, buttons and S1 knob. */
+const FROM_THE_PACK = ['Ail', 'Ele', 'Thr', 'Rud', '6P', 'S1'];
 /** SH is the rescue switch: its cap is red. */
 const RED_CAPS = ['SH'];
 

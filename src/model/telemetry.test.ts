@@ -59,6 +59,16 @@ describe('readTelemetry', () => {
     expect(read!.log.packButton).toBe(5);
   });
 
+  it('reads the S1 knob from EdgeTX 2.12 logs, where it is P1, as the radio reads it', () => {
+    const lines = [
+      'Date,Time,VFAS(V),P1,P2',
+      '2026-11-20,16:38:43.010,12.4,-10,615',
+      '2026-11-20,16:38:43.210,12.4,512,615',
+    ];
+    const read = readTelemetry(parseCsv(lines.join('\n')), 'M2 EVO-2026-11-20-163843.csv');
+    expect(read!.series.channels.s1).toEqual([-10, 512]);
+  });
+
   it('counts the time in the air from the motor output, low current or not', () => {
     // CH3 at cut (2012 µs, reversed) while the pack draws nothing; on from 2 s to 6 s, drawing 0.5 A at moments.
     const lines = ['Date,Time,Curr(A),CH3(us)'];

@@ -69,12 +69,14 @@ function outputOf(name: string): Channel | null {
  * sensor its channel. Empty when nothing fits, and the source stays set by hand.
  */
 export function guessSignal(name: string, signals: PackSignal[]): PackSignal | '' {
-  // A switch, or the 6-position buttons, the log kept: their real positions.
+  // A switch, the 6-position buttons or the S1 knob, the log kept: their real positions.
   const logged = /^s([a-h])$/i.exec(name)
     ? (`s${name.slice(1).toLowerCase()}` as Channel)
     : /^6p$/i.test(name)
       ? 'buttons'
-      : null;
+      : /^s1$/i.test(name)
+        ? 's1'
+        : null;
   if (logged && signals.includes(logged)) return logged;
   const output = outputOf(name);
   if (output) return signals.includes(output) ? output : '';
