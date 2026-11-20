@@ -657,3 +657,116 @@
 .card::after {
   border-bottom-right-radius: 0;
 }
+
+/* A heli's own hour meter (Cockpit's flight line, the Hangar): the airtime drums, small, its hours in words beside it. */
+.hobbs.small {
+  gap: 2px;
+  padding: 3px;
+  border-radius: 6px;
+  font-size: 1.125rem;
+}
+
+.figure-meter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 2px;
+}
+
+.figure-meter .figure-value {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+/* The Cockpit's last session: its figures, its packs with their notes, then what happened in flight. */
+.session {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.session-pack-time {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.session-events,
+.radio-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.session-events li {
+  padding-left: 10px;
+  border-left: 2px solid var(--caution);
+  color: var(--ink-2);
+}
+
+.session-events li.warning {
+  border-left-color: var(--warning);
+}
+
+.session-event-clock {
+  font-family: var(--mono);
+  color: var(--ink);
+}
+
+/* What changed on the radio since: each commit's first line, linked, and when. */
+.radio-changes li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--bezel);
+}
+
+.radio-changes li:last-child {
+  border-bottom: none;
+}
+
+.radio-changes a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.radio-changes a:hover {
+  text-decoration: underline;
+}
+
+.radio-changes small {
+  color: var(--muted);
+}
+
+/* A heli's data plate: its hour meter, mid-sized, beside its time in the air. */
+.plate-airtime {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+}
+
+.plate-airtime .hobbs {
+  font-size: 2rem;
+}
+
+/* The Sorties page's summary: the sorties shown on a small hour meter, then in words. */
+.summary-meter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+/* A figure with its pictogram before it (the time upside down, a heli on its back). */
+.figure-picto {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

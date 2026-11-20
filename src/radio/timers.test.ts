@@ -30,6 +30,37 @@ const pack =
           : -1024;
 
 describe('ModelTimers', () => {
+  it('runs a throttle-relative timer as fast as its throttle source is open (the K110S: CH9)', () => {
+    const k110s = new ModelTimers(
+      {timers: [{start: 240, swtch: 'NONE', mode: 'THR_REL'}], sensors: [], throttleSource: 'ch(8)'},
+      0,
+    );
+    // CH9 at 50 % open (0 on -1024 to 1024) for 20 s, then full for 10 s: 10 s and 10 s counted.
+    k110s.advance(30, second => source => (source === 'ch(8)' ? (second <= 20 ? 0 : 1024) : 0));
+    expect(k110s.value(0)).toBe(240 - 20);
+  });
+
+  it('does not step again from inside a step when its throttle source asks the timers (the mixer making CH9)', () => {
+    const timers = new ModelTimers(
+      {timers: [{start: 240, swtch: 'NONE', mode: 'THR_REL'}], sensors: [], throttleSource: 'ch(8)'},
+      0,
+    );
+    const read =
+      (second: number): Read =>
+      source => {
+        if (source === 'ch(8)') timers.advance(second, read);
+        return source === 'ch(8)' ? 1024 : 0;
+      };
+    timers.advance(10, read);
+    expect(timers.value(0)).toBe(230);
+  });
+
+  it('runs a THR timer only while the throttle is off its stop', () => {
+    const thr = new ModelTimers({timers: [{start: 0, swtch: 'NONE', mode: 'THR'}], sensors: []}, 0);
+    thr.advance(10, second => source => (source === 'Thr' ? (second <= 4 ? -1024 : 0) : 0));
+    expect(thr.value(0)).toBe(6);
+  });
+
   it('counts down from its start only while its switch is on: the motor on', () => {
     const timers = new ModelTimers(heli, 0);
     timers.advance(10, pack);

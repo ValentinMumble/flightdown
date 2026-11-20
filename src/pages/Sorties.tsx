@@ -7,6 +7,7 @@ import {FlightStrip} from '../components/SortieRow';
 import {SortieForm} from '../components/forms/SortieForm';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {formatAirtime, formatMonth, fromDay, plural} from '../model/format';
+import {MinuteMeter} from '../components/instruments';
 import {monthOf, sortSorties, totals} from '../model/stats';
 import {partKey} from '../model/parts';
 import {sortSpots} from '../model/geo';
@@ -207,9 +208,13 @@ export function Sorties() {
         )}
       </div>
 
-      <div className="summary-line">
-        {plural(shown.sorties, 'sortie')} · {plural(shown.packs, 'pack')} · {formatAirtime(shown.airtime, true)} ·{' '}
-        {plural(shown.crashes, 'crash', 'crashes')}
+      {/* The sorties shown (as filtered) on an hour meter, then in words. */}
+      <div className="summary-line summary-meter">
+        <MinuteMeter seconds={shown.airtime} small />
+        <span>
+          {plural(shown.sorties, 'sortie')} · {plural(shown.packs, 'pack')} · {formatAirtime(shown.airtime, true)} ·{' '}
+          {plural(shown.crashes, 'crash', 'crashes')}
+        </span>
       </div>
 
       {months.length ? (

@@ -99,6 +99,8 @@ export interface CardModel {
   precisions?: number[];
   /** Its timers, the logical switches they may run on (by index, L1 is 0), and the special functions resetting them. */
   timers?: ModelTimer[];
+  /** What its THR and THR_REL timers follow: "Thr", the stick, or an output ("ch(8)" on the K110S). */
+  throttleSource?: string;
   logicalSwitches?: Record<number, LogicalSwitch>;
   timerResets?: {swtch: string; timer: number}[];
   /** Its inputs' names by index (Thr is input 3), its input and mix lines, special functions and curve names. */
@@ -282,6 +284,7 @@ export function readModel(id: string, data: Yaml): CardModel {
       swtch: String(record(timer).swtch ?? 'NONE'),
       mode: String(record(timer).mode ?? 'OFF'),
     })),
+    throttleSource: String(data.thrTraceSrc ?? 'Thr'),
     logicalSwitches: Object.fromEntries(
       entries(data.logicalSw).map(([index, item]) => {
         const logical = record(item);

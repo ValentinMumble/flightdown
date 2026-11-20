@@ -39,6 +39,8 @@ export interface Totals {
   flyingDays: number;
   crashesPerHour: number | null;
   packsPerCrash: number | null;
+  /** Seconds in the air per crash, over the sorties whose crash count is known. */
+  timePerCrash: number | null;
   crashesPerSortie: number | null;
 }
 
@@ -72,6 +74,7 @@ export function totals(sorties: Sortie[]): Totals {
     flyingDays: days.size,
     crashesPerHour: knownAirtime > 0 ? crashes / (knownAirtime / 3600) : null,
     packsPerCrash: crashes > 0 ? knownPacks / crashes : null,
+    timePerCrash: crashes > 0 ? knownAirtime / crashes : null,
     crashesPerSortie: knownSorties > 0 ? crashes / knownSorties : null,
   };
 }
@@ -128,8 +131,9 @@ export interface TrendPoint {
   date: string;
   /** Crashes per hour over the window ending with this sortie. */
   rate: number;
-  /** Packs flown per crash over the same window. */
+  /** Packs flown per crash over the same window, and seconds in the air per crash. */
   packsPerCrash: number | null;
+  timePerCrash: number | null;
   /** Crashes every ten packs over the same window: the unit a pilot counts in. */
   per10: number;
 }
@@ -150,6 +154,7 @@ export function crashTrend(sorties: Sortie[], window = 10): TrendPoint[] {
       date: known[index].date,
       rate: crashes / (time / 3600),
       packsPerCrash: crashes ? packs / crashes : null,
+      timePerCrash: crashes ? time / crashes : null,
       per10: (crashes / packs) * 10,
     });
   }

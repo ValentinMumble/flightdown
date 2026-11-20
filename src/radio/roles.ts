@@ -20,9 +20,9 @@ export type SwitchRole = {
 
 /**
  * The M2 EVO and the M4 share one set-up, all but their idle up throttles (flat curves for the ESC's governor, as % of
- * the throttle channel). S1 takes 0 to 30% off idle up 1 ("Lower" mix), all the way left taking nothing off.
+ * the throttle channel) and what S1 does to them, in words after each idle up's throttle.
  */
-function heli(idleUps: [number, number, number]): Record<string, SwitchRole> {
+function heli(idleUps: [number, number, number], s1: [string, string, string]): Record<string, SwitchRole> {
   const disarmed: Effect = ['Disarmed', 'the motor stays off'];
   const normal: Effect = ['Off', 'full rates'];
   return {
@@ -43,9 +43,9 @@ function heli(idleUps: [number, number, number]): Record<string, SwitchRole> {
     },
     SE: {
       job: 'Idle up',
-      up: ['Idle up 1', `throttle ${idleUps[0]}%, S1 takes it down to ${idleUps[0] - 15}%`],
-      middle: ['Idle up 2', `throttle ${idleUps[1]}%`],
-      down: ['Idle up 3', `throttle ${idleUps[2]}%`],
+      up: ['Idle up 1', `throttle ${idleUps[0]}%${s1[0]}`],
+      middle: ['Idle up 2', `throttle ${idleUps[1]}%${s1[1]}`],
+      down: ['Idle up 3', `throttle ${idleUps[2]}%${s1[2]}`],
     },
     SC: {
       job: 'Self-level',
@@ -61,9 +61,49 @@ function heli(idleUps: [number, number, number]): Record<string, SwitchRole> {
   };
 }
 
+/**
+ * The K110S (Futaba S-FHSS, its own WLtoys controller, no telemetry): SA arms down, SF holds, SC down is 6G
+ * (self-level, else 3D), SE picks the mode as on the M2 EVO, its first Low RPM, and SH held is a rescue built
+ * as the M2's: 6G, then a climb.
+ */
+const K110S: Record<string, SwitchRole> = {
+  SA: {
+    job: 'Arm',
+    up: ['Disarmed', 'the motor stays off'],
+    middle: ['Disarmed', 'the motor stays off'],
+    down: ['Armed', 'the motor runs once SF is up too'],
+    running: 'down',
+  },
+  SF: {
+    job: 'Throttle hold',
+    up: ['Throttle on', 'once SA is down too'],
+    down: ['Hold', 'the motor stops'],
+    running: 'up',
+  },
+  SE: {
+    job: 'Idle up',
+    up: ['Low RPM', 'throttle 60%, a gentler pitch'],
+    middle: ['Idle up 2', 'throttle 80%'],
+    down: ['Idle up 3', 'throttle 90%'],
+  },
+  SC: {
+    job: 'Flight mode',
+    up: ['3D', 'full rates, no levelling'],
+    middle: ['3D', 'full rates, no levelling'],
+    down: ['6G', 'holds itself level'],
+  },
+  SH: {
+    job: 'Rescue, while held',
+    up: ['Released'],
+    down: ['Rescue', '6G, the pitch flat, then a climb at 60% after 0.1 s'],
+  },
+};
+
+// S1 adds -20 to +20 % to the M2 EVO's idle ups (-10 to +10 in idle up 3): half that on the throttle's 0 to 100 %.
 const ROLES: Record<string, Record<string, SwitchRole>> = {
-  'M2 EVO': heli([54, 60, 75]),
-  M4: heli([55, 65, 63]),
+  'M2 EVO': heli([54, 60, 75], [', S1 ±10', ', S1 ±10', ', S1 ±5']),
+  K110S,
+  M4: heli([55, 65, 63], [', S1 takes it down to 40%', '', '']),
 };
 
 /** A switch's role on a model, if Flightdown knows that model. */
@@ -99,8 +139,30 @@ const HELI_CHANNELS: Record<number, string> = {
   5: 'Rescue and level',
   6: 'Pitch',
 };
+/** The K110S's logical switches and channels (Futaba's order: CH5 the flight mode, CH9 the Pack timer's throttle). */
+const K110S_CONDITIONS: Record<string, string> = {
+  L1: 'Low RPM',
+  L2: 'IU 2',
+  L3: 'IU 3',
+  L4: 'Hold',
+  L5: 'Disarmed',
+  L6: '6G',
+  L8: 'Logging',
+  L9: 'Rescue',
+  L10: 'Motor off',
+};
+const K110S_CHANNELS: Record<number, string> = {
+  1: 'Aileron',
+  2: 'Elevator',
+  3: 'Motor',
+  4: 'Tail',
+  5: '6G or 3D',
+  6: 'Pitch',
+  9: 'Pack timer',
+};
 const NAMES: Record<string, {conditions: Record<string, string>; channels: Record<number, string>}> = {
   'M2 EVO': {conditions: HELI_CONDITIONS, channels: HELI_CHANNELS},
+  K110S: {conditions: K110S_CONDITIONS, channels: K110S_CHANNELS},
   M4: {conditions: HELI_CONDITIONS, channels: HELI_CHANNELS},
 };
 

@@ -1,0 +1,158 @@
+/*
+ * Flying weather: each spot's next days, hour by hour through daylight, every hour a small cell lit green (good),
+ * amber (fair) or red (no flying). The cells share the row and shrink with it, so a phone never scrolls sideways.
+ */
+.weather-spots {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.weather-spot + .weather-spot {
+  padding-top: 14px;
+  border-top: 1px solid var(--bezel);
+}
+
+.weather-spot-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+
+.weather-spot-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--display);
+  font-size: 0.9375rem;
+  color: var(--ink);
+  text-shadow: var(--glow);
+}
+
+/* A forecast from an earlier check, shown while there is no newer one. */
+.weather-asof {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  color: var(--caution);
+  white-space: nowrap;
+}
+
+.weather-days {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.weather-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+  min-width: 0;
+}
+
+.weather-day-name {
+  flex: none;
+  min-width: 6.5em;
+  font-family: var(--mono);
+  font-size: 0.71875rem;
+  font-weight: 500;
+  text-transform: lowercase;
+  color: var(--label);
+}
+
+.weather-verdict {
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.weather-verdict.good {
+  color: var(--ink-2);
+}
+
+/* The hour cells: one column an hour, from the spot's earliest daylight hour to its latest. */
+.weather-hours {
+  display: grid;
+  gap: 2px;
+}
+
+.weather-hour,
+.weather-key {
+  --tone: var(--warning);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--tone) 20%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 45%, transparent);
+}
+
+.weather-hour {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 18px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 0.5625rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--tone);
+}
+
+.weather-hour.good,
+.weather-key.good {
+  --tone: var(--good);
+}
+
+.weather-hour.fair,
+.weather-key.fair {
+  --tone: var(--caution);
+}
+
+/* An hour rain keeps from good: striped, so it reads apart from a windy one at a glance. */
+.weather-hour.rain,
+.weather-key.rain {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tone) 32%, transparent) 0 2px,
+    color-mix(in srgb, var(--tone) 8%, transparent) 2px 5px
+  );
+}
+
+/* An hour of today already gone by. */
+.weather-hour.past {
+  opacity: 0.3;
+}
+
+.weather-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+}
+
+.weather-status {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.weather-legend {
+  margin-top: 14px;
+}
+
+.weather-panel .empty a {
+  color: var(--label);
+  text-decoration: underline;
+}
+
+@media (max-width: 560px) {
+  .weather-hour {
+    height: 16px;
+    font-size: 0.5rem;
+  }
+}

@@ -24,6 +24,8 @@ describe('totals', () => {
     expect(all.airtime).toBe(10 * 300);
     expect(all.crashes).toBe(2);
     expect(all.packsPerCrash).toBe(4);
+    // 8 known packs of 5 min, 2 crashes: 20 min in the air per crash.
+    expect(all.timePerCrash).toBe((8 * 300) / 2);
     expect(all.crashesPerHour).toBeCloseTo(2 / ((8 * 300) / 3600));
     expect(all.flyingDays).toBe(2);
   });

@@ -757,29 +757,52 @@
   outline: none;
 }
 
-/* Thin lines in the part's heat (set as its colour), a faint fill, and a glow. */
+/* A wireframe: thin, even lines in the part's heat (set as its colour), a soft glow, a faint fill inside. */
+.damage-part {
+  filter: drop-shadow(0 0 2px currentColor);
+}
+
 .damage-zone path {
-  fill: currentColor;
   stroke: currentColor;
-  stroke-width: 1.5;
   stroke-linejoin: round;
-  filter: drop-shadow(0 0 3px currentColor);
+  stroke-linecap: round;
   transition:
     fill-opacity 140ms ease,
     stroke 140ms ease;
 }
 
+.damage-outline {
+  fill: currentColor;
+  stroke-width: 1.1;
+}
+
+/* The contour lines that give the body and boom their volume, thinner and a little fainter. */
+.damage-detail {
+  fill: none;
+  stroke-width: 0.6;
+  stroke-opacity: 0.8;
+}
+
 .damage-zone.focus path,
 .damage-zone:focus-visible path {
   stroke: var(--ink);
-  fill-opacity: 0.4 !important;
 }
 
+.damage-zone.focus .damage-outline,
+.damage-zone:focus-visible .damage-outline {
+  fill-opacity: 0.3 !important;
+}
+
+/* The count, with a rim of the page's colour so it stays clear of the glow around it. */
 .damage-count {
   fill: var(--ink);
   font-family: var(--display);
   font-size: 0.9375rem;
   font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--page);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
 }
 
 .damage-side {

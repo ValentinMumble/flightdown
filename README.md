@@ -9,11 +9,14 @@ Plex Sans, a soft phosphor green for labels, numbers and what is live (Share Tec
 frames marked by corner brackets, a rolling counter of minutes in the air.
 
 - **Cockpit:** the minute counter on 3D drums (they roll up at each change of tab) beside a rotor that spools up,
-  packs per crash on a tape (all time, and the last 20 sorties), the crash-free run in packs and days, the last five
-  sorties beside the helis on the flight line, the live packs by their buttons (flights, last flown, resistance, tiring
-  or worn against their first reading and the freshest pack's) beside the next rung of the skill ladder, and airtime
-  month by month over the two years up to the last sortie.
-- **Sorties:** every sortie as a flight strip (today's and yesterday's say so), a month at a time. Search notes, parts,
+  packs per crash on a tape and the time in the air per crash (all time, and the last 20 sorties), the crash-free run
+  in packs and days, the last five sorties by month beside the helis on the flight line (each with its own small hour
+  meter, as in the Hangar), the last session at a glance (its packs and their notes, a throttle hold undone in flight,
+  the link lost, a hard stop) beside the flying weather at your spots for three days (Open-Meteo), then the live packs
+  by their buttons (flights, last flown, resistance, tiring or worn against their first reading and the freshest
+  pack's) beside what changed on the radio since the last flight (edge-tx's commits).
+- **Sorties:** every sortie as a flight strip (today's and yesterday's say so), a month at a time, the airtime shown on
+  an hour meter (each sortie's page has its own). Search notes, parts,
   places and days; filter by heli, spot, crashes, a broken part or sorties with a radio log (behind one Filters button
   on a phone).
 - **Photos:** they stay in Apple Photos, in an iCloud shared album with its public website on (its link goes in
@@ -53,8 +56,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   others are cut out in the page). Spare parts are hidden for now (`SHOW_SPARES` in `src/model/parts.ts`).
 - **Radio:** a tab of its own: the TX16S, running the Lua that goes on it (in the browser, with Fengari), its switches
   around the screen where they sit on the radio, each saying what it does on the model where it is set (`roles.ts`,
-  written by hand from the model files). Model screens: the M2 EVO's and M4's screens as the radio draws them, from its
-  card, every widget in its zone (EdgeTX's own ones redrawn, LVGL ones drawn from their labels, rectangles, lines,
+  written by hand from the model files). Model screens: the M2 EVO's and the K110S's screens as the radio draws them
+  (the K110S's Pack timer counting with its throttle), from its card, every widget in its zone (EdgeTX's own ones redrawn, LVGL ones drawn from their labels, rectangles, lines,
   triangles, circles, images and boxes). One widget: a widget built in
   [edge-tx](https://github.com/ValentinMumble/edge-tx), in a zone of its size, its Lua to edit (kept in the browser,
   downloadable as `main.lua`). Logic: under the screen, the model's logic and the radio's in words, live with the

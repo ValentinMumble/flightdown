@@ -1,6 +1,7 @@
 import {useEffect, useId, useState, type ReactNode} from 'react';
 import type {GearGone, HeliStatus} from '../types';
 import {formatAirtime} from '../model/format';
+import {INVERTED} from './PackTimes';
 
 /** An instrument on the panel: a bezel with its name along the top. */
 export function Panel({
@@ -122,8 +123,9 @@ function Drum({position, turns, phase}: {position: number; turns: number; phase:
 /**
  * The airtime counter: drums of minutes in the air, the last one white and creeping on with the seconds, like the hour
  * meter of a real aircraft but counting minutes. Each time it appears (a change of tab) the drums roll up from zero.
+ * Small, a heli's own meter: the same drums, without the unit.
  */
-export function MinuteMeter({seconds}: {seconds: number}) {
+export function MinuteMeter({seconds, small = false}: {seconds: number; small?: boolean}) {
   const minutes = Math.floor(seconds / 60);
   const digits = String(minutes).padStart(5, '0').split('');
   const positions = drumPositions(seconds, digits.length);
@@ -150,7 +152,7 @@ export function MinuteMeter({seconds}: {seconds: number}) {
 
   return (
     <span
-      className="hobbs"
+      className={small ? 'hobbs small' : 'hobbs'}
       role="img"
       aria-label={`${minutes.toLocaleString('en-GB')} minutes in the air`}
       title={formatAirtime(seconds, true)}
@@ -164,7 +166,7 @@ export function MinuteMeter({seconds}: {seconds: number}) {
           </span>
         );
       })}
-      <span className="hobbs-unit">min</span>
+      {!small && <span className="hobbs-unit">min</span>}
     </span>
   );
 }
@@ -321,6 +323,31 @@ export function Dial({
 }
 
 const MARK_ANGLE = 40;
+
+/**
+ * A heli on its back, from the side: skids up, rotor below, nose to the left, in the colour charts give inverted
+ * flight. Beside a time upside down.
+ */
+export function InvertedMark({size = 22, className}: {size?: number; className?: string}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <g
+        transform="matrix(1 0 0 -1 0 24)"
+        fill="none"
+        stroke={INVERTED}
+        strokeWidth={1.4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {/* The rotor and its mast, the canopy, the boom, the tail rotor, the skids. */}
+        <path d="M2.5 6.5 H21.5 M12 6.5 V8.6" />
+        <path d="M4.2 12.6 C4.2 10 7.2 8.6 11 8.6 H13.6 V14.2 H6.4 C5 14.2 4.2 13.6 4.2 12.6 Z" />
+        <path d="M13.6 10.4 H21 M21 8.6 V12.2" />
+        <path d="M8 14.2 L7.2 16.6 M12.4 14.2 L13.2 16.6 M5.2 16.6 H15.4" />
+      </g>
+    </svg>
+  );
+}
 
 /**
  * The app's mark: a two-blade rotor seen from above, turning clockwise as RC helis do, each tip trailing a swoosh of

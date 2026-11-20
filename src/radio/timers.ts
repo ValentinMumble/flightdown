@@ -18,7 +18,10 @@ export interface ModelTimer {
   start: number;
   /** The switch that runs it: "L17", "!L10", "NONE" for always. */
   swtch: string;
-  /** OFF for a timer the model does not use. */
+  /**
+   * OFF for a timer the model does not use; ON counts while its switch is; THR while the throttle is off its stop;
+   * THR_REL as fast as the throttle is open (a second a second at full).
+   */
   mode: string;
 }
 
@@ -32,10 +35,15 @@ export interface TimedModel {
   /** Telemetry sensor names and precisions by index: "tele(4),30" on Curr (precision 1) is 3.0 A. */
   sensors: string[];
   precisions?: number[];
+  /** What THR and THR_REL timers follow (the model's throttle source): "Thr", the stick, or "ch(8)", CH9. */
+  throttleSource?: string;
 }
 
 /** Reads a source as the radio does: switches and sticks from -1024 to 1024, sensors in their own units. */
 export type Read = (source: string) => number;
+
+/** Past this share of its travel the throttle is off its stop: a THR timer runs. */
+const THROTTLE_STOP = 0.02;
 
 /** How far apart the steps of a replay are, in seconds: fine enough for a one-second delay. */
 const STEPS_A_SECOND = 10;
@@ -51,6 +59,11 @@ export class ModelTimers {
   /** Each logical switch as the last step left it, and what that step read: for isOn. */
   private states = new Map<number, boolean>();
   private lastRead: Read | null = null;
+  /**
+   * While a step runs: reading a timer's throttle source can run the model's mixer (the K110S's CH9), which asks the
+   * logical switches, which would move the timers on again from inside their own step. It gets them as they stand.
+   */
+  private stepping = false;
 
   private model: TimedModel;
 
@@ -75,6 +88,7 @@ export class ModelTimers {
    * again from its start.
    */
   advance(clock: number, readAt: (second: number) => Read) {
+    if (this.stepping) return;
     if (this.clock !== null && clock < this.clock) this.reset();
     if (this.clock === null) {
       const from = Math.min(this.origin ?? clock, clock);
@@ -112,14 +126,28 @@ export class ModelTimers {
   }
 
   private step(clock: number, seconds: number, read: Read) {
+    this.stepping = true;
+    try {
+      this.run(clock, seconds, read);
+    } finally {
+      this.stepping = false;
+    }
+  }
+
+  private run(clock: number, seconds: number, read: Read) {
     this.clock = clock;
     const known = new Map<number, boolean>();
     const on = (name: string) => this.switchAt(name, clock, read, known);
     for (const reset of this.model.timerResets ?? []) {
       if (on(reset.swtch) && reset.timer < this.elapsed.length) this.elapsed[reset.timer] = 0;
     }
+    // The throttle, 0 at its stop to 1 full open, for the timers that follow it.
+    const open = Math.max(0, Math.min(1, (read(this.model.throttleSource ?? 'Thr') + 1024) / 2048));
     (this.model.timers ?? []).forEach((timer, index) => {
-      if (timer.mode !== 'OFF' && (timer.swtch === 'NONE' || on(timer.swtch))) this.elapsed[index] += seconds;
+      if (timer.mode === 'OFF' || (timer.swtch !== 'NONE' && !on(timer.swtch))) return;
+      if (timer.mode === 'THR_REL') this.elapsed[index] += seconds * open;
+      else if (timer.mode === 'THR') this.elapsed[index] += open > THROTTLE_STOP ? seconds : 0;
+      else this.elapsed[index] += seconds;
     });
     // Every logical switch, so each one's delay runs whether a timer reads it or not.
     for (const index of Object.keys(this.model.logicalSwitches ?? {})) this.logical(Number(index), clock, read, known);

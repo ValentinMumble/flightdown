@@ -16,7 +16,7 @@ import type {Battery, Heli} from '../types';
 import {useStore} from '../data/store';
 import {Card, Empty, HeliDot, PageHeader, useOverlay} from '../components/ui';
 import {BatteryForm, GearForm, HeliForm, SpareForm, TipForm} from '../components/forms/HangarForms';
-import {Stamp} from '../components/instruments';
+import {MinuteMeter, Stamp} from '../components/instruments';
 import {useSeriesColor} from '../components/colors';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {ago, formatAirtime, formatDay, formatNumber, formatPrice, formatRate, plural} from '../model/format';
@@ -61,7 +61,10 @@ export function HeliCard({heli, tally, wide = false}: {heli: Heli; tally?: Group
         <div className="figures">
           <div>
             <div className="figure-label">Hours</div>
-            <div className="figure-value">{formatAirtime(tally?.airtime ?? 0)}</div>
+            <div className="figure-meter">
+              <MinuteMeter seconds={tally?.airtime ?? 0} small />
+              <span className="figure-value">{formatAirtime(tally?.airtime ?? 0)}</span>
+            </div>
           </div>
           <div>
             <div className="figure-label">Packs</div>

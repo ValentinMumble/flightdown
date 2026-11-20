@@ -1,4 +1,5 @@
 import {useMemo} from 'react';
+import type {Sortie} from '../types';
 import {Link} from 'react-router';
 import {ChevronRight} from 'lucide-react';
 import {useStore} from '../data/store';
@@ -7,18 +8,20 @@ import {FlightStrip} from '../components/SortieRow';
 import {MinuteMeter, Panel, Rotor, RotorMark, SegmentBar, Stamp, Tape} from '../components/instruments';
 import {SortieForm} from '../components/forms/SortieForm';
 import {VisitorBanner} from '../components/VisitorBanner';
-import {AirtimeChart} from '../components/charts/AirtimeChart';
-import {SkillLadder} from '../components/charts/SkillLadder';
+import {FlyingWeather} from '../components/FlyingWeather';
+import {LastSession} from '../components/LastSession';
+import {RadioChanges} from '../components/RadioChanges';
 import {useSeriesColor} from '../components/colors';
-import {ago, formatAirtime, formatDay, formatMonth, formatNumber, formatRate, plural, today} from '../model/format';
-import {daysSinceCrash, groupBy, monthly, monthOf, packsSinceCrash, sortSorties, streaks, totals} from '../model/stats';
+import {ago, formatAirtime, formatDay, formatMonth, formatNumber, formatRate, plural} from '../model/format';
+import {daysSinceCrash, groupBy, monthOf, packsSinceCrash, sortSorties, streaks, totals} from '../model/stats';
 import {SHOW_SPARES, spareStock} from '../model/parts';
 import {packRecords} from '../model/packs';
 import {HeliPhoto} from '../components/HeliPhoto';
 
 /**
  * The cockpit: the instruments a pilot glances at before going out to fly: the airtime and the crash gauges, the last
- * sorties beside the helis ready to fly, the packs beside the skills, then the airtime month by month.
+ * sorties beside the helis ready to fly, the last session at a glance beside the flying weather, then the packs beside
+ * what changed on the radio (Debrief keeps the skills and the months).
  */
 export function Home() {
   const {doc} = useStore();
@@ -28,10 +31,6 @@ export function Home() {
   const all = useMemo(() => totals(sorties), [sorties]);
   const recent = useMemo(() => totals(sorties.slice(-20)), [sorties]);
   const runs = useMemo(() => streaks(sorties), [sorties]);
-  // Two years up to now, or up to the last sortie after a long break, so the chart never sits empty.
-  const lastMonth = sorties.length ? monthOf(sorties[sorties.length - 1].date) : monthOf(today());
-  const months = useMemo(() => monthly(sorties, lastMonth).slice(-24), [sorties, lastMonth]);
-  const lastMonthIsThisMonth = lastMonth === monthOf(today());
   const tallies = useMemo(
     () => new Map(groupBy(sorties, sortie => sortie.heliId).map(group => [group.key, group])),
     [sorties],
@@ -40,6 +39,14 @@ export function Home() {
   const last = sorties[sorties.length - 1];
   const best = runs.longestCrashFree?.packs ?? 0;
   const newest = [...sorties].reverse().slice(0, 5);
+  // The newest sorties by month, the latest month first.
+  const newestByMonth: {month: string; sorties: Sortie[]}[] = [];
+  for (const sortie of newest) {
+    const month = monthOf(sortie.date);
+    const latest = newestByMonth[newestByMonth.length - 1];
+    if (latest?.month === month) latest.sorties.push(sortie);
+    else newestByMonth.push({month, sorties: [sortie]});
+  }
   // The packs that fly the flight line, the live ones by their buttons: how often, how lately, how worn.
   const lineIds = new Set(flightLine.map(heli => heli.id));
   const lineBatteries = doc.batteries.filter(battery => battery.heliIds.some(id => lineIds.has(id)));
@@ -111,6 +118,19 @@ export function Home() {
               <i className="tape-key bug" /> last 20 sorties · {formatRate(recent.packsPerCrash)}
             </span>
           </div>
+          {/* The same in time: how long in the air between crashes. */}
+          <div className="figures">
+            <div>
+              <div className="figure-label">Time / crash</div>
+              <div className="figure-value">{all.timePerCrash === null ? '–' : formatAirtime(all.timePerCrash)}</div>
+            </div>
+            <div>
+              <div className="figure-label">Last 20 sorties</div>
+              <div className="figure-value">
+                {recent.timePerCrash === null ? 'no crash' : formatAirtime(recent.timePerCrash)}
+              </div>
+            </div>
+          </div>
         </Panel>
 
         <Panel
@@ -145,6 +165,7 @@ export function Home() {
           </div>
         </Panel>
 
+        {/* The last sorties beside the helis ready to fly, then the last session beside the weather. */}
         <Panel
           label="Last sorties"
           note={last ? `The latest ${ago(last.date)}` : undefined}
@@ -161,9 +182,19 @@ export function Home() {
           }
         >
           {last ? (
+            // By month, as on the Sorties page: each month's heading, its strips under it with their weekday and day.
             <div className="strip-board">
-              {newest.map(sortie => (
-                <FlightStrip key={sortie.id} sortie={sortie} large />
+              {newestByMonth.map(group => (
+                <section key={group.month} className="log-month">
+                  <div className="month-head">
+                    <h3>{formatMonth(group.month, true)}</h3>
+                  </div>
+                  <div className="strip-board">
+                    {group.sorties.map(sortie => (
+                      <FlightStrip key={sortie.id} sortie={sortie} large inMonth />
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           ) : (
@@ -194,7 +225,10 @@ export function Home() {
                       <span className="figures">
                         <span>
                           <span className="figure-label">Hours</span>
-                          <span className="figure-value">{formatAirtime(tally?.airtime ?? 0)}</span>
+                          <span className="figure-meter">
+                            <MinuteMeter seconds={tally?.airtime ?? 0} small />
+                            <span className="figure-value">{formatAirtime(tally?.airtime ?? 0)}</span>
+                          </span>
                         </span>
                         <span>
                           <span className="figure-label">Clean packs</span>
@@ -216,10 +250,15 @@ export function Home() {
           )}
         </Panel>
 
+        <LastSession className="span-7" />
+
+        <FlyingWeather className="span-5" />
+
+        {/* The packs beside what changed on the radio since the last flight. */}
         <Panel
           label="Packs"
           note={`The live ones by their buttons, their resistance a cell's share against their first reading and the freshest pack's${deadPacks ? `; ${plural(deadPacks, 'dead pack')} left out` : ''}`}
-          className="span-8"
+          className="span-7"
           action={
             <Link to="/hangar/batteries" className="button small ghost">
               Hangar <ChevronRight size={14} />
@@ -267,29 +306,7 @@ export function Home() {
           )}
         </Panel>
 
-        <Panel
-          label="Skill ladder"
-          className="span-4"
-          action={
-            <Link to="/stats" className="button small ghost">
-              All <ChevronRight size={14} />
-            </Link>
-          }
-        >
-          <SkillLadder sorties={sorties} compact />
-        </Panel>
-
-        <Panel
-          label="Airtime by month"
-          note={
-            lastMonthIsThisMonth
-              ? 'The last two years, month by month'
-              : `The two years up to the last sortie, in ${formatMonth(lastMonth, true)}`
-          }
-          className="span-12"
-        >
-          <AirtimeChart months={months} short />
-        </Panel>
+        <RadioChanges className="span-5" />
       </div>
     </div>
   );

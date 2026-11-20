@@ -5,7 +5,7 @@ import type {Sortie} from '../types';
 import {useStore} from '../data/store';
 import {Card, Empty, HeliName, PageHeader, spotLabel, useOverlay} from '../components/ui';
 import {CrashPill, FlightStrip} from '../components/SortieRow';
-import {Panel} from '../components/instruments';
+import {MinuteMeter, Panel} from '../components/instruments';
 import {SortieForm} from '../components/forms/SortieForm';
 import {SpotForm} from '../components/forms/HangarForms';
 import {MiniMap} from '../components/MiniMap';
@@ -125,9 +125,12 @@ export function SortiePage() {
             <div className="figures">
               <div>
                 <div className="figure-label">Air</div>
-                {/* From its logs, to the second; else its packs times its timer. */}
-                <div className="figure-value">
-                  {logged ? formatTimer(airtime(sortie)) : formatAirtime(airtime(sortie), true)}
+                {/* From its logs, to the second; else its packs times its timer. On an hour meter, then in words. */}
+                <div className="figure-meter">
+                  <MinuteMeter seconds={airtime(sortie)} small />
+                  <span className="figure-value">
+                    {logged ? formatTimer(airtime(sortie)) : formatAirtime(airtime(sortie), true)}
+                  </span>
                 </div>
               </div>
               <div>

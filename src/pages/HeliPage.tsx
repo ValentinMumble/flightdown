@@ -4,7 +4,7 @@ import {ChevronRight, Pencil, Plus} from 'lucide-react';
 import {useStore} from '../data/store';
 import {Empty, PageHeader, useOverlay} from '../components/ui';
 import {FlightStrip} from '../components/SortieRow';
-import {Panel, Stamp} from '../components/instruments';
+import {MinuteMeter, Panel, Stamp} from '../components/instruments';
 import {HeliForm, SpareForm} from '../components/forms/HangarForms';
 import {AirtimeChart} from '../components/charts/AirtimeChart';
 import {DamageMap} from '../components/charts/DamageMap';
@@ -77,9 +77,13 @@ export function HeliPage() {
               {heli.price !== undefined && <span className="pill label">{formatPrice(heli.price)}</span>}
             </div>
           )}
-          <div className="readout accent">
-            {formatAirtime(all.airtime)}
-            <small>in the air</small>
+          {/* The heli's hour meter beside its time in the air in words, as the Cockpit's. */}
+          <div className="plate-airtime">
+            <MinuteMeter seconds={all.airtime} />
+            <div className="readout accent">
+              {formatAirtime(all.airtime)}
+              <small>in the air</small>
+            </div>
           </div>
           <div className="figures">
             <div>
@@ -97,6 +101,10 @@ export function HeliPage() {
             <div>
               <div className="figure-label">Packs / crash</div>
               <div className="figure-value">{formatRate(all.packsPerCrash)}</div>
+            </div>
+            <div>
+              <div className="figure-label">Time / crash</div>
+              <div className="figure-value">{all.timePerCrash === null ? '–' : formatAirtime(all.timePerCrash)}</div>
             </div>
             <div>
               <div className="figure-label">Clean packs</div>

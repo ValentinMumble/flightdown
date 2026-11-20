@@ -48,7 +48,9 @@ export function optionLines(radio: Radio, declared: WidgetOption[], values: Card
   return declared
     .map((option, index) => {
       const given = values[index];
-      let value: number | string = option.type === 'source' ? '' : option.initial;
+      // A source the model leaves unset: none ('') to the Lua, but 0 where the widget's own default is 0 (none on the
+      // radio too), so a widget testing for 0 (FMStatus's S1Source) reads it as unset.
+      let value: number | string = option.type === 'source' ? (Number(option.initial) === 0 ? 0 : '') : option.initial;
       if (given) {
         if (given.type === 'Color') value = colorFlag(radio, given.value);
         else if (given.type === 'Source' || given.type === 'String') value = String(given.value);

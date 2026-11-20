@@ -20,7 +20,7 @@ import {
 const REPO = 'ValentinMumble/edge-tx';
 const RAW = `https://raw.githubusercontent.com/${REPO}/main/`;
 /** The models the Radio tab shows: those still flown or worth a look, in this order. */
-const KEEP = ['M2 EVO', 'M4'];
+const KEEP = ['M2 EVO', 'K110S', 'M4'];
 /** The files of a widget the page fetches: its Lua, and the pictures it opens. */
 const WIDGET_FILE = /\.(lua|png|bmp|jpe?g)$/i;
 

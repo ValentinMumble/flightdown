@@ -1,6 +1,6 @@
 import {Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import type {TrendPoint} from '../../model/stats';
-import {formatDay, formatRate, fromDay} from '../../model/format';
+import {formatAirtime, formatDay, formatRate, fromDay} from '../../model/format';
 import {useChartInk, useSeriesColor} from '../colors';
 
 /** Crashes every ten packs over the last ten sorties, sortie after sortie: one line, the learning curve. */
@@ -45,6 +45,10 @@ export function CrashTrend({points}: {points: TrendPoint[]}) {
                   <div className="tooltip-row">
                     <span>Packs per crash</span>
                     <b>{row.packsPerCrash === null ? 'no crash' : formatRate(row.packsPerCrash)}</b>
+                  </div>
+                  <div className="tooltip-row">
+                    <span>Time per crash</span>
+                    <b>{row.timePerCrash === null ? 'no crash' : formatAirtime(row.timePerCrash)}</b>
                   </div>
                 </div>
               );
