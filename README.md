@@ -63,7 +63,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   timers; pick one to light what it reads and what reads it (`logic.ts`). Set the switches by hand (a click on one moves
   it; SH, the red rescue switch, springs back, down only while held; SF starts in hold), the 6-position buttons and the S1
   knob above the screen, the two sticks under it (dragged; all but the throttle spring back), or
-  replay a logged pack: its log drives the sensors, the buttons, the switches (their real positions; in older logs, the
+  replay a logged pack: its log drives the sensors, the buttons, the S1 knob, the switches (their real positions; in older logs, the
   arming ones follow the rotor, on while the pack draws 2 A) and the outputs; a log with no mAh sensor counts the mAh
   from the current, as the radio does. Widgets read the model's global variables (mAhRe its cell count), and its timers
   run as on the radio, on its logical switches (`timers.ts`); its outputs come from its own inputs, curves and mixes
