@@ -16,7 +16,7 @@ import {join} from 'node:path';
 import {loadEnv} from 'vite';
 import type {Sortie, TelemetryLog, TelemetrySeries} from '../src/types';
 import {formatAirtime, formatDay, formatNumber, formatTimer} from '../src/model/format';
-import {matchSortie, modelFromFileName, readTelemetry, simple} from '../src/model/telemetry';
+import {matchSortie, modelFromFileName, namedLike, readTelemetry} from '../src/model/telemetry';
 import {parseCsv} from '../src/model/csv';
 import {newId, now} from '../src/model/ids';
 import {groupPacks} from '../src/model/packs';
@@ -142,7 +142,7 @@ const created: Sortie[] = [];
 for (const orphan of orphans) {
   const day = orphan.log.start?.slice(0, 10);
   // Of the helis named like the radio's model, one still flying first: a lost one may share its name.
-  const named = orphan.model ? doc.helis.filter(one => simple(one.name).startsWith(simple(orphan.model ?? ''))) : [];
+  const named = orphan.model ? doc.helis.filter(one => namedLike(one.name, orphan.model ?? '')) : [];
   const heli = named.find(one => one.status === 'active') ?? named[0];
   if (!flags.has('--create') || !day || !heli) {
     const why = !heli ? `no heli named like "${orphan.model}"` : `no sortie on ${heli.name} that day`;

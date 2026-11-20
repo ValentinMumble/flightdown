@@ -286,9 +286,12 @@ export const simple = (text: string) =>
     .trim()
     .toLowerCase();
 
+/** Whether a heli is named like the radio's model: the model's name from the start of any word ("WLtoys K110S"). */
+export const namedLike = (heliName: string, model: string) => ` ${simple(heliName)}`.includes(` ${simple(model)}`);
+
 /**
- * The sortie a log belongs to: one on the log's day, on the heli whose name starts with the radio model's name; the
- * longest that day when the log does not name its model. None when the named model did not fly that day.
+ * The sortie a log belongs to: one on the log's day, on the heli named like the radio's model; the longest that day
+ * when the log does not name its model. None when the named model did not fly that day.
  */
 export function matchSortie(
   log: TelemetryLog,
@@ -300,8 +303,7 @@ export function matchSortie(
   if (!day) return null;
   const sameDay = sorties.filter(sortie => sortie.date === day);
   if (!sameDay.length) return null;
-  const wanted = model ? simple(model) : '';
-  const candidates = wanted ? sameDay.filter(sortie => simple(heliName(sortie.heliId)).startsWith(wanted)) : sameDay;
+  const candidates = model ? sameDay.filter(sortie => namedLike(heliName(sortie.heliId), model)) : sameDay;
   if (!candidates.length) return null;
   return candidates.reduce((best, sortie) =>
     sortie.packs * (sortie.timer ?? 0) > best.packs * (best.timer ?? 0) ? sortie : best,

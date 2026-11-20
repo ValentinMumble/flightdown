@@ -85,11 +85,15 @@ describe('readTelemetry', () => {
     const sorties: Sortie[] = [
       {...base, id: 'a', date: '2023-05-03', heliId: 'm1'},
       {...base, id: 'b', date: '2023-05-03', heliId: 'm2'},
+      {...base, id: 'c', date: '2023-05-03', heliId: 'k1'},
     ];
-    const names: Record<string, string> = {m1: 'M1', m2: 'M2 EVO 🟠'};
+    const names: Record<string, string> = {m1: 'M1', m2: 'M2 EVO 🟠', k1: 'WLtoys K110S'};
     expect(modelFromFileName('M2 EVO-2023-05-03-124800.csv')).toBe('M2 EVO');
     expect(matchSortie(read.log, 'M2 EVO', sorties, id => names[id])?.id).toBe('b');
+    // The model's name may start any word of the heli's, not only its first.
+    expect(matchSortie(read.log, 'K110S', sorties, id => names[id])?.id).toBe('c');
     expect(matchSortie(read.log, 'M4', sorties, id => names[id])).toBeNull();
+    expect(matchSortie(read.log, 'EVO 2', sorties, id => names[id])).toBeNull();
   });
 });
 
