@@ -37,7 +37,10 @@ const largest = (values: (number | undefined)[]) => {
   return known.length ? Math.max(...known) : undefined;
 };
 
-/** One pack's figures from its files: the lowest and highest of each, the average current weighted by time. */
+/**
+ * One pack's figures from its files: the lowest and highest of each, the average current weighted by time, and the mAh
+ * each file used (a count carried on from the file before starts from there).
+ */
 function summarise(files: TelemetryLog[]): PackLog {
   const first = startSeconds(files[0]);
   const last = startSeconds(files[files.length - 1]);
@@ -53,7 +56,7 @@ function summarise(files: TelemetryLog[]): PackLog {
     duration,
     start: files[0].start,
     packButton: files[0].packButton,
-    mAh: used.length ? used.reduce((sum, file) => sum + (file.mAh ?? 0), 0) : undefined,
+    mAh: used.length ? used.reduce((sum, file) => sum + (file.mAh ?? 0) - (file.mAhFrom ?? 0), 0) : undefined,
     minVoltage: smallest(files.map(file => file.minVoltage)),
     maxCurrent: largest(files.map(file => file.maxCurrent)),
     avgCurrent: time
@@ -121,17 +124,22 @@ export function packName(pack: PackLog, batteries: Battery[]): string | null {
 
 /**
  * The pack a 6-position button stood for on a day (else today), and its kind: of the packs that had the button by
- * then, the one given it last, so a new pack on a dead one's button takes over from the day it got it.
+ * then (and had not moved off it), the one given it last, so a new pack on a dead one's button takes over from the day
+ * it got it.
  */
 export function buttonBattery(button: number, batteries: Battery[], day = today()) {
-  let found: {battery: Battery; pack: Pack} | null = null;
+  let found: {battery: Battery; pack: Pack; since: string} | null = null;
   for (const battery of batteries) {
     for (const pack of battery.packs) {
-      if (pack.button !== button || (pack.since && day < pack.since)) continue;
-      if (!found || (pack.since ?? '') > (found.pack.since ?? '')) found = {battery, pack};
+      const held = [...(pack.earlier ?? []), ...(pack.button ? [{button: pack.button, since: pack.since}] : [])];
+      for (const spell of held) {
+        if (spell.button !== button || (spell.since && day < spell.since)) continue;
+        if ('until' in spell && day >= spell.until) continue;
+        if (!found || (spell.since ?? '') > found.since) found = {battery, pack, since: spell.since ?? ''};
+      }
     }
   }
-  return found;
+  return found && {battery: found.battery, pack: found.pack};
 }
 
 /** A kind's name up to its cells: "OMPHobby" of "OMPHobby 3S 750 mAh 60C". Kinds named alike number their packs as one. */

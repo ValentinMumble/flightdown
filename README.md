@@ -13,8 +13,9 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   sorties beside the helis on the flight line, the live packs by their buttons (flights, last flown, resistance, tiring
   or worn against their first reading and the freshest pack's) beside the next rung of the skill ladder, and airtime
   month by month over the two years up to the last sortie.
-- **Sorties:** every sortie as a flight strip, a month at a time. Search notes, parts, places and days; filter by
-  heli, spot, crashes, a broken part or sorties with a radio log (behind one Filters button on a phone).
+- **Sorties:** every sortie as a flight strip (today's and yesterday's say so), a month at a time. Search notes, parts,
+  places and days; filter by heli, spot, crashes, a broken part or sorties with a radio log (behind one Filters button
+  on a phone).
 - **Photos:** they stay in Apple Photos, in an iCloud shared album with its public website on (its link goes in
   Settings). A sortie shows the album's photos taken that day, or the ones picked in its form.
 - **Log a sortie:** heli, day, packs and time per pack (minus and plus, or typed), crashes, the last flown spots (the
@@ -45,7 +46,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   a pack and the line they all make).
 - **Hangar:** the flight line, the radio and other gear, the helis that left (stamped sold or lost), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
-  the dead one keeps its logs and charts), notes. Helis and packs keep the day they were bought, helis and radios
+  the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), notes. Helis and packs keep the day they were bought, helis and radios
   their price. Each heli has a data plate page (with each part's time since it last broke there, against how long it
   lasts) and its own chart colour (picked in its form). Helis, radios and packs
   take a photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac;
@@ -57,9 +58,11 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   triangles, circles, images and boxes). One widget: a widget built in
   [edge-tx](https://github.com/ValentinMumble/edge-tx), in a zone of its size, its Lua to edit (kept in the browser,
   downloadable as `main.lua`). Logic: under the screen, the model's logic and the radio's in words, live with the
-  switches and a replay: controls, conditions, what each channel is made of now and why, special and global functions,
+  switches and a replay: controls, conditions, what each channel is made of now and why (a
+  curve drawn, a dot where its input is), special and global functions,
   timers; pick one to light what it reads and what reads it (`logic.ts`). Set the switches by hand (a click on one moves
-  it; SH, the red rescue switch, springs back, down only while held; SF starts in hold) and the 6-position buttons, or
+  it; SH, the red rescue switch, springs back, down only while held; SF starts in hold), the 6-position buttons and the S1
+  knob above the screen, the two sticks under it (dragged; all but the throttle spring back), or
   replay a logged pack: its log drives the sensors, the buttons, the switches (their real positions; in older logs, the
   arming ones follow the rotor, on while the pack draws 2 A) and the outputs; a log with no mAh sensor counts the mAh
   from the current, as the radio does. Widgets read the model's global variables (mAhRe its cell count), and its timers

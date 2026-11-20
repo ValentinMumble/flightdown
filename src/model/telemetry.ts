@@ -226,6 +226,8 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     mAh = Math.round(used);
   }
   if (!channels.capacity?.some(value => value > 0)) delete channels.capacity;
+  // A count that does not start near 0 was carried on from the file before: the pack counts this file from there.
+  const mAhFrom = channels.capacity && channels.capacity[0] > 5 ? Math.round(channels.capacity[0]) : undefined;
   // In the air: each sample with the motor running, as the radio's PACK timer counts it.
   const running = motorRunning(channels);
   let flying = 0;
@@ -262,6 +264,7 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     duration: Math.round(duration),
     samples: time.length,
     ...(mAh !== undefined && {mAh}),
+    ...(mAhFrom !== undefined && {mAhFrom}),
     ...(voltages.length && {minVoltage: round(Math.min(...voltages))}),
     ...(currents.length && {maxCurrent: round(Math.max(...currents)), avgCurrent: round(average(currents))}),
     ...(signals.length && {minRssi: Math.min(...signals)}),

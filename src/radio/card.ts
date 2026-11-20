@@ -169,7 +169,11 @@ function zones(value: unknown): CardZone[] {
       return {
         index,
         widget: String(data.widgetName ?? ''),
-        options: entries(record(data.widgetData).options).map(([, item]) => option(item)),
+        // Each at its number: a model may skip one (an option left as it was), and the next keeps its own place.
+        options: entries(record(data.widgetData).options).reduce<CardOption[]>((list, [index, item]) => {
+          list[Number(index)] = option(item);
+          return list;
+        }, []),
       };
     })
     .filter(zone => zone.widget);

@@ -58,6 +58,8 @@ export interface TelemetryLog {
   samples: number;
   /** Capacity used, from the Capa sensor or the current over time. */
   mAh?: number;
+  /** The count it starts from, when the radio carried it on from the file before (it does while armed). */
+  mAhFrom?: number;
   minVoltage?: number;
   maxCurrent?: number;
   avgCurrent?: number;
@@ -130,6 +132,8 @@ export interface Pack {
   button?: number;
   /** The day it got that button (YYYY-MM-DD): a log on the button is this pack's from then on. */
   since?: string;
+  /** The buttons it held before, each from its day until the day it moved on: its logs on them stay its own. */
+  earlier?: {button: number; since?: string; until: string}[];
   /** The day it stopped holding a charge (YYYY-MM-DD): no longer flown, still counted. */
   dead?: string;
 }

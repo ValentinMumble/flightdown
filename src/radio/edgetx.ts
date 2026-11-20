@@ -80,8 +80,14 @@ interface RadioBitmap {
 /** What the widget reads: its sources' values, and the model it is on. */
 export interface RadioInputs {
   value: (source: string) => number;
-  /** The model it is on: its name, picture and global variables (first flight mode, by index). */
-  model: {name: string; bitmap: string; globals?: Record<number, number>; reversed?: number[]};
+  /** The model it is on: its name, picture, global variables (first flight mode, by index) and curves (by index). */
+  model: {
+    name: string;
+    bitmap: string;
+    globals?: Record<number, number>;
+    reversed?: number[];
+    curves?: ({name: string; y: number[]; x?: number[]} | undefined)[];
+  };
   /** A model timer as the radio runs it (timers.ts): its value (the time left when it counts down) and start. */
   timer?: (index: number) => {value: number; start: number};
 }
@@ -182,6 +188,17 @@ export class Radio {
   /** 1 when a channel's output (from 0) is reversed in the model, as model.getOutput(index).revert gives it. */
   outputReversed(index: number) {
     return this.inputs.model.reversed?.includes(Number(index)) ? 1 : 0;
+  }
+
+  /**
+   * A model curve (from 0) for model.getCurve, as "name|custom|y,y,…|x,x,…" (x with its ends, -100 and 100, as EdgeTX
+   * gives them), or '' when the model has none there.
+   */
+  modelCurve(index: number) {
+    const curve = this.inputs.model.curves?.[Number(index)];
+    if (!curve) return '';
+    const xs = curve.x ? [-100, ...curve.x, 100] : [];
+    return [curve.name.replace(/\|/g, ' '), curve.x ? 1 : 0, curve.y.join(','), xs.join(',')].join('|');
   }
 
   modelGlobal(index: number) {
@@ -647,6 +664,21 @@ function model.getTimer(index)
     minuteBeep = false, persistent = 0, name = ''}
 end
 function model.resetTimer(index) end
+-- A curve as EdgeTX gives it: its name, type (1 custom), points, y and (custom) x from 1; nil where the model has none.
+local function numbers(text)
+  local list = {}
+  for value in string.gmatch(text, '-?%d+') do list[#list + 1] = tonumber(value) end
+  return list
+end
+function model.getCurve(index)
+  local text = host:modelCurve(index)
+  if text == '' then return nil end
+  local name, kind, ys, xs = string.match(text, '^(.-)|(%d)|([^|]*)|(.*)$')
+  local curve = {name = name, type = tonumber(kind), smooth = false, y = numbers(ys)}
+  curve.points = #curve.y
+  if curve.type == 1 then curve.x = numbers(xs) end
+  return curve
+end
 function model.getOutput(index)
   return {name = 'CH' .. (index + 1), min = -1000, max = 1000, offset = 0, ppmCenter = 1500, symetrical = 0,
     revert = int(host:outputReversed(index))}

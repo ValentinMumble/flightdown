@@ -34,11 +34,62 @@
 /* The 6-position buttons under the screen, as on the TX16S: the pressed one lit, its pack named after them. */
 .radio-buttons {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+/* The buttons in a row as tall as the knob, so the knob's middle and theirs line up; the pack's name under them. */
+.radio-buttons-set {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.radio-buttons-row {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  margin-top: 12px;
+  min-height: 40px;
+}
+
+/* The replay light, at the bar's other end: a red dot that flashes while a pack plays, its place kept otherwise. */
+.radio-replay {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  font: 600 0.6875rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--warning);
+}
+
+.radio-replay[aria-hidden='true'] {
+  visibility: hidden;
+}
+
+.radio-replay-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
+  animation: radio-replay-flash 1s steps(1, end) infinite;
+}
+
+@keyframes radio-replay-flash {
+  50% {
+    opacity: 0.15;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radio-replay-dot {
+    animation: none;
+  }
 }
 
 .radio-button {
@@ -64,8 +115,128 @@
   outline-offset: 2px;
 }
 
+/* The two sticks under the screen, as gimbals: a square with its cross, the head where the axes put it. */
+/* Under the screen, a stick under each half, as the radio's gimbals sit. */
+.radio-sticks {
+  display: flex;
+  justify-content: space-around;
+  gap: 24px;
+  margin-top: 18px;
+}
+
+.radio-stick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.radio-stick-gimbal {
+  --across: 50%;
+  --up: 50%;
+  position: relative;
+  width: 112px;
+  height: 112px;
+  border-radius: 12px;
+  border: 1px solid var(--bezel-strong);
+  background:
+    linear-gradient(var(--bezel), var(--bezel)) center / 1px 100% no-repeat,
+    linear-gradient(var(--bezel), var(--bezel)) center / 100% 1px no-repeat,
+    radial-gradient(circle, #1a1e22, #0c0e10 70%);
+  cursor: grab;
+  touch-action: none;
+}
+
+.radio-stick-gimbal:active {
+  cursor: grabbing;
+}
+
+.radio-stick-gimbal:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.radio-stick-head {
+  position: absolute;
+  left: var(--across);
+  top: var(--up);
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  border: 1px solid var(--bezel-strong);
+  background: radial-gradient(circle at 35% 30%, #4a5056, #15181b 70%);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 35%, transparent);
+  pointer-events: none;
+}
+
+/* As wide as its longest ("Rud +100% · Thr +100%"), centred: the stick stays put while the values change. */
+.radio-stick-label {
+  width: 21ch;
+  font: 600 0.6875rem/1 var(--mono);
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* A knob (S1): its pointer turns with it, up at the middle; dragged, scrolled or keyed. */
+/* The knob as tall as its dial, so it lines up with the buttons; its label hangs under it. */
+.radio-knob {
+  position: relative;
+}
+
+.radio-knob .radio-knob-label {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.radio-knob-dial {
+  --turn: 0deg;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--bezel-strong);
+  background: radial-gradient(circle at 35% 30%, #3a3f44, #111417 70%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  touch-action: none;
+}
+
+.radio-knob-dial::after {
+  content: '';
+  position: absolute;
+  left: calc(50% - 1.5px);
+  top: 4px;
+  width: 3px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform-origin: 50% 16px;
+  transform: rotate(var(--turn));
+}
+
+.radio-knob-dial:active {
+  cursor: grabbing;
+}
+
+.radio-knob-dial:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* As wide as its longest ("S1 +100%"), centred, for the same reason. */
+.radio-knob-label {
+  width: 8ch;
+  font: 600 0.6875rem/1 var(--mono);
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
 .radio-buttons-pack {
-  flex-basis: 100%;
   text-align: center;
   font-size: 0.75rem;
   color: var(--muted);
@@ -150,6 +321,7 @@
 }
 
 .radio-input {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -337,6 +509,52 @@
   display: block;
   font-weight: 600;
   color: var(--ink);
+}
+
+.radio-switch-role {
+  display: grid;
+}
+
+/* A held spring switch's tooltip: under its tile, over what is below, with a notch pointing up at it. */
+.radio-switch-tip {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 8px);
+  left: 50%;
+  width: max-content;
+  max-width: 220px;
+  transform: translateX(-50%);
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--warning);
+  background: color-mix(in srgb, var(--warning) 14%, var(--panel));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--ink);
+  text-align: center;
+  pointer-events: none;
+}
+
+.radio-switch-tip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: calc(50% - 5px);
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  border-top: 1px solid var(--warning);
+  border-left: 1px solid var(--warning);
+  background: color-mix(in srgb, var(--warning) 14%, var(--panel));
+}
+
+.radio-switch-effect {
+  grid-area: 1 / 1;
+}
+
+.radio-switch-effect[aria-hidden='true'] {
+  visibility: hidden;
 }
 
 /* The position after the name, as EdgeTX writes it (SA↑). */
@@ -653,6 +871,49 @@ textarea.input.radio-code {
   display: flex;
   justify-content: space-between;
   gap: 8px;
+}
+
+/* A line and, under it, the curve it goes through. */
+.logic-entry {
+  display: block;
+}
+
+.logic-curve {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin: 4px 0 6px;
+}
+
+.logic-curve-frame {
+  fill: color-mix(in srgb, var(--panel-2) 70%, transparent);
+  stroke: var(--bezel);
+  vector-effect: non-scaling-stroke;
+}
+
+.logic-curve-axis {
+  stroke: var(--bezel);
+  stroke-dasharray: 2 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.logic-curve-line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.logic-now .logic-curve-line {
+  stroke: var(--good);
+}
+
+.logic-curve-dot {
+  fill: var(--accent);
+  stroke: var(--panel);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
 }
 
 .logic-now .logic-line {

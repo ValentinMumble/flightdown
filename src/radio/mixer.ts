@@ -26,11 +26,15 @@ export function outputIndex(name: string): number | null {
   return fromOne ? Number(fromOne[1]) - 1 : null;
 }
 
+/** Where a curve's points sit across (%): its own x points between the ends, else evenly spaced. */
+export const curveXs = (curve: CardCurve) =>
+  curve.x ? [-100, ...curve.x, 100] : curve.y.map((_, index) => -100 + (200 * index) / (curve.y.length - 1));
+
 /** A curve's value at `value`: its points joined by straight lines (a smooth curve drawn straight). */
 function custom(curve: CardCurve, value: number): number {
   const count = curve.y.length;
   if (count < 2) return value;
-  const xs = curve.x ? [-100, ...curve.x, 100] : curve.y.map((_, index) => -100 + (200 * index) / (count - 1));
+  const xs = curveXs(curve);
   const at = (value / FULL) * 100;
   for (let index = 1; index < count; index += 1) {
     if (at <= xs[index] || index === count - 1) {
@@ -56,8 +60,14 @@ function applyCurve(value: number, curve: CurveRef | undefined, curves: CardCurv
   return value;
 }
 
-/** A channel's output (from 0), as the radio's mixer makes it from `read` (sources) and `isOn` (switches). */
-export function channelOutput(model: MixedModel, channel: number, read: Read, isOn: (name: string) => boolean): number {
+/** A curve's value (%) at `percent` across, as a mix line applies it. */
+export const curveAt = (curve: CardCurve, percent: number) => (custom(curve, (percent * FULL) / 100) * 100) / FULL;
+
+/**
+ * What a mix line's source gives now, before its curve (-1024 to 1024): an input (I2) through its own line, a logical
+ * switch full one way or the other, a stick, knob or switch as `read` gives it.
+ */
+export function mixSource(model: MixedModel, read: Read, isOn: (name: string) => boolean): (raw: string) => number {
   const curves = model.curves ?? [];
   const on = (name: string) => !name || name === 'NONE' || isOn(name);
   const inputs = new Map<number, number>();
@@ -77,6 +87,14 @@ export function channelOutput(model: MixedModel, channel: number, read: Read, is
     if (raw === 'MAX') return FULL;
     return read(NAMES[raw] ?? raw);
   };
+  return source;
+}
+
+/** A channel's output (from 0), as the radio's mixer makes it from `read` (sources) and `isOn` (switches). */
+export function channelOutput(model: MixedModel, channel: number, read: Read, isOn: (name: string) => boolean): number {
+  const curves = model.curves ?? [];
+  const on = (name: string) => !name || name === 'NONE' || isOn(name);
+  const source = mixSource(model, read, isOn);
   let value = 0;
   for (const mix of model.mixes ?? []) {
     if (mix.channel !== channel || !on(mix.swtch)) continue;

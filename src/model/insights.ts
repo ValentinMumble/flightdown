@@ -15,14 +15,21 @@ const INVERTED_SECONDS = 3;
 /** How far to the other side of hover: a quarter of the collective's travel (-3° on a ±12° heli). */
 const INVERTED_SHARE = 0.25;
 
+/** Collective stick (% of its travel, bottom 0) from which the pitch is positive: upright, the heli climbs. */
+const STICK_UP = 60;
+
 /**
- * The side of centre the collective (CH6) sits at in a hover, upright: the side of most of its time under load,
- * whatever the channel's reversal. 1 or -1, or 0 when the log cannot say (no pitch, no load).
+ * The side of centre the collective (CH6) sits at in a hover, upright, whatever the channel's reversal: its side while
+ * the collective stick is up, under load (an upright hover needs positive pitch), so a pack flown mostly inverted reads
+ * right. A log with no stick: the side of most of its time under load. 1 or -1, or 0 when the log cannot say.
  */
 export function hoverSide(series: TelemetrySeries): number {
   const pitch = series.channels.ch6 ?? [];
   const current = series.channels.current ?? [];
-  const sides = pitch.filter((_, index) => (current[index] ?? 0) >= IDLE_AMPS).map(value => value - 1500);
+  const stick = series.channels.throttle ?? [];
+  const loaded = (index: number) => (current[index] ?? 0) >= IDLE_AMPS;
+  const raised = pitch.filter((_, index) => loaded(index) && (stick[index] ?? 0) >= STICK_UP);
+  const sides = (raised.length ? raised : pitch.filter((_, index) => loaded(index))).map(value => value - 1500);
   if (!sides.length) return 0;
   return Math.sign(sides.sort((left, right) => left - right)[Math.floor(sides.length / 2)]);
 }

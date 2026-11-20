@@ -382,11 +382,16 @@ export function BatteryForm({battery}: {battery?: Battery}) {
   const savedPack = (number: number) => battery?.packs.find(pack => pack.number === number);
   const change = (number: number, update: (pack: Pack) => Pack) =>
     setPacks(current => current.map(pack => (pack.number === number ? update(pack) : pack)));
-  // A pack keeps the day it got its button while it keeps the button: its older logs stay its own.
+  // A pack keeps the day it got its button while it keeps the button; moved off it, the old button goes in its
+  // history until today, so its older logs stay its own.
   const setButton = (number: number, button?: number) =>
     change(number, pack => {
       const saved = savedPack(number);
-      return {...pack, button, since: !button ? undefined : saved?.button === button ? saved.since : today()};
+      if (saved?.button === button) return {...pack, button, since: saved?.since, earlier: saved?.earlier};
+      const earlier = saved?.button
+        ? [...(saved.earlier ?? []), {button: saved.button, ...(saved.since && {since: saved.since}), until: today()}]
+        : saved?.earlier;
+      return {...pack, button, since: button ? today() : undefined, earlier};
     });
   // A new pack numbers on from every pack of the kinds named alike (Gens Ace 700 and 750): no two share a name.
   const addPack = () =>
@@ -404,10 +409,11 @@ export function BatteryForm({battery}: {battery?: Battery}) {
       name: name.trim() || `${cells}S ${capacity} mAh`,
       cells,
       capacity: Number(capacity) || 0,
-      packs: packs.map(({number, button, since, dead}) => ({
+      packs: packs.map(({number, button, since, earlier, dead}) => ({
         number,
         ...(button ? {button} : {}),
         ...(since && {since}),
+        ...(earlier?.length && {earlier}),
         ...(dead && {dead}),
       })),
       heliIds,

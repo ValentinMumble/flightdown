@@ -40,6 +40,14 @@ describe('groupPacks', () => {
     expect(joined.avgCurrent).toBeCloseTo((7 * 175 + 10 * 161) / 336, 2);
   });
 
+  it('counts a file whose mAh count carried on from the file before from where it started', () => {
+    const [pack] = groupPacks([
+      file('one', '2026-11-20T16:32:08', 133, {mAh: 290}),
+      file('two', '2026-11-20T16:34:23', 240, {mAh: 633, mAhFrom: 290}),
+    ]);
+    expect(pack.mAh).toBe(633);
+  });
+
   it('keeps files a pack swap apart as separate packs, and a file with no start on its own at the end', () => {
     const packs = groupPacks([file('alone', undefined, 60), ...logs.slice(1)]);
     expect(packs.map(pack => pack.files.map(one => one.id))).toEqual([['first'], ['second'], ['alone']]);
@@ -105,5 +113,19 @@ describe('buttonPack', () => {
     expect(buttonPack(2, batteries, '2026-11-13')).toBe('Gens Ace #3');
     expect(buttonPack(3, batteries, '2026-11-13')).toBe('Gens Ace #4');
     expect(buttonPack(4, batteries, '2026-11-13')).toBe('OMPHobby #2');
+  });
+
+  it('keeps the logs on a button a pack moved off its own until the day it moved', () => {
+    const moved = [
+      ...batteries.slice(0, 2),
+      kind('gens-750', 'Gens Ace 3S 750 mAh', [
+        {number: 3, button: 1, since: '2026-11-21', earlier: [{button: 2, since: '2026-11-13', until: '2026-11-21'}]},
+        {number: 4, button: 3, since: '2026-11-13'},
+      ]),
+    ];
+    expect(buttonPack(2, moved, '2026-11-20')).toBe('Gens Ace #3');
+    expect(buttonPack(1, moved, '2026-11-20')).toBe('Gens Ace #1');
+    expect(buttonPack(1, moved, '2026-11-21')).toBe('Gens Ace #3');
+    expect(buttonPack(2, moved, '2026-11-21')).toBe('Gens Ace #2');
   });
 });

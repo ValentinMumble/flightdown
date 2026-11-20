@@ -4,7 +4,7 @@ import type {Sortie} from '../types';
 import {useStore} from '../data/store';
 import {sortiePhotos, useAlbum} from '../data/album';
 import {airtime, loggedTimes} from '../model/stats';
-import {formatAirtime, formatDay, formatTimer, fromDay} from '../model/format';
+import {daysBetween, formatAirtime, formatDay, formatTimer, fromDay, today} from '../model/format';
 import {useSeriesColor} from './colors';
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -36,6 +36,9 @@ export function FlightStrip({
   const one = heli(sortie.heliId);
   const place = spot(sortie.spotId);
   const date = fromDay(sortie.date);
+  // Today's and yesterday's sorties say so in place of their weekday.
+  const days = daysBetween(sortie.date, today());
+  const near = days === 0 ? 'TODAY' : days === 1 ? 'YESTERDAY' : null;
   const parts = sortie.broken.reduce((sum, broken) => sum + broken.qty, 0);
   const shots = sortiePhotos(sortie, useAlbum()).length;
   return (
@@ -45,7 +48,7 @@ export function FlightStrip({
       style={{['--strip' as string]: color(one?.color ?? -1)}}
     >
       <span className="strip-date" title={formatDay(sortie.date, {year: true})}>
-        <span>{WEEKDAYS[date.getDay()]}</span>
+        <span>{near ?? WEEKDAYS[date.getDay()]}</span>
         <b>{String(date.getDate()).padStart(2, '0')}</b>
         {!inMonth && (
           <span>

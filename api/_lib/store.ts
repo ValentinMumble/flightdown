@@ -28,10 +28,21 @@ export function isKind(value: unknown): value is Kind {
   return typeof value === 'string' && (KINDS as string[]).includes(value);
 }
 
+/** Items in a fixed order, a hash keeping none: by the day each came (none last), then by name. */
+const byDay =
+  <Item extends {name: string}>(day: (item: Item) => string | undefined) =>
+  (left: Item, right: Item) =>
+    (day(left) ?? '9999').localeCompare(day(right) ?? '9999') || left.name.localeCompare(right.name);
+
 export async function readDoc(): Promise<Doc> {
   const store = redis();
   const hashes = await Promise.all(KINDS.map(kind => store.hgetall<Record<string, unknown>>(kindKey(kind))));
-  return Object.fromEntries(KINDS.map((kind, index) => [kind, Object.values(hashes[index] ?? {})])) as unknown as Doc;
+  const doc = Object.fromEntries(
+    KINDS.map((kind, index) => [kind, Object.values(hashes[index] ?? {})]),
+  ) as unknown as Doc;
+  doc.helis.sort(byDay(heli => heli.acquired));
+  doc.batteries.sort(byDay(battery => battery.bought));
+  return doc;
 }
 
 /** Writes items by id, in chunks: Upstash caps the size of one request. */

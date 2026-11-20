@@ -3,7 +3,7 @@
  * (logical switches), and what comes of them (each channel's mix lines, the special functions, the timers), with the
  * radio's own global functions beside them. Each item says what it reads, so the view can light a path through it.
  */
-import type {CardFunction, CardMix, CardModel, CardRadio, CurveRef} from './card';
+import type {CardCurve, CardFunction, CardMix, CardModel, CardRadio, CurveRef} from './card';
 import type {LogicalSwitch} from './timers';
 import {channelName, conditionName, switchRole} from './roles';
 
@@ -31,6 +31,11 @@ export interface LogicLine {
   when: string;
   /** The switch in words: "L3 IU 3", or empty for always. */
   label: string;
+  /**
+   * The custom curve it goes through, to draw: its name and points, the source it takes (as the mixer reads it: "I5"),
+   * and whether it takes it the other way round (a curve picked as "-CP2").
+   */
+  curve?: {name: string; shape: CardCurve; source: string; mirrored: boolean};
 }
 
 export interface LogicChannel extends LogicItem {
@@ -264,7 +269,23 @@ export function describeLogic(model: CardModel, radio?: CardRadio): ModelLogicVi
     }
     const how = mix.how === 'REPL' ? '=' : mix.how === 'MULT' ? '×' : '+';
     const when = mix.swtch === 'NONE' ? '' : mix.swtch;
-    item.lines.push({text: describeMix(mix, model), how, when, label: when ? switchLabel(when, model) : ''});
+    const shape = mix.curve?.type === 3 ? model.curves?.[Math.abs(mix.curve.value) - 1] : undefined;
+    const curve =
+      mix.curve && shape && shape.y.length >= 2
+        ? {
+            name: model.curveNames?.[Math.abs(mix.curve.value) - 1] || `${Math.abs(mix.curve.value)}`,
+            shape,
+            source: mix.source,
+            mirrored: mix.curve.value < 0,
+          }
+        : undefined;
+    item.lines.push({
+      text: describeMix(mix, model),
+      how,
+      when,
+      label: when ? switchLabel(when, model) : '',
+      ...(curve && {curve}),
+    });
     item.uses.push(...switchReads(mix.source, model), ...switchReads(mix.swtch, model));
   }
   channels.sort((left, right) => left.channel - right.channel);

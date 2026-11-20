@@ -62,7 +62,7 @@ function heli(idleUps: [number, number, number]): Record<string, SwitchRole> {
 }
 
 const ROLES: Record<string, Record<string, SwitchRole>> = {
-  'M2 EVO': heli([54, 58, 75]),
+  'M2 EVO': heli([54, 60, 75]),
   M4: heli([55, 65, 63]),
 };
 

@@ -74,6 +74,24 @@ describe('the card', () => {
     expect(model.sensors[5]).toBe('VFAS');
   });
 
+  it("keeps a widget's options at their numbers when the model skips one", () => {
+    const model = readModel('model20', {
+      topbarData: {
+        zones: {
+          0: {
+            widgetName: 'FMStatus',
+            widgetData: {
+              options: {0: {type: 'Source', value: {source: 'SE'}}, 3: {type: 'Source', value: {source: 'P1'}}},
+            },
+          },
+        },
+      },
+    });
+    const options = model.topbar[0].options;
+    expect(options[2]).toBeUndefined();
+    expect(options[3]).toEqual({type: 'Source', value: 'P1'});
+  });
+
   it('finds the switches a model uses anywhere, but not in its power-on checks', () => {
     expect(
       usedSwitches({

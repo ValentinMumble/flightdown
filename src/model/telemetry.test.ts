@@ -117,6 +117,14 @@ describe('invertedStretches', () => {
   it('needs the motor under load', () => {
     expect(invertedStretches({...series, channels: {ch6, current: time.map(() => 0)}})).toEqual([]);
   });
+
+  it('knows upright by the collective stick, on a pack flown mostly inverted', () => {
+    // Upright (stick at 70%, 1436 µs) for the first 4 s, then inverted (stick at 25%, 1884 µs) to the end.
+    const mostly = time.map(second => (second < 4 ? 1436 : 1884));
+    const stick = time.map(second => (second < 4 ? 70 : 25));
+    const inverted = {id: 'pack', time, channels: {ch6: mostly, throttle: stick, current: time.map(() => 6)}};
+    expect(invertedStretches(inverted)).toEqual([{start: 4, seconds: 16}]);
+  });
 });
 
 describe('telemetryInsights', () => {

@@ -19,9 +19,11 @@ import {formatDay, formatTimer, plural} from '../model/format';
 import {buttonOf, isOutput} from '../model/telemetry';
 import {Radio, SCREEN, startLua, type RadioInputs, type WidgetOption, type WidgetRunner} from '../radio/edgetx';
 import {ModelTimers} from '../radio/timers';
-import {channelOutput, outputIndex} from '../radio/mixer';
+import {channelOutput, mixSource, outputIndex} from '../radio/mixer';
 import {describeLogic} from '../radio/logic';
 import {RadioLogic} from '../components/RadioLogic';
+import {RadioKnob} from '../components/RadioKnob';
+import {RadioStick} from '../components/RadioStick';
 import type {Card, CardModel} from '../radio/card';
 import {switchRole, type SwitchRole} from '../radio/roles';
 import {mainView, TOP_BAR} from '../radio/layout';
@@ -116,9 +118,25 @@ const isPositional = (name: string) => /^S[A-Z]\d?$|switch|^ch\(|^I\d+$|^(Thr|Ru
 const isSwitch = (name: string) => /^S[A-Z]\d?$|switch/i.test(name);
 
 /** A source as one name whatever its case: EdgeTX reads "sh" as the switch SH. */
-/** The TX16S's knobs, sliders and buttons as Lua names them on the radio (EdgeTX 2.12.5, exactly), as the tab does. */
-const LUA_NAMES: Record<string, string> = {'6pos': '6P', s1: 'S1', s2: 'S2', ls: 'LS', rs: 'RS'};
-const sourceKey = (source: string) => LUA_NAMES[source] ?? (/^s[a-z]$/i.test(source) ? source.toUpperCase() : source);
+/**
+ * The TX16S's sticks, knobs, sliders and buttons as Lua names them on the radio (EdgeTX 2.12.5, exactly), as the tab
+ * does: a stick by its model file name, so a widget and the mixer move the same one.
+ */
+const LUA_NAMES: Record<string, string> = {
+  '6pos': '6P',
+  s1: 'S1',
+  s2: 'S2',
+  ls: 'LS',
+  rs: 'RS',
+  ail: 'Ail',
+  ele: 'Ele',
+  thr: 'Thr',
+  rud: 'Rud',
+};
+/** The same, as a model file names a widget's source option (EdgeTX 2.12: S1 is P1, the buttons P2). */
+const FILE_NAMES: Record<string, string> = {P1: 'S1', P2: '6P', P3: 'S2', SL1: 'LS', SL2: 'RS'};
+const sourceKey = (source: string) =>
+  LUA_NAMES[source] ?? FILE_NAMES[source] ?? (/^s[a-z]$/i.test(source) ? source.toUpperCase() : source);
 
 /**
  * The pack signal a source most likely follows: by its own name (a telemetry source by its sensor's, "tele(5)" being
@@ -166,6 +184,8 @@ const restingValue = (name: string) => RESTING[name] ?? (TWO_POSITIONS.includes(
 
 /** SH springs back: down only while held. */
 const MOMENTARY = ['SH'];
+/** What a pack replayed drives again when chosen, whatever was moved by hand: the sticks and the 6-position buttons. */
+const FROM_THE_PACK = ['Ail', 'Ele', 'Thr', 'Rud', '6P'];
 /** SH is the rescue switch: its cap is red. */
 const RED_CAPS = ['SH'];
 
@@ -455,17 +475,29 @@ function SourceControl({
           aria-label={`${name} value`}
         />
       )}
-      {isSwitch(name) && (effect || unused) && (
+      {isSwitch(name) && (roleLines.length > 0 || unused) && (
+        // Every position's word in one cell, only the current one seen: the tile keeps one height, so a switch moved
+        // (SH held for the rescue) does not push the others.
         <p className="radio-switch-role" aria-live="polite">
-          {effect ? (
-            <>
-              <strong>{effect[0]}</strong>
-              {effect[1] && <span>{effect[1]}</span>}
-            </>
-          ) : (
-            'Not used'
-          )}
+          {roleLines.length > 0
+            ? positions.map(({label: position}) => {
+                const words = role?.[position.toLowerCase() as keyof typeof POSITION_MARK];
+                const current = words === effect;
+                // The word only: what it does in full is the tile's tooltip.
+                return (
+                  <span key={position} className="radio-switch-effect" aria-hidden={!current}>
+                    {words && <strong>{words[0]}</strong>}
+                  </span>
+                );
+              })
+            : 'Not used'}
         </p>
+      )}
+      {/* A spring switch held (SH, the rescue): what it does now, in full, floating out of the tile. */}
+      {momentary && value > 0 && effect?.[1] && (
+        <span className="radio-switch-tip" role="tooltip">
+          {effect[1]}
+        </span>
       )}
       {channels.length > 0 && !isSwitch(name) && (
         <select
@@ -832,6 +864,7 @@ export default function RadioView() {
         bitmap: model.bitmap,
         globals: model.globals,
         reversed: model.reversed,
+        curves: (model.curves ?? []).map((curve, index) => curve && {...curve, name: model.curveNames?.[index] ?? ''}),
       };
       await loadPicture(model.bitmap, async () => radioFile(`IMAGES/${model.bitmap}`));
       const next: Placed[] = [];
@@ -954,6 +987,11 @@ export default function RadioView() {
     }
     setSeries(joinSeries(chosen.pack, parts as TelemetrySeries[]));
     setSeriesStart(chosen.pack.start);
+    // The pack drives the sticks and the buttons again, even those moved by hand before (the curve's dot follows the
+    // collective it logged).
+    setBindings(previous =>
+      Object.fromEntries(Object.entries(previous).filter(([name]) => !FROM_THE_PACK.includes(name))),
+    );
     live.current.replay = {...live.current.replay, at: 0, playing: true};
   };
 
@@ -1013,7 +1051,21 @@ export default function RadioView() {
   // The 6-position buttons, under the screen as on the radio: always on a model screen, else when the widget reads them.
   const showButtons = mode === 'screen' || sources.includes('6P');
   const buttons = sourceNow('6P');
-  const folded = others.filter(name => name !== '6P' || !showButtons);
+  // The S1 knob beside them when a widget reads it (the M2 EVO's Cockpit shows what it adds to the head speed).
+  const showKnob = sources.includes('S1');
+  const folded = others.filter(name => (name !== '6P' || !showButtons) && (name !== 'S1' || !showKnob));
+  const turnKnob = (value: number) => {
+    setBindings(previous => ({...previous, S1: ''}));
+    setManual(previous => ({...previous, S1: value}));
+  };
+  // The two sticks under the screen (Mode 2): on a model screen, or when the widget reads one. Moved by hand, a stick
+  // leaves the pack replayed.
+  const showSticks = mode === 'screen' || sources.some(name => ['Ail', 'Ele', 'Thr', 'Rud'].includes(name));
+  const moveStick = (name: string, value: number) => {
+    setBindings(previous => ({...previous, [name]: ''}));
+    setManual(previous => ({...previous, [name]: value}));
+  };
+  const axis = (name: string, springs = true) => ({name, value: sourceNow(name).value, springs});
   const pressed = buttonOf(buttons.value);
   const pressButton = (button: number) => {
     setBindings(previous => ({...previous, '6P': ''}));
@@ -1106,38 +1158,58 @@ export default function RadioView() {
 
   return (
     <div className="radio-view">
+      {/* As on the TX16S, the S1 knob and the 6-position buttons sit above the screen (and the switches keep
+        their top level with it). */}
+      {(showButtons || showKnob) && (
+        <div
+          className={['radio-buttons', buttons.followed && 'from-pack'].filter(Boolean).join(' ')}
+          role="group"
+          aria-label="6-position buttons"
+        >
+          {showKnob && <RadioKnob name="S1" value={sourceNow('S1').value} onChange={turnKnob} />}
+          {showButtons && (
+            <div className="radio-buttons-set">
+              <div className="radio-buttons-row">
+                {BUTTONS.map(button => {
+                  const pack = buttonPack(button, doc.batteries);
+                  return (
+                    <button
+                      key={button}
+                      type="button"
+                      className="radio-button"
+                      aria-pressed={pressed === button}
+                      aria-label={`Button ${button}${pack ? `: ${pack}` : ''}`}
+                      title={pack ?? `Button ${button}`}
+                      onClick={() => pressButton(button)}
+                    >
+                      {button}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="radio-buttons-pack">
+                {buttonPack(pressed, doc.batteries) ?? `Button ${pressed}`}
+                {buttons.followed && series ? ', from the pack' : ''}
+              </span>
+            </div>
+          )}
+          {/* A light that flashes while a pack replays, as a recorder's: its place kept, so nothing moves. */}
+          <span className="radio-replay" aria-hidden={!replay.playing} role="status">
+            <span className="radio-replay-dot" />
+            Replay
+          </span>
+        </div>
+      )}
       <div className="radio-console">
         <div className="radio-switches left" aria-label="Left switches">
           {side.left.map(name => control(name, isUnused(name)))}
         </div>
         <div className="radio-screen">
           <canvas ref={canvas} width={SCREEN.width} height={SCREEN.height} aria-label="The radio's screen" />
-          {showButtons && (
-            <div
-              className={['radio-buttons', buttons.followed && 'from-pack'].filter(Boolean).join(' ')}
-              role="group"
-              aria-label="6-position buttons"
-            >
-              {BUTTONS.map(button => {
-                const pack = buttonPack(button, doc.batteries);
-                return (
-                  <button
-                    key={button}
-                    type="button"
-                    className="radio-button"
-                    aria-pressed={pressed === button}
-                    aria-label={`Button ${button}${pack ? `: ${pack}` : ''}`}
-                    title={pack ?? `Button ${button}`}
-                    onClick={() => pressButton(button)}
-                  >
-                    {button}
-                  </button>
-                );
-              })}
-              <span className="radio-buttons-pack">
-                {buttonPack(pressed, doc.batteries) ?? `Button ${pressed}`}
-                {buttons.followed && series ? ', from the pack' : ''}
-              </span>
+          {showSticks && (
+            <div className="radio-sticks">
+              <RadioStick label="Left stick" across={axis('Rud')} up={axis('Thr', false)} onChange={moveStick} />
+              <RadioStick label="Right stick" across={axis('Ail')} up={axis('Ele')} onChange={moveStick} />
             </div>
           )}
         </div>
@@ -1311,6 +1383,15 @@ export default function RadioView() {
           ways={waysOf}
           timer={index => logicNow()?.value(index) ?? 0}
           output={outputNow}
+          input={source =>
+            model
+              ? mixSource(
+                  model,
+                  mixed => valueAt(mixed),
+                  name => logicNow()?.isOn(name) ?? false,
+                )(source)
+              : 0
+          }
         />
       )}
 

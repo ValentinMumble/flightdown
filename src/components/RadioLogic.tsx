@@ -1,5 +1,6 @@
 import {useEffect, useState, type ReactNode} from 'react';
 import {connected, type LogicChannel, type LogicItem, type LogicLine, type ModelLogicView} from '../radio/logic';
+import {CurveGraph} from './CurveGraph';
 
 type Props = {
   view: ModelLogicView;
@@ -13,6 +14,8 @@ type Props = {
   timer: (index: number) => number;
   /** A channel's output now in µs (from 1), when a replayed pack logged it. */
   output: (channel: number) => number | null;
+  /** What a mix line's source gives now, before its curve (-1024 to 1024): the dot on the line's curve. */
+  input: (source: string) => number;
 };
 
 const clock = (seconds: number) =>
@@ -34,7 +37,7 @@ function channelNow(channel: LogicChannel, isOn: (when: string) => boolean) {
  * of them. What is on now stands out; the rest stays quiet, its detail shown when picked. Picking anything lights what
  * it reads and what reads it, and dims the rest.
  */
-export function RadioLogic({view, isOn, where, ways, timer, output}: Props) {
+export function RadioLogic({view, isOn, where, ways, timer, output, input}: Props) {
   const [picked, setPicked] = useState<string | null>(null);
   const [, setTick] = useState(0);
   // Delays, timers and a replay move on by themselves: a few times a second follows them.
@@ -93,13 +96,27 @@ export function RadioLogic({view, isOn, where, ways, timer, output}: Props) {
     );
   };
 
+  // A line through a custom curve draws it, with a dot where its input is now (the input taken the other way round
+  // for a mirrored curve).
+  const graph = (one: LogicLine, live: boolean) =>
+    one.curve && (
+      <CurveGraph
+        name={one.curve.name}
+        shape={one.curve.shape}
+        at={live ? ((one.curve.mirrored ? -1 : 1) * input(one.curve.source)) / 10.24 : undefined}
+      />
+    );
+
   const line = (one: LogicLine, index: number, added: boolean) => (
-    <span key={index} className="logic-line">
-      <span className="logic-text">
-        {added && '+ '}
-        {one.text}
+    <span key={index} className="logic-entry">
+      <span className="logic-line">
+        <span className="logic-text">
+          {added && '+ '}
+          {one.text}
+        </span>
+        <span className="logic-why">{one.label || 'always'}</span>
       </span>
-      <span className="logic-why">{one.label || 'always'}</span>
+      {graph(one, true)}
     </span>
   );
 
@@ -117,11 +134,14 @@ export function RadioLogic({view, isOn, where, ways, timer, output}: Props) {
             (open ? (
               <span className="logic-rest">
                 {rest.map((one, index) => (
-                  <span key={index} className="logic-line">
-                    <span className="logic-text">
-                      {one.how} {one.text}
+                  <span key={index} className="logic-entry">
+                    <span className="logic-line">
+                      <span className="logic-text">
+                        {one.how} {one.text}
+                      </span>
+                      <span className="logic-why">{one.label || 'always'}</span>
                     </span>
-                    <span className="logic-why">{one.label || 'always'}</span>
+                    {graph(one, false)}
                   </span>
                 ))}
               </span>
