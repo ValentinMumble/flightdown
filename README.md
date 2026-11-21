@@ -56,7 +56,9 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   their price, helis their class, rotor size and weight (under the maker and model). Each heli has a data plate page (with each part's time since it last broke there, against how long it
   lasts) and its own chart colour (picked in its form). Helis, radios and packs
   take a photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac;
-  others are cut out in the page). Spare parts are hidden for now (`SHOW_SPARES` in `src/model/parts.ts`).
+  others are cut out in the page). Spare parts in their own tab: each counted on a day, each break logged since
+  taking one off, those below what to keep on the Cockpit's flight line (`SHOW_SPARES` in `src/model/parts.ts` hides
+  them).
 - **Radio:** a tab of its own: the TX16S, running the Lua that goes on it (in the browser, with Fengari), its switches
   around the screen where they sit on the radio, each saying what it does on the model where it is set (`roles.ts`,
   written by hand from the model files). Model screens: the M2 EVO's and the K110S's screens as the radio draws them
