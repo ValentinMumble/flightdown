@@ -114,8 +114,28 @@ export interface Sortie {
    */
   photos?: string[];
   telemetry: TelemetryLog[];
+  /** The weather at its spot while it flew, filled in from Open-Meteo's history (outdoor sorties at a located spot). */
+  weather?: SortieWeather;
   /** When it was written down: spares in stock only count the parts broken after their count. */
   loggedAt: string;
+}
+
+/** The weather at a sortie's spot over the hours it flew, from Open-Meteo's history. */
+export interface SortieWeather {
+  /** The spot it was read for: a sortie moved to another spot reads it again. */
+  spotId: string;
+  /** The hours it covers, the spot's local time, both counted (0 to 23): its logs', else 12 to 17. */
+  from: number;
+  to: number;
+  /** The mean wind over those hours and the strongest gust, km/h at 10 m. */
+  wind: number;
+  gusts: number;
+  /** The mean temperature, °C. */
+  temp: number;
+  /** Rain over those hours, mm. */
+  rain: number;
+  /** The mean cloud cover, %: missing from weather read before it was kept, which is read again. */
+  cloud?: number;
 }
 
 export interface Spare {

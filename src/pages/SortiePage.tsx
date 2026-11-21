@@ -21,6 +21,7 @@ import {packDebrief} from '../model/cockpit';
 import {packRecords} from '../model/packs';
 import {parseCsv} from '../model/csv';
 import {hasLocation} from '../model/geo';
+import {weatherEmoji, weatherNote} from '../model/pastWeather';
 
 /** "Photo", "Video", "Map" or the site's name, for a link. */
 function linkLabel(url: string) {
@@ -140,6 +141,15 @@ export function SortiePage() {
                   {logged ? sortie.packs : `${sortie.packs} × ${formatTimer(sortie.timer)}`}
                 </div>
               </div>
+              {sortie.weather && !sortie.indoor && (
+                <div title={`At the spot from ${sortie.weather.from}:00 to ${sortie.weather.to + 1}:00, by Open-Meteo`}>
+                  <div className="figure-label">Wind</div>
+                  <div className="figure-value">
+                    <span aria-hidden>{weatherEmoji(sortie.weather)}</span> {Math.round(sortie.weather.wind)} km/h
+                  </div>
+                  <div className="figure-note">{weatherNote(sortie.weather)}</div>
+                </div>
+              )}
             </div>
             {/* The crashes, the spot and indoors, one tap each, saved at once. */}
             <SortieQuickFacts sortie={sortie} />

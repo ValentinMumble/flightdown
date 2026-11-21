@@ -6,6 +6,7 @@ import {sortiePhotos, useAlbum} from '../data/album';
 import {airtime, loggedTimes} from '../model/stats';
 import {daysBetween, formatAirtime, formatDay, formatTimer, fromDay, today} from '../model/format';
 import {useSeriesColor} from './colors';
+import {weatherEmoji, weatherTitle} from '../model/pastWeather';
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -60,6 +61,12 @@ export function FlightStrip({
         <span className="strip-heli">{one?.name ?? 'Unknown heli'}</span>
         <span className="strip-spot">
           {place ? `${place.emoji ? `${place.emoji} ` : ''}${place.name}` : 'Somewhere'}
+          {sortie.weather && !sortie.indoor && (
+            <span className="strip-weather" title={weatherTitle(sortie.weather)}>
+              {' '}
+              {weatherEmoji(sortie.weather)}
+            </span>
+          )}
           {sortie.notes && <span className="strip-notes"> · {sortie.notes}</span>}
         </span>
       </span>

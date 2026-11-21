@@ -473,6 +473,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+.figure-note {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* LED segments */
 .segments {
   display: grid;
@@ -2219,19 +2225,25 @@
 }
 
 .heli-table {
-  display: flex;
-  flex-direction: column;
+  /* The columns are the table's, each row a subgrid of them: a column lines up from row to row. */
+  display: grid;
+  grid-template-columns: var(--columns, minmax(0, 1fr) auto auto auto);
+  column-gap: 14px;
   margin-top: 14px;
 }
 
 .heli-table-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  gap: 14px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
   padding: 8px 0;
   border-top: 1px solid var(--bezel);
   font-size: 0.875rem;
+}
+
+.heli-table-row > :not(:first-child) {
+  text-align: right;
 }
 
 .heli-table-row .name {
@@ -2243,6 +2255,94 @@
 
 .heli-table-row .tabular {
   font-family: var(--display);
+}
+
+.heli-table-row.head,
+.stick-row.head {
+  border-top: 0;
+  padding-top: 0;
+  font-family: var(--display);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The sticks: a row a logged sortie, its idle ups as one bar split three ways. */
+.stick-rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto auto minmax(60px, 1fr) auto;
+  column-gap: 14px;
+  margin-top: 10px;
+}
+
+.stick-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--bezel);
+  font-size: 0.875rem;
+}
+
+/* The figures right, the idle ups' bar under its name on the left. */
+.stick-row > :nth-child(2),
+.stick-row > :nth-child(3),
+.stick-row > :nth-child(5) {
+  text-align: right;
+}
+
+.stick-row .name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.stick-row .tabular {
+  font-family: var(--display);
+  text-align: right;
+}
+
+.split-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+}
+
+.split-bar span {
+  border-radius: 4px;
+  min-width: 3px;
+}
+
+.split-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 12px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.split-legend i,
+.swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-right: 3px;
+  vertical-align: -1px;
+}
+
+@media (max-width: 640px) {
+  .stick-rows {
+    grid-template-columns: minmax(0, 1fr) auto auto minmax(48px, 0.8fr);
+  }
+  .stick-row > :last-child {
+    display: none;
+  }
 }
 
 .meter-stack {

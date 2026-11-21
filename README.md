@@ -44,12 +44,18 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
   heli breaks (a damage map on a 3D Huey you turn by dragging, a part's breaks on hover or tap; the flat drawing
   while it loads; the low-poly Huey by Sami, CC BY 4.0, turned into the zones by `scripts/huey.ts`, see
-  `assets/huey/CREDIT.md`), what brings it down (crash causes read from the notes), the fleet's
+  `assets/huey/CREDIT.md`), what brings it down (crash causes read from the notes), crash patterns (after a crash,
+  indoors, days since the last sortie) and crashes by wind, the fleet's
   history, the skill ladder, the flying season, packs a sortie, spots, hours by heli (each heli's share as a ring, in
   its chart colour), every pack's voltage under load, each pack's resistance over time (twice its first reading is
   worn), the flips and rolls added up, pack health (resistance first to latest, its trend a flight, the flights left
-  before it is worn at that rate, mAh a flight, lowest cell) and the power curve (current against collective, a cloud
-  a pack and the line they all make).
+  before it is worn at that rate, mAh a flight, lowest cell), the power curve (current against collective, a cloud
+  a pack and the line they all make), the sticks from the logs (rescues, self-level, practice rates, idle ups, cyclic
+  work, sortie by sortie), the current each idle up draws and the time a pack gives in it, and what it costs (helis
+  and gear bought, crash parts priced from the spares, each heli an hour).
+- **Weather:** each outdoor sortie at a located spot gets the wind, gusts, temperature and rain over the hours it flew
+  (its logs', else 12 to 17), from Open-Meteo's history, filled in by the app and shown on the sortie, with an emoji
+  on its strip (rain, wind, frost, or how cloudy).
 - **Hangar:** the flight line and the helis that left (stamped sold or lost), the radio and other gear (a tab), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
   the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), notes. Helis and packs keep the day they were bought, helis and radios

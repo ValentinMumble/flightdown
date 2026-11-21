@@ -26,6 +26,7 @@ import {HeliPage} from './pages/HeliPage';
 import {Settings} from './pages/Settings';
 import {Spots} from './pages/Spots';
 import {useTabSwipe} from './components/useTabSwipe';
+import {useSortieWeather} from './data/useSortieWeather';
 
 /** The views, in the order of the wide screens' bar and the phone's dock. */
 const TABS = [
@@ -199,6 +200,7 @@ function useScrollReset() {
 function Shell() {
   useSwipeTabs();
   useScrollReset();
+  useSortieWeather();
   return (
     <div className="app">
       <CockpitBar />

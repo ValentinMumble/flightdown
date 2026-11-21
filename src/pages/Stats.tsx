@@ -14,6 +14,9 @@ import {SkillLadder} from '../components/charts/SkillLadder';
 import {AirtimeDonut} from '../components/charts/AirtimeDonut';
 import {PackHealth} from '../components/charts/PackHealth';
 import {PowerCurve} from '../components/charts/PowerCurve';
+import {CrashPatterns, WindCrashes} from '../components/charts/CrashPatterns';
+import {Costs} from '../components/charts/Costs';
+import {IdleUpDraw, StickWork, useFlyingStats} from '../components/charts/StickWork';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {topBarHeight} from '../components/topBar';
 import {ago, formatAirtime, formatDay, formatRate, plural} from '../model/format';
@@ -26,12 +29,15 @@ import type {Sortie, TurnWay} from '../types';
 const SECTIONS = [
   {id: 'progress', label: 'Progress'},
   {id: 'crashes', label: 'Crashes'},
+  {id: 'patterns', label: 'Patterns'},
   {id: 'fleet', label: 'Fleet'},
   {id: 'packs', label: 'Packs'},
   {id: 'flips', label: 'Flips'},
+  {id: 'sticks', label: 'Sticks'},
   {id: 'health', label: 'Health'},
   {id: 'skills', label: 'Skills'},
   {id: 'spots', label: 'Spots'},
+  {id: 'costs', label: 'Costs'},
 ];
 
 /** The height of the bar the page scrolls under (the top bar on a phone, the cockpit bar on a wide screen). */
@@ -166,6 +172,7 @@ export function Stats() {
   const packs = useMemo(() => packsPerSortie(sorties), [sorties]);
   const packsMax = Math.max(...packs.map(count => count.sorties), 1);
   const fleet = heliId ? doc.helis.filter(one => one.id === heliId) : doc.helis;
+  const flown = useFlyingStats(sorties);
 
   return (
     <div className="page">
@@ -281,6 +288,19 @@ export function Stats() {
             </Panel>
 
             <Panel
+              id="patterns"
+              label="Crash patterns"
+              note="What came before the crashes: the sortie before, the place, the days since"
+              className="span-7"
+            >
+              <CrashPatterns sorties={sorties} />
+            </Panel>
+
+            <Panel label="Wind" note="How the crashes go with the wind at the spot" className="span-5">
+              <WindCrashes sorties={sorties} />
+            </Panel>
+
+            <Panel
               id="fleet"
               label="Fleet history"
               note="Each heli from its first sortie to its last: a dot a sortie, a red tick a crash"
@@ -309,6 +329,23 @@ export function Stats() {
 
             <Panel id="flips" label="Flips and rolls" note="Whole turns, read from the radio's logs" className="span-4">
               <FlipTotals sorties={sorties} />
+            </Panel>
+
+            <Panel
+              id="sticks"
+              label="At the sticks"
+              note="Read from the radio's logs: the switches and the cyclic, sortie by sortie"
+              className="span-8"
+            >
+              <StickWork flown={flown} />
+            </Panel>
+
+            <Panel
+              label="A pack in each idle up"
+              note="The current drawn, and the time a pack gives"
+              className="span-4"
+            >
+              <IdleUpDraw flown={flown} />
             </Panel>
 
             <Panel
@@ -411,6 +448,15 @@ export function Stats() {
                     </Link>
                   ))}
               </div>
+            </Panel>
+
+            <Panel
+              id="costs"
+              label="What it costs"
+              note="The helis, the gear and the parts the crashes broke"
+              className="span-12"
+            >
+              <Costs sorties={sorties} period={period} heliId={heliId} />
             </Panel>
           </div>
         </>
