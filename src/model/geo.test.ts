@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
-import {parseLocation, worldPixel} from './geo';
+import type {Sortie} from '../types';
+import {parseLocation, spotsByLastUse, worldPixel} from './geo';
 
 describe('parseLocation', () => {
   it('reads a plain pair', () => {
@@ -37,5 +38,19 @@ describe('parseLocation', () => {
 describe('worldPixel', () => {
   it('puts the equator and the prime meridian in the middle of the world', () => {
     expect(worldPixel({lat: 0, lng: 0}, 1)).toEqual({x: 256, y: 256});
+  });
+});
+
+describe('spotsByLastUse', () => {
+  const flown = (spotId?: string) => ({spotId}) as Sortie;
+
+  it('puts the spots flown last first, then the ones never flown', () => {
+    const spots = [
+      {id: 'park', name: 'Park'},
+      {id: 'hall', name: 'Hall'},
+      {id: 'beach', name: 'Beach'},
+    ];
+    const order = spotsByLastUse(spots, [flown('hall'), flown('park'), flown(), flown('hall')]);
+    expect(order.map(spot => spot.id)).toEqual(['hall', 'park', 'beach']);
   });
 });

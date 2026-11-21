@@ -53,6 +53,9 @@ export function HeliForm({heli}: {heli?: Heli}) {
   const [price, setPrice] = useState(heli?.price ? String(heli.price) : '');
   const [timer, setTimer] = useState(heli?.timer ? formatTimer(heli.timer) : '');
   const [battery, setBattery] = useState(heli?.battery ?? '');
+  const [sizeClass, setSizeClass] = useState(heli?.sizeClass ?? '');
+  const [rotor, setRotor] = useState(heli?.rotor ? String(heli.rotor) : '');
+  const [weight, setWeight] = useState(heli?.weight ? String(heli.weight) : '');
   const [photo, setPhoto] = useState(heli?.photo ?? '');
   const [setup, setSetup] = useState(heli?.setup ?? '');
   const sorties = heli ? doc.sorties.filter(sortie => sortie.heliId === heli.id).length : 0;
@@ -69,6 +72,10 @@ export function HeliForm({heli}: {heli?: Heli}) {
       ...(parsePrice(price) && {price: parsePrice(price)}),
       ...(parseTimer(timer) && {timer: parseTimer(timer)!}),
       ...(battery.trim() && {battery: battery.trim()}),
+      // "250 class" typed whole keeps only "250": the card adds "class" itself.
+      ...(sizeClass.trim() && {sizeClass: sizeClass.trim().replace(/\s*class$/i, '')}),
+      ...(parsePrice(rotor) && {rotor: parsePrice(rotor)}),
+      ...(parsePrice(weight) && {weight: parsePrice(weight)}),
       ...(photo.trim() && {photo: photo.trim()}),
       ...(setup.trim() && {setup: setup.trim()}),
       createdAt: heli?.createdAt ?? now(),
@@ -120,6 +127,40 @@ export function HeliForm({heli}: {heli?: Heli}) {
         <div className="field">
           <label htmlFor="heli-model">Model</label>
           <input id="heli-model" className="input" value={model} onChange={event => setModel(event.target.value)} />
+        </div>
+      </div>
+      <div className="field-row three">
+        <div className="field">
+          <label htmlFor="heli-class">Class</label>
+          <input
+            id="heli-class"
+            className="input"
+            placeholder="280"
+            value={sizeClass}
+            onChange={event => setSizeClass(event.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="heli-rotor">Rotor (mm)</label>
+          <input
+            id="heli-rotor"
+            className="input tabular"
+            inputMode="numeric"
+            placeholder="650"
+            value={rotor}
+            onChange={event => setRotor(event.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="heli-weight">Weight (g)</label>
+          <input
+            id="heli-weight"
+            className="input tabular"
+            inputMode="numeric"
+            placeholder="400"
+            value={weight}
+            onChange={event => setWeight(event.target.value)}
+          />
         </div>
       </div>
       <div className="field">

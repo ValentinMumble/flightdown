@@ -29,6 +29,8 @@ describe('zoneOf', () => {
     expect(zoneOf('Elevator servo ball joint')).toBe('servos');
     expect(zoneOf('Tail boom')).toBe('boom');
     expect(zoneOf('Tail motor')).toBe('tail');
+    expect(zoneOf('Main motor')).toBe('motor');
+    expect(zoneOf('Pinion')).toBe('motor');
     expect(zoneOf('Canopy mount')).toBe('canopy');
     expect(zoneOf('Skids')).toBe('skids');
     expect(zoneOf('Main gear')).toBe('frame');

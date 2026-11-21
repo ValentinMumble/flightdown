@@ -1,10 +1,11 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {Trash} from 'lucide-react';
 import type {TelemetryLog, TelemetrySeries} from '../types';
 import {useStore} from '../data/store';
 import {buttonBattery, groupPacks, joinSeries, packName, packRecords, packUsed} from '../model/packs';
 import {formatTimer, plural} from '../model/format';
 import {TelemetryCharts} from './charts/TelemetryCharts';
+import {topBarHeight} from './topBar';
 
 /** Below this the radio lost the voltage for a sample: left out of the lines. */
 const NO_VOLTAGE = 0.5;
@@ -52,6 +53,25 @@ export function TelemetryPacks({
   // Each file's samples once loaded, null when they could not be read.
   const [loaded, setLoaded] = useState<Record<string, TelemetrySeries | null>>({});
   const [chosen, setChosen] = useState(0);
+  // The packs' row stays pinned under the top bar, so another pack is one tap away from anywhere in the charts: it sits
+  // as far down as that bar is tall.
+  const row = useRef<HTMLDivElement>(null);
+  const [top, setTop] = useState(0);
+  useEffect(() => {
+    const measure = () => setTop(topBarHeight());
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+  // When the row is wider than the screen: keep the chosen pack in sight.
+  useEffect(() => {
+    const card = row.current?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!row.current || !card || row.current.scrollWidth <= row.current.clientWidth) return;
+    row.current.scrollTo({
+      left: card.offsetLeft - (row.current.clientWidth - card.offsetWidth) / 2,
+      behavior: 'smooth',
+    });
+  }, [chosen]);
 
   useEffect(() => {
     let current = true;
@@ -171,7 +191,7 @@ export function TelemetryPacks({
   return (
     <>
       {flights.length > 1 && (
-        <div className="pack-cards" role="group" aria-label="Packs">
+        <div ref={row} className="pack-cards" style={{top}} role="group" aria-label="Packs">
           {flights.map((one, index) => (
             <button
               key={one.files[0].id}

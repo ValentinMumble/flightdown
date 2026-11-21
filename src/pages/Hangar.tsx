@@ -19,7 +19,7 @@ import {BatteryForm, GearForm, HeliForm, SpareForm, TipForm} from '../components
 import {MinuteMeter, Stamp} from '../components/instruments';
 import {useSeriesColor} from '../components/colors';
 import {VisitorBanner} from '../components/VisitorBanner';
-import {ago, formatAirtime, formatDay, formatNumber, formatPrice, formatRate, plural} from '../model/format';
+import {ago, formatAirtime, formatDay, formatNumber, formatPrice, formatRate, heliSpecs, plural} from '../model/format';
 import {groupBy, packsSinceCrash, type GroupTally} from '../model/stats';
 import {brokenRanking, partKey, SHOW_SPARES, spareStock} from '../model/parts';
 import {now} from '../model/ids';
@@ -30,6 +30,7 @@ const VIEWS = [
   {to: '/hangar', label: 'Fleet', view: undefined},
   ...(SHOW_SPARES ? [{to: '/hangar/spares', label: 'Spares', view: 'spares'}] : []),
   {to: '/hangar/batteries', label: 'Batteries', view: 'batteries'},
+  {to: '/hangar/gear', label: 'Radio', view: 'gear'},
   {to: '/hangar/notes', label: 'Notes', view: 'notes'},
 ];
 
@@ -57,6 +58,7 @@ export function HeliCard({heli, tally, wide = false}: {heli: Heli; tally?: Group
           <div className="heli-model">
             {[heli.maker, heli.model].filter(Boolean).join(' ') || 'Maker and model not set'}
           </div>
+          {heliSpecs(heli) && <div className="heli-specs">{heliSpecs(heli)}</div>}
         </div>
         <div className="figures">
           <div>
@@ -202,8 +204,6 @@ function Fleet() {
           <Empty>No heli flying. Add one, or set one back to flying.</Empty>
         </div>
       )}
-
-      <Gear />
 
       {gone.length > 0 && (
         <>
@@ -519,6 +519,8 @@ export function Hangar() {
         <Spares />
       ) : view === 'batteries' ? (
         <Batteries />
+      ) : view === 'gear' ? (
+        <Gear />
       ) : view === 'notes' ? (
         <Notes />
       ) : (

@@ -571,6 +571,12 @@
   letter-spacing: 0.06em;
 }
 
+/* TODAY and YESTERDAY in place of the weekday: tighter, so YESTERDAY fits the narrow column on a phone. */
+.strip-date .strip-near {
+  font-size: 0.5625rem;
+  letter-spacing: 0;
+}
+
 .strip-heli {
   font-family: var(--display);
   font-size: 1rem;
@@ -643,7 +649,7 @@
   /* Three lines on a phone: the heli, the spot and notes, then the tags; the airtime on the right of all three. */
   .flight-strip,
   .flight-strip.large {
-    grid-template-columns: 52px minmax(0, 1fr) minmax(56px, auto);
+    grid-template-columns: 58px minmax(0, 1fr) minmax(56px, auto);
     grid-template-areas:
       'date heli time'
       'date spot time'
@@ -733,23 +739,52 @@
   letter-spacing: 0.06em;
 }
 
-/* Damage map */
+/* Damage map: the heli across the panel, the list of its parts under it. */
 .damage {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(180px, 1fr);
-  gap: 16px;
-  align-items: center;
-}
-
-@media (max-width: 860px) {
-  .damage {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
 }
 
 .damage-map {
   width: 100%;
   display: block;
+}
+
+/* The heli in 3D: the panel's width, half as tall (no taller than a screenful), the counts floating over their parts. */
+.damage-model {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  min-height: 220px;
+  max-height: min(560px, 70vh);
+  touch-action: pan-y;
+}
+
+.damage-model canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.damage-model canvas:active {
+  cursor: grabbing;
+}
+
+.damage-model-count {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  text-shadow:
+    0 0 3px var(--page),
+    0 0 6px var(--page);
 }
 
 .damage-zone {
@@ -809,6 +844,18 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-width: 560px;
+}
+
+/* Back from a part's broken parts to the list of parts. */
+.damage-back {
+  align-self: flex-start;
+  margin-left: -8px;
+}
+
+/* A part in the list: hovered, it lights on the heli; tapped, its broken parts show. */
+.damage-pick {
+  cursor: pointer;
 }
 
 .damage-title {
@@ -1193,11 +1240,30 @@
 }
 
 /* A sortie's packs, a card each, the voltage drawn small: the chosen one's log shows under them. */
+/* The packs as one row pinned under the top bar while their charts scroll under it, so another pack is one tap away
+   from anywhere in the charts; swiped or scrolled sideways when they do not all fit. */
 .pack-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  position: sticky;
+  z-index: 12;
+  display: flex;
   gap: 8px;
   margin-bottom: 18px;
+  padding: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-radius: 12px;
+  border: 1px solid var(--bezel);
+  background-color: var(--glass-regular);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+
+.pack-cards::-webkit-scrollbar {
+  display: none;
+}
+
+.pack-cards > .pack-card {
+  flex: 1 0 150px;
 }
 
 .pack-card {
@@ -1246,6 +1312,29 @@
 .pack-spark {
   width: 100%;
   height: 24px;
+}
+
+@media (max-width: 860px) {
+  /* On a phone a pack is a smaller card, the row swiped sideways. */
+  .pack-cards {
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .pack-cards > .pack-card {
+    flex: 0 0 auto;
+    min-width: 116px;
+    padding: 6px 10px 5px;
+    gap: 1px;
+  }
+
+  .pack-card .pack-spark {
+    height: 14px;
+  }
+
+  .pack-card-note {
+    display: none;
+  }
 }
 
 .pack-spark polyline {
@@ -1471,6 +1560,14 @@
 .heli-model {
   font-size: 0.8125rem;
   color: var(--muted);
+}
+
+/* Its class, rotor and weight, under the maker and model. */
+.heli-specs {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
 }
 
 .gone-row {

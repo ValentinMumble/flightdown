@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useSearchParams} from 'react-router';
-import {Activity, Plus, Search, SlidersHorizontal} from 'lucide-react';
+import {Activity, House, Plus, Search, SlidersHorizontal} from 'lucide-react';
 import {useStore} from '../data/store';
 import {Empty, HeliDot, PageHeader, Segmented, useOverlay} from '../components/ui';
 import {FlightStrip} from '../components/SortieRow';
@@ -22,7 +22,7 @@ const plain = (text: string) =>
     .toLowerCase();
 
 /** The pickers of the filter bar, remembered in this browser so the page opens as it was left. */
-const REMEMBERED = ['spot', 'heli', 'crashes', 'log'];
+const REMEMBERED = ['spot', 'heli', 'crashes', 'log', 'indoor'];
 const FILTERS_KEY = 'flightdown.sorties.filters';
 /** Any of these in the address: the page was opened on purpose with its own filter, which wins. */
 const FILTERS = [...REMEMBERED, 'part', 'q'];
@@ -55,9 +55,10 @@ export function Sorties() {
   const part = params.get('part') ?? '';
   const crashes = (params.get('crashes') as CrashFilter | null) ?? 'all';
   const withLog = params.get('log') === '1';
+  const indoor = params.get('indoor') === '1';
   // On a phone the pickers fold behind one button, so the strips start near the top.
   const [showFilters, setShowFilters] = useState(false);
-  const activeFilters = [spotId, crashes !== 'all', withLog, heliId].filter(Boolean).length;
+  const activeFilters = [spotId, crashes !== 'all', withLog, indoor, heliId].filter(Boolean).length;
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -76,6 +77,7 @@ export function Sorties() {
       heli: !saved.heli || doc.helis.some(one => one.id === saved.heli),
       crashes: ['crashed', 'clean'].includes(saved.crashes ?? 'crashed'),
       log: true,
+      indoor: true,
     };
     const next = new URLSearchParams(params);
     for (const key of REMEMBERED) if (saved[key] && known[key]) next.set(key, saved[key]);
@@ -94,6 +96,7 @@ export function Sorties() {
         if (crashes === 'crashed' && !sortie.crashes) return false;
         if (crashes === 'clean' && sortie.crashes !== 0) return false;
         if (withLog && !sortie.telemetry.length) return false;
+        if (indoor && !sortie.indoor) return false;
         if (!words.length) return true;
         const haystack = plain(
           [
@@ -101,6 +104,7 @@ export function Sorties() {
             heli(sortie.heliId)?.name,
             spot(sortie.spotId)?.name,
             sortie.date,
+            sortie.indoor ? 'indoor' : '',
             fromDay(sortie.date).toLocaleDateString('en-GB', {day: 'numeric', month: 'long', year: 'numeric'}),
             ...sortie.broken.map(broken => broken.part),
             ...sortie.skills,
@@ -108,7 +112,7 @@ export function Sorties() {
         );
         return words.every(word => haystack.includes(word));
       });
-  }, [doc.sorties, query, heliId, spotId, part, crashes, withLog, heli, spot]);
+  }, [doc.sorties, query, heliId, spotId, part, crashes, withLog, indoor, heli, spot]);
 
   const months = useMemo(() => {
     const groups: {month: string; sorties: typeof filtered}[] = [];
@@ -181,6 +185,9 @@ export function Sorties() {
             />
             <button className="chip" aria-pressed={withLog} onClick={() => setParam('log', withLog ? '' : '1')}>
               <Activity size={14} /> With log
+            </button>
+            <button className="chip" aria-pressed={indoor} onClick={() => setParam('indoor', indoor ? '' : '1')}>
+              <House size={14} /> Indoor
             </button>
           </div>
         </div>

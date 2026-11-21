@@ -16,17 +16,18 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   by their buttons (flights, last flown, resistance, tiring or worn against their first reading and the freshest
   pack's) beside what changed on the radio since the last flight (edge-tx's commits).
 - **Sorties:** every sortie as a flight strip (today's and yesterday's say so), a month at a time, the airtime shown on
-  an hour meter (each sortie's page has its own). Search notes, parts,
-  places and days; filter by heli, spot, crashes, a broken part or sorties with a radio log (behind one Filters button
-  on a phone).
+  an hour meter (each sortie's page has its own, with its crashes, spot and indoors set in one tap). Search notes,
+  parts, places and days; filter by heli, spot, crashes, a broken part, sorties with a radio log or flown indoors
+  (behind one Filters button on a phone).
 - **Photos:** they stay in Apple Photos, in an iCloud shared album with its public website on (its link goes in
   Settings). A sortie shows the album's photos taken that day, or the ones picked in its form.
 - **Log a sortie:** heli, day, packs and time per pack (minus and plus, or typed), crashes, the last flown spots (the
-  rest one tap away), broken parts, manoeuvres practised, notes and links. Quick with one hand at the field; changes
+  rest one tap away) and indoors, broken parts, manoeuvres practised, notes and links. Quick with one hand at the field; changes
   made without signal wait and sync later.
 - **Telemetry:** add EdgeTX logs (the radio's `LOGS` folder) to a sortie. It shows a card per pack, named by the
   6-position button pressed for it (packs get buttons in the Hangar; files a few seconds apart are one pack, the radio
-  splits a log when the link drops, unless their buttons differ), and for the chosen pack: voltage, current, signal and
+  splits a log when the link drops, unless their buttons differ; one row pinned under the top bar, so another pack is
+  one tap away from anywhere in the charts), and for the chosen pack: voltage, current, signal and
   throttle as lanes of one recorder (each reads out at the cursor; the flight only, the quiet start and end cut, or the
   whole log; its exceedances marked along the top), under it a replay of the sticks with throttle, power and battery
   dials (the power with a mark for what the pack could still give before a cell drops to 3.3 V, from its resistance;
@@ -41,16 +42,18 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   a word or two on it (too deep, sagged, past its rating, flown hard, tiring or worn, or within its limits), the share
   upside down as a ring, and its flips and rolls. `npm run logs` brings them from the plugged-in radio.
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
-  heli breaks (a damage map on a heli drawing), what brings it down (crash causes read from the notes), the fleet's
+  heli breaks (a damage map on a 3D Huey you turn by dragging, a part's breaks on hover or tap; the flat drawing
+  while it loads; the low-poly Huey by Sami, CC BY 4.0, turned into the zones by `scripts/huey.ts`, see
+  `assets/huey/CREDIT.md`), what brings it down (crash causes read from the notes), the fleet's
   history, the skill ladder, the flying season, packs a sortie, spots, hours by heli (each heli's share as a ring, in
   its chart colour), every pack's voltage under load, each pack's resistance over time (twice its first reading is
   worn), the flips and rolls added up, pack health (resistance first to latest, its trend a flight, the flights left
   before it is worn at that rate, mAh a flight, lowest cell) and the power curve (current against collective, a cloud
   a pack and the line they all make).
-- **Hangar:** the flight line, the radio and other gear, the helis that left (stamped sold or lost), packs and their
+- **Hangar:** the flight line and the helis that left (stamped sold or lost), the radio and other gear (a tab), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
   the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), notes. Helis and packs keep the day they were bought, helis and radios
-  their price. Each heli has a data plate page (with each part's time since it last broke there, against how long it
+  their price, helis their class, rotor size and weight (under the maker and model). Each heli has a data plate page (with each part's time since it last broke there, against how long it
   lasts) and its own chart colour (picked in its form). Helis, radios and packs
   take a photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac;
   others are cut out in the page). Spare parts are hidden for now (`SHOW_SPARES` in `src/model/parts.ts`).

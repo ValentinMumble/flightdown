@@ -4,7 +4,8 @@ import {ChevronRight, ExternalLink, FileUp, MapPin, Pencil, Wrench} from 'lucide
 import type {Sortie} from '../types';
 import {useStore} from '../data/store';
 import {Card, Empty, HeliName, PageHeader, spotLabel, useOverlay} from '../components/ui';
-import {CrashPill, FlightStrip} from '../components/SortieRow';
+import {FlightStrip} from '../components/SortieRow';
+import {SortieQuickFacts} from '../components/SortieQuickFacts';
 import {MinuteMeter, Panel} from '../components/instruments';
 import {SortieForm} from '../components/forms/SortieForm';
 import {SpotForm} from '../components/forms/HangarForms';
@@ -139,19 +140,9 @@ export function SortiePage() {
                   {logged ? sortie.packs : `${sortie.packs} × ${formatTimer(sortie.timer)}`}
                 </div>
               </div>
-              <div>
-                <div className="figure-label">Spot</div>
-                <div className="figure-value" style={{fontSize: '0.9375rem'}}>
-                  {place ? spotLabel(place) : '–'}
-                </div>
-              </div>
-              <div>
-                <div className="figure-label">Crashes</div>
-                <div className="figure-value">
-                  <CrashPill crashes={sortie.crashes} />
-                </div>
-              </div>
             </div>
+            {/* The crashes, the spot and indoors, one tap each, saved at once. */}
+            <SortieQuickFacts sortie={sortie} />
             {/* Its packs as their logs flew them, and the share upside down. */}
             {logged && (
               <div className="debrief-packs">

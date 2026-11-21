@@ -1,5 +1,5 @@
 import {Link} from 'react-router';
-import {Activity, Camera, Wrench} from 'lucide-react';
+import {Activity, Camera, House, Wrench} from 'lucide-react';
 import type {Sortie} from '../types';
 import {useStore} from '../data/store';
 import {sortiePhotos, useAlbum} from '../data/album';
@@ -48,7 +48,7 @@ export function FlightStrip({
       style={{['--strip' as string]: color(one?.color ?? -1)}}
     >
       <span className="strip-date" title={formatDay(sortie.date, {year: true})}>
-        <span>{near ?? WEEKDAYS[date.getDay()]}</span>
+        <span className={near ? 'strip-near' : undefined}>{near ?? WEEKDAYS[date.getDay()]}</span>
         <b>{String(date.getDate()).padStart(2, '0')}</b>
         {!inMonth && (
           <span>
@@ -75,6 +75,11 @@ export function FlightStrip({
       <span className="strip-cell strip-end">
         <CrashPill crashes={sortie.crashes} />
         <span className="strip-icons">
+          {sortie.indoor && (
+            <span className="pill label" title="Flown indoors">
+              <House size={12} /> Indoor
+            </span>
+          )}
           {parts > 0 && (
             <span className="pill caution" title={`${parts} broken parts`}>
               <Wrench size={12} /> {parts}

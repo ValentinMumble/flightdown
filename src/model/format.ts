@@ -107,6 +107,17 @@ export function formatNumber(value: number, digits = 0) {
   return value.toLocaleString('en-GB', {minimumFractionDigits: digits, maximumFractionDigits: digits});
 }
 
+/** A heli's size on one line, as much as is known of it: "280 class · 652 mm rotor · 410 g". */
+export function heliSpecs(heli: {sizeClass?: string; rotor?: number; weight?: number}) {
+  return [
+    heli.sizeClass && `${heli.sizeClass} class`,
+    heli.rotor && `${formatNumber(heli.rotor)} mm rotor`,
+    heli.weight && `${formatNumber(heli.weight)} g`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 /** A price in euros: "€999", "€6.50". */
 export const formatPrice = (price: number) => `€${formatNumber(price, Number.isInteger(price) ? 0 : 2)}`;
 

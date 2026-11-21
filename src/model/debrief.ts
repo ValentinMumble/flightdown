@@ -13,6 +13,7 @@ export const ZONES = [
   {key: 'blades', label: 'Main blades'},
   {key: 'head', label: 'Rotor head and links'},
   {key: 'shaft', label: 'Main shaft'},
+  {key: 'motor', label: 'Main motor'},
   {key: 'servos', label: 'Servos'},
   {key: 'canopy', label: 'Canopy'},
   {key: 'frame', label: 'Frame and drive'},
@@ -26,6 +27,8 @@ export type Zone = (typeof ZONES)[number]['key'];
 const ZONE_HINTS: [RegExp, Zone][] = [
   [/tail boom|\bboom\b/i, 'boom'],
   [/tail/i, 'tail'],
+  // The main motor and its pinion (a tail motor is the tail's, above).
+  [/\bmotor\b|pinion/i, 'motor'],
   [/servo/i, 'servos'],
   [/main shaft|\bmast\b/i, 'shaft'],
   [/grip/i, 'head'],
@@ -33,7 +36,7 @@ const ZONE_HINTS: [RegExp, Zone][] = [
   [/canopy|body|cockpit/i, 'canopy'],
   [/skid|landing|undercarriage/i, 'skids'],
   [/feathering|head|swash|link|ball|rod|jesus|grip|hub|anti-rotation|damper|spindle/i, 'head'],
-  [/frame|gear|motor|esc|pinion|bearing|belt|board|fbl|receiver/i, 'frame'],
+  [/frame|gear|esc|bearing|belt|board|fbl|receiver/i, 'frame'],
 ];
 
 /** The zone a broken part belongs to; none for an unknown part or a whole heli. */

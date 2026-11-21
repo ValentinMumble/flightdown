@@ -1,4 +1,4 @@
-import type {Spot} from '../types';
+import type {Sortie, Spot} from '../types';
 
 export interface LatLng {
   lat: number;
@@ -55,6 +55,16 @@ export const satelliteTile = (zoom: number, x: number, y: number) =>
 /** The place in Apple Maps (the web version off Apple devices). */
 export const mapsLink = (spot: Spot & LatLng) =>
   `https://maps.apple.com/?ll=${spot.lat},${spot.lng}&q=${encodeURIComponent(spot.name)}&t=k`;
+
+/**
+ * Spots flown last first, by their place in the log (so two sorties on one day keep their order), then the ones never
+ * flown: the order to offer them in when picking a sortie's spot. `sorted` is the log oldest first.
+ */
+export function spotsByLastUse(spots: Spot[], sorted: Sortie[]): Spot[] {
+  const lastUse = new Map<string, number>();
+  for (const [index, sortie] of sorted.entries()) if (sortie.spotId) lastUse.set(sortie.spotId, index);
+  return [...spots].sort((left, right) => (lastUse.get(right.id) ?? -1) - (lastUse.get(left.id) ?? -1));
+}
 
 /** Spots by name, "Other" last: the order of a list to pick from. */
 export function sortSpots(spots: Spot[]) {

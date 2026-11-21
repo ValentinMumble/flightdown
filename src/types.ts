@@ -19,6 +19,12 @@ export interface Heli {
   timer?: number;
   /** The packs it flies on, in words ("3S 450 mAh"). */
   battery?: string;
+  /** Its size class, as makers sell it ("280", "micro"). */
+  sizeClass?: string;
+  /** The main rotor's diameter, in mm. */
+  rotor?: number;
+  /** What it weighs ready to fly, its pack in, in grams. */
+  weight?: number;
   /** Flybarless gains, channel map, anything about its setup. */
   setup?: string;
   /** A link to a picture of it. */
@@ -89,6 +95,8 @@ export interface Sortie {
   date: string;
   heliId: string;
   spotId?: string;
+  /** Flown indoors: a hall, a gym, at home. */
+  indoor?: boolean;
   packs: number;
   /** Flight time of one pack, in seconds; null when not known. */
   timer: number | null;

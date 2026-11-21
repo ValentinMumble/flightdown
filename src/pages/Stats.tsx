@@ -15,6 +15,7 @@ import {AirtimeDonut} from '../components/charts/AirtimeDonut';
 import {PackHealth} from '../components/charts/PackHealth';
 import {PowerCurve} from '../components/charts/PowerCurve';
 import {VisitorBanner} from '../components/VisitorBanner';
+import {topBarHeight} from '../components/topBar';
 import {ago, formatAirtime, formatDay, formatRate, plural} from '../model/format';
 import {crashTrend, groupBy, sortSorties, totals} from '../model/stats';
 import {CAUSES, crashCauses, milestones, packsPerSortie} from '../model/debrief';
@@ -34,8 +35,6 @@ const SECTIONS = [
 ];
 
 /** The height of the bar the page scrolls under (the top bar on a phone, the cockpit bar on a wide screen). */
-const topBarHeight = () =>
-  Math.max(0, ...[...document.querySelectorAll<HTMLElement>('.cockpit-bar, .topbar')].map(bar => bar.offsetHeight));
 
 /**
  * A row of section names that stays under the top bar: a tap scrolls to the section, and the one in view is lit.

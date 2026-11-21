@@ -9,7 +9,7 @@ import {HeliForm, SpareForm} from '../components/forms/HangarForms';
 import {AirtimeChart} from '../components/charts/AirtimeChart';
 import {DamageMap} from '../components/charts/DamageMap';
 import {useSeriesColor} from '../components/colors';
-import {formatAirtime, formatDay, formatPrice, formatRate, formatTimer, plural} from '../model/format';
+import {formatAirtime, formatDay, formatPrice, formatRate, formatTimer, heliSpecs, plural} from '../model/format';
 import {daysSinceCrash, monthly, packsSinceCrash, sortSorties, totals} from '../model/stats';
 import {SHOW_SPARES, spareStock} from '../model/parts';
 import {partTimes} from '../model/cockpit';
@@ -67,6 +67,7 @@ export function HeliPage() {
             <div className="heli-model">
               {[heli.maker, heli.model].filter(Boolean).join(' ') || 'Maker and model not set'}
             </div>
+            {heliSpecs(heli) && <div className="heli-specs">{heliSpecs(heli)}</div>}
           </div>
           <Stamp status={heli.status} />
           {(heli.acquired || heli.price !== undefined) && (

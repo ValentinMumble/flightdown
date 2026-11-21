@@ -1,4 +1,5 @@
-import {useMemo, useState} from 'react';
+import {lazy, Suspense, useMemo, useState} from 'react';
+import {ChevronLeft} from 'lucide-react';
 import type {Sortie} from '../../types';
 import {damageByZone, ZONES, type Zone} from '../../model/debrief';
 
@@ -90,6 +91,13 @@ const SHAPES: Record<
     label: [324.5, 84],
     anchor: 'middle',
   },
+  // The main motor on top of the frame, under the swashplate: a can, the shaft through it.
+  motor: {
+    outline: ['M274,85Q274,83 276,83L292,83Q294,83 294,85L294,94Q294,96 292,96L276,96Q274,96 274,94Z'],
+    detail: ['M274,89.5L294,89.5'],
+    label: [268, 84],
+    anchor: 'end',
+  },
   // A slim tube from the frame's clamp to the tail motor, with one line along it.
   boom: {
     outline: ['M362,103.5L528,100.5L528,106.5L362,112.5Z'],
@@ -126,61 +134,80 @@ const SHAPES: Record<
   },
 };
 
+/** The heli in 3D, loaded with three.js only when a damage map shows. */
+const DamageModel = lazy(() => import('./DamageModel'));
+
 /** The order the parts are drawn in, back to front. */
-const DRAW_ORDER: Zone[] = ['blades', 'shaft', 'head', 'frame', 'servos', 'canopy', 'boom', 'tail', 'skids'];
+const DRAW_ORDER: Zone[] = ['blades', 'shaft', 'head', 'frame', 'motor', 'servos', 'canopy', 'boom', 'tail', 'skids'];
 
 /**
- * The M2 EVO drawn from the side, each part lit by how often it broke: the hotter, the more spares it ate. Hover or
- * focus a part for what broke there.
+ * The heli in 3D, each part lit by how often it broke: the hotter, the more spares it ate. Hover or tap a part for what
+ * broke there. The M2 EVO drawn flat from the side shows while the 3D one loads, and in its place without WebGL.
  */
 export function DamageMap({sorties}: {sorties: Sortie[]}) {
   const {zones, unplaced} = useMemo(() => damageByZone(sorties), [sorties]);
   const [focus, setFocus] = useState<Zone | null>(null);
+  // A part hovered in the list beside the heli: lit on it, the list staying as it is.
+  const [hovered, setHovered] = useState<Zone | null>(null);
+  const lit = focus ?? hovered;
   const max = Math.max(...[...zones.values()].map(zone => zone.qty), 1);
   const heat = (qty: number) => (qty ? HEAT[Math.min(4, 1 + Math.floor((qty / max) * 3.999))] : HEAT[0]);
   const shown = focus ? zones.get(focus) : null;
   const ranked = [...zones.values()].filter(zone => zone.qty).sort((left, right) => right.qty - left.qty);
+  const colors = Object.fromEntries(ZONES.map(({key}) => [key, heat(zones.get(key)!.qty)])) as Record<Zone, string>;
+  const counts = Object.fromEntries(ZONES.map(({key}) => [key, zones.get(key)!.qty])) as Record<Zone, number>;
+
+  // The flat drawing: while the 3D one loads, and in its place without WebGL.
+  const drawing = (
+    <svg viewBox="12 12 586 178" className="damage-map" role="img" aria-label="Broken parts by part of the heli">
+      {DRAW_ORDER.map(key => {
+        const label = ZONES.find(zone => zone.key === key)?.label ?? key;
+        const zone = zones.get(key)!;
+        const shape = SHAPES[key];
+        return (
+          <g
+            key={key}
+            tabIndex={0}
+            role="button"
+            aria-label={`${label}: ${zone.qty} broken`}
+            className={`damage-zone ${lit === key ? 'focus' : ''}`}
+            onMouseEnter={() => setFocus(key)}
+            onMouseLeave={() => setFocus(null)}
+            onFocus={() => setFocus(key)}
+            onBlur={() => setFocus(null)}
+          >
+            <g className="damage-part" style={{color: heat(zone.qty)}}>
+              <path
+                d={shape.outline.join('')}
+                fillRule="evenodd"
+                className="damage-outline"
+                style={{fillOpacity: zone.qty ? 0.16 : 0.05}}
+              />
+              {shape.detail.length > 0 && <path d={shape.detail.join('')} className="damage-detail" />}
+            </g>
+            {zone.qty > 0 && (
+              <text x={shape.label[0]} y={shape.label[1]} textAnchor={shape.anchor} className="damage-count">
+                {zone.qty}
+              </text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
 
   return (
     <div className="damage">
-      <svg viewBox="12 12 586 178" className="damage-map" role="img" aria-label="Broken parts by part of the heli">
-        {DRAW_ORDER.map(key => {
-          const label = ZONES.find(zone => zone.key === key)?.label ?? key;
-          const zone = zones.get(key)!;
-          const shape = SHAPES[key];
-          return (
-            <g
-              key={key}
-              tabIndex={0}
-              role="button"
-              aria-label={`${label}: ${zone.qty} broken`}
-              className={`damage-zone ${focus === key ? 'focus' : ''}`}
-              onMouseEnter={() => setFocus(key)}
-              onMouseLeave={() => setFocus(null)}
-              onFocus={() => setFocus(key)}
-              onBlur={() => setFocus(null)}
-            >
-              <g className="damage-part" style={{color: heat(zone.qty)}}>
-                <path
-                  d={shape.outline.join('')}
-                  fillRule="evenodd"
-                  className="damage-outline"
-                  style={{fillOpacity: zone.qty ? 0.16 : 0.05}}
-                />
-                {shape.detail.length > 0 && <path d={shape.detail.join('')} className="damage-detail" />}
-              </g>
-              {zone.qty > 0 && (
-                <text x={shape.label[0]} y={shape.label[1]} textAnchor={shape.anchor} className="damage-count">
-                  {zone.qty}
-                </text>
-              )}
-            </g>
-          );
-        })}
-      </svg>
+      <Suspense fallback={drawing}>
+        <DamageModel colors={colors} counts={counts} focus={lit} onFocus={setFocus} fallback={drawing} />
+      </Suspense>
       <div className="damage-side">
         {shown ? (
           <>
+            {/* Back to every part: tapping the heli outside its parts does the same, but nobody would guess it. */}
+            <button type="button" className="button small ghost damage-back" onClick={() => setFocus(null)}>
+              <ChevronLeft size={14} /> All parts
+            </button>
             <div className="damage-title">{ZONES.find(zone => zone.key === shown.zone)?.label}</div>
             {shown.qty ? (
               [...shown.parts.values()]
@@ -198,7 +225,16 @@ export function DamageMap({sorties}: {sorties: Sortie[]}) {
         ) : (
           <>
             {ranked.slice(0, 5).map(zone => (
-              <div key={zone.zone} className="bar-line">
+              <div
+                key={zone.zone}
+                className="bar-line damage-pick"
+                onMouseEnter={() => setHovered(zone.zone)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => {
+                  setHovered(null);
+                  setFocus(zone.zone);
+                }}
+              >
                 <span className="name">
                   <i className="dot" style={{background: heat(zone.qty), borderRadius: 3}} />
                   {ZONES.find(item => item.key === zone.zone)?.label}

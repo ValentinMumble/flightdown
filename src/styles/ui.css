@@ -729,6 +729,18 @@ button.list-row:hover {
   min-width: 0;
 }
 
+/* A row of chips set apart from the one above it (Indoor under the spots). */
+.chips-apart {
+  margin-top: 8px;
+}
+
+/* A sortie's crashes and spot as one-tap chips, in its debrief. */
+.quick-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .field > label,
 .field-label {
   font-family: var(--display);
@@ -743,6 +755,10 @@ button.list-row:hover {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.field-row.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* The battery form's packs: number, button, dead, and a remove button for one just added. */

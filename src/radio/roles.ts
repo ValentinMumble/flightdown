@@ -97,11 +97,25 @@ const K110S: Record<string, SwitchRole> = {
     up: ['Released'],
     down: ['Rescue', '6G, the pitch flat, then a climb at 60% after 0.1 s'],
   },
+  SD: {
+    job: 'Practice rates',
+    up: ['Off', 'full rates'],
+    middle: ['Off', 'full rates'],
+    down: ['Practice', 'cyclic 70%, rudder 80%, a gentler pitch around hover in IU2 and IU3 (CPP); "low rates" said'],
+  },
+};
+
+/** The M2 EVO's practice rates (practice_rates.py in edge-tx), for soft landings. */
+const M2_PRACTICE: SwitchRole = {
+  job: 'Practice rates',
+  up: ['Off', 'full rates'],
+  middle: ['Off', 'full rates'],
+  down: ['Practice', 'cyclic 70%, rudder 80%, a gentler pitch around hover (CPP, -5° to +9°); "low rates" said'],
 };
 
 // S1 adds -20 to +20 % to the M2 EVO's idle ups (-10 to +10 in idle up 3): half that on the throttle's 0 to 100 %.
 const ROLES: Record<string, Record<string, SwitchRole>> = {
-  'M2 EVO': heli([54, 60, 75], [', S1 ±10', ', S1 ±10', ', S1 ±5']),
+  'M2 EVO': {...heli([54, 60, 75], [', S1 ±10', ', S1 ±10', ', S1 ±5']), SD: M2_PRACTICE},
   K110S,
   M4: heli([55, 65, 63], [', S1 takes it down to 40%', '', '']),
 };

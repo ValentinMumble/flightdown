@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import {useNavigate} from 'react-router';
-import {ChevronDown, ChevronUp, Minus, Plus, Trash, X} from 'lucide-react';
+import {ChevronDown, ChevronUp, House, Minus, Plus, Trash, X} from 'lucide-react';
 import type {BrokenPart, Sortie, Spot} from '../../types';
 import {useStore} from '../../data/store';
 import {newId, now} from '../../model/ids';
@@ -8,6 +8,7 @@ import {formatAirtime, formatTimer, parseTimer, today} from '../../model/format'
 import {partKey, partSuggestions} from '../../model/parts';
 import {SKILLS} from '../../model/skills';
 import {sortSorties} from '../../model/stats';
+import {spotsByLastUse} from '../../model/geo';
 import {HeliDot, SheetHead, Stepper, useOverlay} from '../ui';
 import {PhotoPicker} from './PhotoPicker';
 
@@ -26,7 +27,9 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
 
   const [date, setDate] = useState(sortie?.date ?? today());
   const [heliId, setHeliId] = useState(sortie?.heliId ?? last?.heliId ?? doc.helis[0]?.id ?? '');
-  const [spotId, setSpotId] = useState<string | undefined>(sortie?.spotId ?? last?.spotId);
+  // A new sortie starts at the last one's spot; one being edited keeps its own, none included.
+  const [spotId, setSpotId] = useState<string | undefined>(sortie ? sortie.spotId : last?.spotId);
+  const [indoor, setIndoor] = useState(sortie ? Boolean(sortie.indoor) : Boolean(last?.indoor));
   const [newSpot, setNewSpot] = useState('');
   const [everySpot, setEverySpot] = useState(false);
   const [packs, setPacks] = useState(sortie?.packs ?? last?.packs ?? 3);
@@ -45,12 +48,8 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
   const helis = doc.helis.filter(
     one => one.status === 'active' || one.status === 'grounded' || one.id === heliId || one.status === 'retired',
   );
-  // Spots flown last first (by their place in the log, so two sorties on one day keep their order), never flown last.
-  const spots = useMemo(() => {
-    const lastUse = new Map<string, number>();
-    for (const [index, one] of sorted.entries()) if (one.spotId) lastUse.set(one.spotId, index);
-    return [...doc.spots].sort((left, right) => (lastUse.get(right.id) ?? -1) - (lastUse.get(left.id) ?? -1));
-  }, [doc.spots, sorted]);
+  // Spots flown last first, never flown last.
+  const spots = useMemo(() => spotsByLastUse(doc.spots, sorted), [doc.spots, sorted]);
   // The chosen spot always shows, even when it is not one of the last flown.
   const shownSpots = everySpot ? spots : spots.filter((spot, index) => index < SPOTS_SHOWN || spot.id === spotId);
   const suggestions = partSuggestions(heliId, doc.sorties, doc.spares)
@@ -96,6 +95,7 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
       date,
       heliId,
       ...(chosenSpot && {spotId: chosenSpot}),
+      ...(indoor && {indoor: true}),
       packs,
       timer: seconds,
       crashes,
@@ -252,6 +252,12 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
               {everySpot ? 'Fewer' : `${spots.length - shownSpots.length} more`}
             </button>
           )}
+        </div>
+        {/* Indoors is not a place: its own row, apart from the spots. */}
+        <div className="chips chips-apart">
+          <button type="button" className="chip" aria-pressed={indoor} onClick={() => setIndoor(!indoor)}>
+            <House size={14} /> Indoor
+          </button>
         </div>
         <input
           className="input"
