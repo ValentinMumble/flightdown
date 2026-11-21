@@ -372,7 +372,7 @@ export function SpareForm({
       </div>
       <div className="field-row">
         <div className="field">
-          <label htmlFor="spare-price">Price each</label>
+          <label htmlFor="spare-price">Price each (€)</label>
           <input
             id="spare-price"
             className="input"

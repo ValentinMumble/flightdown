@@ -282,7 +282,7 @@ function Spares() {
         <div className="banner">
           <span>
             <ShoppingCart size={15} /> <b>{plural(toBuy.length, 'part')} to buy</b>
-            {cost > 0 && <span className="muted"> · about {formatNumber(cost, 2)}</span>}
+            {cost > 0 && <span className="muted"> · about {formatPrice(cost)}</span>}
           </span>
         </div>
       )}
@@ -305,7 +305,7 @@ function Spares() {
                 </div>
                 <div className="row-sub">
                   {heli(spare.heliId)?.name ?? 'Any heli'} · keep {spare.min}
-                  {spare.price ? ` · ${formatNumber(spare.price, 2)} each` : ''}
+                  {spare.price ? ` · ${formatPrice(spare.price)} each` : ''}
                 </div>
               </div>
               <span className={`pill ${stock <= 0 ? 'critical' : stock < spare.min ? 'caution' : 'good'}`}>
