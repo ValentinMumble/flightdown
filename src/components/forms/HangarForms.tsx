@@ -286,6 +286,7 @@ export function SpareForm({
   const [min, setMin] = useState(spare?.min ?? 1);
   const [price, setPrice] = useState(spare?.price ? String(spare.price) : '');
   const [url, setUrl] = useState(spare?.url ?? '');
+  const [photo, setPhoto] = useState(spare?.photo ?? '');
   const known = brokenRanking(doc.sorties).map(part => part.name);
 
   const save = () => {
@@ -298,6 +299,7 @@ export function SpareForm({
       min,
       ...(Number(price.replace(',', '.')) > 0 && {price: Number(price.replace(',', '.'))}),
       ...(url.trim() && {url: url.trim()}),
+      ...(photo.trim() && {photo: photo.trim()}),
     };
     // An unchanged count keeps its date, so parts broken since still come off it.
     if (spare && count === Math.max(0, stock)) {
@@ -391,6 +393,17 @@ export function SpareForm({
             onChange={event => setUrl(event.target.value)}
           />
         </div>
+      </div>
+      <div className="field">
+        <label htmlFor="spare-photo">Photo link</label>
+        <input
+          id="spare-photo"
+          className="input"
+          type="url"
+          placeholder="https://…"
+          value={photo}
+          onChange={event => setPhoto(event.target.value)}
+        />
       </div>
       <Actions
         label={spare ? 'Save' : 'Add'}

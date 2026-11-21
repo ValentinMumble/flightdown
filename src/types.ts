@@ -130,6 +130,8 @@ export interface Spare {
   min: number;
   price?: number;
   url?: string;
+  /** A link to a picture of it. */
+  photo?: string;
 }
 
 /** One pack of a kind, for good: it keeps its number, and its logs and charts when it dies. */

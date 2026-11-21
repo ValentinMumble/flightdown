@@ -1,5 +1,5 @@
 /**
- * Lifts every photo of a heli, a radio or a pack out of its background with Apple's Vision framework, on this Mac:
+ * Lifts every photo of a heli, a radio, a pack or a spare out of its background with Apple's Vision framework, on this Mac:
  * `npm run cutouts`.
  *
  * Product photos on white are cut out in the page too, but a white canopy that meets the white paper with no edge goes
@@ -14,7 +14,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {promisify} from 'node:util';
 import {loadEnv} from 'vite';
-import type {Battery, Gear, Heli} from '../src/types';
+import type {Battery, Gear, Heli, Spare} from '../src/types';
 
 const run = promisify(execFile);
 const force = process.argv.includes('--force');
@@ -26,6 +26,7 @@ const items = [
   ...((await store.hvals(kindKey('helis'))) as Heli[]),
   ...((await store.hvals(kindKey('gear'))) as Gear[]),
   ...((await store.hvals(kindKey('batteries'))) as Battery[]),
+  ...((await store.hvals(kindKey('spares'))) as Spare[]),
 ];
 const photos = new Map(items.filter(item => item.photo).map(item => [item.photo!, item.name]));
 const lifted = new Set(await store.hkeys(CUTOUTS));

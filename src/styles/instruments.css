@@ -2008,20 +2008,39 @@
   height: 104px;
 }
 
+/* A spare's picture at the start of its row, a wrench without one; smaller on a heli's page. */
+.spare-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 56px;
+  height: 40px;
+  overflow: hidden;
+  color: var(--muted);
+}
+
+.spare-photo.small {
+  width: 36px;
+  height: 24px;
+}
+
 .battery-photo {
   height: 108px;
   margin-bottom: 8px;
 }
 
 .gear-photo .heli-photo,
-.battery-photo .heli-photo {
+.battery-photo .heli-photo,
+.spare-photo .heli-photo {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
 
 .gear-photo .heli-photo.cut,
-.battery-photo .heli-photo.cut {
+.battery-photo .heli-photo.cut,
+.spare-photo .heli-photo.cut {
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
 }
 

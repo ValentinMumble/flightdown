@@ -54,8 +54,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
   the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), notes. Helis and packs keep the day they were bought, helis and radios
   their price, helis their class, rotor size and weight (under the maker and model). Each heli has a data plate page (with each part's time since it last broke there, against how long it
-  lasts) and its own chart colour (picked in its form). Helis, radios and packs
-  take a photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac;
+  lasts) and its own chart colour (picked in its form). Helis, radios, packs and
+  spares take a photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac;
   others are cut out in the page). Spare parts in their own tab: each counted on a day, each break logged since
   taking one off, those below what to keep on the Cockpit's flight line (`SHOW_SPARES` in `src/model/parts.ts` hides
   them).

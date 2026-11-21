@@ -11,6 +11,7 @@ import {
   Plug,
   Plus,
   ShoppingCart,
+  Wrench,
 } from 'lucide-react';
 import type {Battery, Heli} from '../types';
 import {useStore} from '../data/store';
@@ -289,6 +290,9 @@ function Spares() {
         <div className="list">
           {rows.map(({spare, stock}) => (
             <div key={spare.id} className="list-row">
+              <span className="spare-photo">
+                {spare.photo ? <HeliPhoto url={spare.photo} alt={spare.name} /> : <Wrench size={18} />}
+              </span>
               <div className="row-main">
                 <div className="row-title">
                   {spare.heliId && <HeliDot heli={heli(spare.heliId)} />}

@@ -188,6 +188,11 @@ export function HeliPage() {
                       onClick={() => open(<SpareForm spare={spare} />)}
                     >
                       <span className="name">
+                        {spare.photo && (
+                          <span className="spare-photo small">
+                            <HeliPhoto url={spare.photo} alt={spare.name} />
+                          </span>
+                        )}
                         {spare.name}
                         {!spare.heliId && <span className="muted">· any heli</span>}
                       </span>

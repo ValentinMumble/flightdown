@@ -1,11 +1,11 @@
-import type {Battery, Gear, Heli} from '../src/types.js';
+import type {Battery, Gear, Heli, Spare} from '../src/types.js';
 import {handle, HttpError} from './_lib/http.js';
 import {kindKey, readCutout, redis} from './_lib/store.js';
 
 const MAX_BYTES = 8_000_000;
 
 /**
- * GET /api/photo?url=...: the photo of a heli, a radio or a pack, served from this site so the page may read its pixels
+ * GET /api/photo?url=...: the photo of a heli, a radio, a pack or a spare, served from this site so the page may read its pixels
  * and cut out the white background (most image hosts do not allow that across sites). Only photos set on something of
  * the log are fetched, and the CDN keeps them for a year. With &cut=1: the photo lifted out of its background on the
  * Mac, if it was.
@@ -27,6 +27,7 @@ export function GET(request: Request) {
       store.hvals(kindKey('helis')) as Promise<Heli[]>,
       store.hvals(kindKey('gear')) as Promise<Gear[]>,
       store.hvals(kindKey('batteries')) as Promise<Battery[]>,
+      store.hvals(kindKey('spares')) as Promise<Spare[]>,
     ]);
     if (!kinds.flat().some(item => item.photo === source))
       throw new HttpError(404, 'Nothing in the log has this photo');
