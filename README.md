@@ -56,6 +56,11 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
 - **Weather:** each outdoor sortie at a located spot gets the wind, gusts, temperature and rain over the hours it flew
   (its logs', else 12 to 17), from Open-Meteo's history, filled in by the app and shown on the sortie, with an emoji
   on its strip (rain, wind, frost, or how cloudy).
+- **Sim:** fly the low-poly Huey, in the heli's colour, from the pilot's spot, with the TX16S plugged in as a USB joystick
+  (Classic mode: the model's own outputs, so its rates, curves, idle ups and holds), a game controller (mode 2) or the
+  keyboard. Flybarless rate-mode physics sized from the heli's weight and rotor: servo lag, turbulence, disc blowback,
+  translational lift, tail kick, a governor that sags, hold and autorotation, ground effect, wind, crashes. Drills:
+  hover in a box over the pad in each facing, and soft landings graded by touchdown speed.
 - **Hangar:** the flight line and the helis that left (stamped sold or lost), the radio and other gear (a tab), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
   the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), notes. Helis and packs keep the day they were bought, helis and radios
@@ -86,7 +91,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   Set a spot's GPS point by tapping the map, pasting coordinates or a Maps link, or from the phone's position; each
   sortie then shows its spot from above.
 - **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`): Cockpit, Sorties, Radio, Hangar and More
-  (Debrief, Spots, Settings), with a round log button; swipe sideways to change tab. Add it to the home screen: it
+  (Debrief, Spots, Sim, Settings), with a round log button; swipe sideways to change tab. Add it to the home screen: it
   opens like an app, with the 🚁 icon, at once and offline at the field (as in `papyrus/guidelines/web-apps.md`),
   and reloads into a new deploy by itself.
 

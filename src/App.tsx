@@ -4,6 +4,7 @@ import {
   BookOpen,
   CloudOff,
   Ellipsis,
+  Gamepad2,
   Gauge,
   MapPin,
   Plus,
@@ -25,6 +26,7 @@ import {Radio} from './pages/Radio';
 import {HeliPage} from './pages/HeliPage';
 import {Settings} from './pages/Settings';
 import {Spots} from './pages/Spots';
+import {Sim} from './pages/Sim';
 import {useTabSwipe} from './components/useTabSwipe';
 import {useSortieWeather} from './data/useSortieWeather';
 
@@ -36,6 +38,7 @@ const TABS = [
   {to: '/hangar', label: 'Hangar', icon: Warehouse},
   {to: '/stats', label: 'Debrief', icon: Radar},
   {to: '/spots', label: 'Spots', icon: MapPin},
+  {to: '/sim', label: 'Sim', icon: Gamepad2},
 ];
 
 /** The phone dock's tabs: the first four; the others, and Settings, go in its More menu. */
@@ -217,6 +220,7 @@ function Shell() {
           <Route path="/radio" element={<Radio />} />
           <Route path="/helis/:id" element={<HeliPage />} />
           <Route path="/spots" element={<Spots />} />
+          <Route path="/sim" element={<Sim />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -11,6 +11,7 @@ import './styles/ui.css';
 import './styles/instruments.css';
 import './styles/hud.css';
 import './styles/weather.css';
+import './styles/sim.css';
 
 // A page opened before a deploy asks for files the new deploy no longer has (the radio, the maps): reload to get the
 // new ones, rather than leave the page blank. Not twice in a row, so a file that is really missing cannot start a

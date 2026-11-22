@@ -1,0 +1,212 @@
+/* The simulator: its 3D view, the readouts over it, the sticks under it. */
+.sim-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 74vh;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #a9cde8;
+  box-shadow: 0 0 0 1px var(--bezel);
+}
+
+.sim-stage:fullscreen {
+  max-height: none;
+  border-radius: 0;
+}
+
+.sim-canvas,
+.sim-canvas canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sim-stage-failed {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #0b1610;
+  font-weight: 600;
+}
+
+.sim-hud {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.sim-hud-left {
+  top: 12px;
+  left: 12px;
+  max-width: min(320px, 60%);
+}
+
+.sim-hud-right {
+  top: 12px;
+  right: 12px;
+}
+
+.sim-hud-bottom {
+  left: 12px;
+  bottom: 12px;
+}
+
+/* The readouts: the app's dark glass over the sky. */
+.sim-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(7, 16, 11, 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(190%);
+  backdrop-filter: blur(14px) saturate(190%);
+  color: var(--ink);
+  font-size: 0.8125rem;
+}
+
+.sim-card b {
+  font-size: 0.875rem;
+}
+
+.sim-figures {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 12px;
+  row-gap: 2px;
+  align-items: baseline;
+}
+
+.sim-figures span {
+  font-family: var(--display);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sim-figures b {
+  font-family: var(--display);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.sim-figures b.live {
+  color: var(--caution);
+}
+
+.sim-goal {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bezel);
+  overflow: hidden;
+}
+
+.sim-goal span {
+  display: block;
+  height: 100%;
+  background: var(--good);
+}
+
+.sim-done {
+  color: var(--good);
+  font-weight: 600;
+}
+
+.sim-source {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.sim-crash {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: rgba(40, 8, 6, 0.82);
+  color: #ffd8d2;
+  pointer-events: none;
+}
+
+.sim-crash b {
+  font-size: 1.0625rem;
+}
+
+.sim-toolbar {
+  flex-wrap: wrap;
+}
+
+.sim-panels {
+  margin-top: 16px;
+}
+
+.sim-sticks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sim-stick {
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr) 4.5em;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.sim-stick small {
+  text-align: right;
+}
+
+.sim-stick-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bezel);
+}
+
+.sim-stick-bar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: var(--accent);
+}
+
+.sim-setup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.sim-help {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+  .sim-stage {
+    aspect-ratio: 4 / 3;
+  }
+  .sim-hud-left {
+    max-width: 55%;
+  }
+}
