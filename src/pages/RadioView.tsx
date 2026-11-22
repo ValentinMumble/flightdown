@@ -865,6 +865,7 @@ export default function RadioView() {
         globals: model.globals,
         reversed: model.reversed,
         curves: (model.curves ?? []).map((curve, index) => curve && {...curve, name: model.curveNames?.[index] ?? ''}),
+        inputs: model.inputs,
       };
       await loadPicture(model.bitmap, async () => radioFile(`IMAGES/${model.bitmap}`));
       const next: Placed[] = [];

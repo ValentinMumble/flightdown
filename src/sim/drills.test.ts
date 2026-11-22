@@ -69,17 +69,61 @@ describe('a game controller', () => {
   it('flies mode 2, the collective centred on hover pitch', () => {
     const sticks = new GameControllerSticks();
     expect(sticks.read(pad([0, 0, 0, 0]), 0.3)).toMatchObject({collective: 0.3, throttle: 0});
+    // Full up and down reach the ends of the pitch; a small push stays near hover pitch.
     expect(sticks.read(pad([0, -1, 0, 0]), 0.3).collective).toBeCloseTo(1);
     expect(sticks.read(pad([0, 1, 0, 0]), 0.3).collective).toBeCloseTo(-1);
+    expect(sticks.read(pad([0, -0.3, 0, 0]), 0.3).collective).toBeLessThan(0.36);
+    // Upside down the centre is the inverted hover pitch, and the ends still reach both ends of the pitch.
+    expect(sticks.read(pad([0, 0, 0, 0]), -0.3).collective).toBe(-0.3);
+    expect(sticks.read(pad([0, -1, 0, 0]), -0.3).collective).toBeCloseTo(1);
+    expect(sticks.read(pad([0, 1, 0, 0]), -0.3).collective).toBeCloseTo(-1);
     expect(sticks.read(pad([0.5, 0, 1, -1]), 0.3)).toMatchObject({roll: 1, pitch: 1});
     expect(sticks.read(pad([0.05, 0, 0, 0]), 0.3).yaw).toBe(0);
   });
 
-  it('starts the motor with A and steps the idle ups with Y, once a press', () => {
+  it('turns the motor on and off with the left trigger and steps the idle ups with LB, once a pull', () => {
     const sticks = new GameControllerSticks();
-    expect(sticks.read(pad([0, 0, 0, 0], [0]), 0).throttle).toBe(0.6);
-    expect(sticks.read(pad([0, 0, 0, 0], [0]), 0).throttle).toBe(0.6);
-    expect(sticks.read(pad([0, 0, 0, 0], [3]), 0).throttle).toBe(0.75);
-    expect(sticks.status).toEqual({idleUp: 3, hold: false});
+    const pull = (button: number) => ({
+      axes: [0, 0, 0, 0],
+      buttons: Array.from({length: 16}, (_, index) => ({
+        pressed: index === button,
+        touched: false,
+        value: index === button ? 1 : 0,
+      })),
+    });
+    expect(sticks.read(pad([0, 0, 0, 0]), 0).throttle).toBe(0);
+    // Out of hold but not armed: no motor, until the D-pad's up arrow arms it.
+    expect(sticks.read(pull(6), 0).throttle).toBe(0);
+    expect(sticks.read(pull(12), 0)).toMatchObject({throttle: 0.6, armed: true});
+    expect(sticks.read(pull(12), 0).throttle).toBe(0.6);
+    expect(sticks.read(pull(3), 0).throttle).toBe(0.6);
+    expect(sticks.read(pull(4), 0).throttle).toBe(0.75);
+    expect(sticks.status).toEqual({idleUp: 3, hold: false, armed: true});
+    sticks.read(pad([0, 0, 0, 0]), 0);
+    expect(sticks.read(pull(6), 0).throttle).toBe(0);
+    expect(sticks.read(pull(0), 0).throttle).toBe(0);
+    expect(sticks.read(pull(7), 0).rescue).toBe(true);
+  });
+
+  it('steps the rates with RB, and turns self-level on and off with Y', () => {
+    const sticks = new GameControllerSticks();
+    const press = (button: number, axes = [0, 0, 1, 0]) => ({
+      axes,
+      buttons: Array.from({length: 16}, (_, index) => ({
+        pressed: index === button,
+        touched: false,
+        value: index === button ? 1 : 0,
+      })),
+    });
+    expect(sticks.read(press(3), 0)).toMatchObject({level: true, rates: '100 %', roll: 1});
+    expect(sticks.read(press(5), 0)).toMatchObject({level: true, rates: '70 %', roll: 0.7});
+    sticks.read(press(-1), 0);
+    expect(sticks.read(press(5), 0)).toMatchObject({rates: '100 %', roll: 1});
+    sticks.read(press(-1), 0);
+    expect(sticks.read(press(3), 0)).toMatchObject({level: false});
+    // Raw, for the model's mixer: the rates are left to the model.
+    sticks.read(press(-1), 0);
+    sticks.read(press(5), 0);
+    expect(sticks.read(press(-1), 0, true)).toMatchObject({rates: '70 %', roll: 1});
   });
 });

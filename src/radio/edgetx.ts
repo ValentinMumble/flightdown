@@ -20,7 +20,7 @@ export const THEME = {
   COLOR_THEME_SECONDARY1: 0x161616,
   COLOR_THEME_SECONDARY2: 0x505050,
   COLOR_THEME_SECONDARY3: 0x303030,
-  COLOR_THEME_FOCUS: 0x2f5f8f,
+  COLOR_THEME_FOCUS: 0x804b17,
   COLOR_THEME_EDIT: 0x7a2e2e,
   COLOR_THEME_ACTIVE: 0x1f4a2c,
   COLOR_THEME_WARNING: 0x404040,
@@ -87,6 +87,8 @@ export interface RadioInputs {
     globals?: Record<number, number>;
     reversed?: number[];
     curves?: ({name: string; y: number[]; x?: number[]} | undefined)[];
+    /** Its input lines, in the order the radio keeps them, for model.getInput. */
+    inputs?: {input: number; name?: string; weight: number}[];
   };
   /** A model timer as the radio runs it (timers.ts): its value (the time left when it counts down) and start. */
   timer?: (index: number) => {value: number; start: number};
@@ -199,6 +201,17 @@ export class Radio {
     if (!curve) return '';
     const xs = curve.x ? [-100, ...curve.x, 100] : [];
     return [curve.name.replace(/\|/g, ' '), curve.x ? 1 : 0, curve.y.join(','), xs.join(',')].join('|');
+  }
+
+  /** How many lines an input (from 0) has, for model.getInputsCount. */
+  modelInputCount(input: number) {
+    return (this.inputs.model.inputs ?? []).filter(line => line.input === Number(input)).length;
+  }
+
+  /** An input's line (both from 0) for model.getInput, as "name|weight", or '' past its last. */
+  modelInput(input: number, line: number) {
+    const found = (this.inputs.model.inputs ?? []).filter(one => one.input === Number(input))[Number(line)];
+    return found ? `${(found.name ?? '').replace(/\|/g, ' ')}|${Math.round(found.weight)}` : '';
   }
 
   modelGlobal(index: number) {
@@ -678,6 +691,13 @@ function model.getCurve(index)
   curve.points = #curve.y
   if curve.type == 1 then curve.x = numbers(xs) end
   return curve
+end
+function model.getInputsCount(input) return int(host:modelInputCount(input)) end
+function model.getInput(input, line)
+  local text = host:modelInput(input, line)
+  if text == '' then return nil end
+  local name, weight = string.match(text, '^(.-)|(-?%d+)$')
+  return {name = name, weight = tonumber(weight)}
 end
 function model.getOutput(index)
   return {name = 'CH' .. (index + 1), min = -1000, max = 1000, offset = 0, ppmCenter = 1500, symetrical = 0,

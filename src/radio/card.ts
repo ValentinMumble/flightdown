@@ -40,6 +40,8 @@ export interface CurveRef {
 /** An input line: a stick or source through its weight and curve, before the mixes (I3 Thr). */
 export interface CardInput {
   input: number;
+  /** The line's name ("Prac" for the practice rates' lines). */
+  name?: string;
   source: string;
   weight: number;
   swtch: string;
@@ -316,6 +318,7 @@ export function readModel(id: string, data: Yaml): CardModel {
       const line = record(item);
       return {
         input: Number(line.chn) || 0,
+        name: String(line.name ?? '').replace(/^"|"$/g, ''),
         source: String(line.srcRaw ?? ''),
         weight: Number(line.weight ?? 100),
         swtch: String(line.swtch ?? 'NONE'),

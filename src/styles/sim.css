@@ -1,9 +1,118 @@
 /* The simulator: its 3D view, the readouts over it, the sticks under it. */
+/* The sim takes the whole page: no width limit, the view as tall as the screen allows. */
+.page.sim-page {
+  max-width: none;
+}
+
+.sim-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 14px;
+  align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+  .sim-layout {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+/* The game controller's map to the radio, beside the view. */
+.sim-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+
+.sim-side-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.sim-pad {
+  display: block;
+  width: calc(100% + 12px);
+  height: auto;
+  margin: 4px -6px 10px;
+}
+
+.sim-pad-body {
+  fill: #18241d;
+  stroke: var(--bezel-strong);
+  stroke-width: 1.5;
+}
+
+.sim-pad-part {
+  fill: #223128;
+  stroke: var(--bezel-strong);
+  stroke-width: 1.2;
+}
+
+.sim-pad-part.lit {
+  fill: var(--caution-soft);
+  stroke: var(--caution);
+}
+
+.sim-pad-dim {
+  fill: #1f2b24;
+  stroke: var(--bezel);
+}
+
+.sim-pad-text {
+  fill: var(--ink);
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.sim-pad-text.small {
+  font-size: 8.5px;
+}
+
+.sim-map-row {
+  display: grid;
+  grid-template-columns: 6.2em 3.6em minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 0;
+  border-top: 1px solid var(--bezel);
+  font-size: 0.8125rem;
+}
+
+.sim-map-pad {
+  font-weight: 600;
+}
+
+.sim-map-radio {
+  font-family: var(--display);
+  color: var(--label);
+}
+
+.sim-map-does {
+  color: var(--muted);
+}
+
+.sim-map-state {
+  font-family: var(--display);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.sim-map-state.lit {
+  color: var(--caution);
+}
+
 .sim-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: 74vh;
+  min-height: 360px;
   border-radius: 14px;
   overflow: hidden;
   background: #a9cde8;
@@ -11,7 +120,7 @@
 }
 
 .sim-stage:fullscreen {
-  max-height: none;
+  height: 100% !important;
   border-radius: 0;
 }
 
@@ -101,6 +210,11 @@
   color: var(--caution);
 }
 
+/* Lowered rates, in the radio's PRACTICE blue. */
+.sim-figures b.practice {
+  color: #6cb4ff;
+}
+
 .sim-goal {
   height: 6px;
   border-radius: 3px;
@@ -122,6 +236,86 @@
 .sim-source {
   font-size: 0.75rem;
   color: var(--muted);
+}
+
+/* The view's zoom: a slider on the view, the only part of the readouts that takes a click. */
+.sim-zoom {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 6px 10px;
+  pointer-events: auto;
+  color: var(--muted);
+}
+
+.sim-zoom input {
+  width: 140px;
+  accent-color: var(--accent);
+}
+
+.sim-zoom span {
+  min-width: 2.6em;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--ink);
+}
+
+/* The TX16S's screen in a corner of the view, at its own shape. */
+.sim-radio {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: min(52%, 600px);
+  pointer-events: none;
+}
+
+.sim-radio canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 2px #15191c,
+    0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.sim-radio-problem {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(7, 16, 11, 0.85);
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+/* The replay's banner, across the top of the view. */
+.sim-replaying {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(240, 184, 90, 0.92);
+  color: #1d1406;
+  font-weight: 700;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.sim-replaying small {
+  font-weight: 500;
+  font-size: 0.75rem;
 }
 
 .sim-crash {
@@ -146,6 +340,13 @@
 
 .sim-toolbar {
   flex-wrap: wrap;
+}
+
+/* The toolbar's on and off buttons (sound, radio screen) show when they are on. */
+.sim-toolbar .button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .sim-panels {
@@ -177,6 +378,30 @@
   background: var(--bezel);
 }
 
+.sim-stick-ghost {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--caution);
+}
+
+.sim-seek {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  accent-color: var(--accent);
+}
+
+.sim-replay {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
 .sim-stick-bar span {
   position: absolute;
   top: 0;
@@ -203,8 +428,8 @@
 }
 
 @media (max-width: 640px) {
-  .sim-stage {
-    aspect-ratio: 4 / 3;
+  .sim-radio {
+    width: 64%;
   }
   .sim-hud-left {
     max-width: 55%;

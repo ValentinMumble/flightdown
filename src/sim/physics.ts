@@ -25,6 +25,16 @@ export interface Controls {
   collective: number;
   /** The head speed asked of the governor, as a share of the most it gives. */
   throttle: number;
+  /** The rescue, while held: the FBL levels the heli and climbs. */
+  rescue?: boolean;
+  /** Armed (SA): left out, armed. The throttle is 0 while disarmed. */
+  armed?: boolean;
+  /** Throttle hold off (SF up), armed or not: left out, read from the throttle. */
+  throttleOn?: boolean;
+  /** Self-level: the FBL holds the heli level, the cyclic leaning it rather than turning it. */
+  level?: boolean;
+  /** The rates picked on a game controller or the keyboard (already in the sticks), by name; the radio has its own. */
+  rates?: string;
 }
 
 export const NO_CONTROLS: Controls = {roll: 0, pitch: 0, yaw: 0, collective: 0, throttle: 0};
@@ -50,6 +60,11 @@ export interface HeliParams {
   spoolRate: number;
   /** Faster than this onto the ground is a crash, m/s. */
   crashSpeed: number;
+  /**
+   * How hard the disc blows back with airspeed, what the FBL's gyro leaves of it (it holds the attitude the sticks
+   * ask for): rad/s of pitch or roll a m/s, at hover thrust. Little, so the heli carries its speed and keeps a lean.
+   */
+  blowback: number;
 }
 
 /** A heli's numbers from its weight (g) and rotor (mm): the M2 EVO's when they are not known. */
@@ -64,15 +79,19 @@ export function heliParams(heli?: {weight?: number; rotor?: number}): HeliParams
     hoverRpm,
     // The M2 EVO's idle up 2 runs 60 % throttle: hover rpm is 60 % of the most.
     maxRpm: hoverRpm / 0.6,
-    // Its hover pitch from its logs: about +3.5° at 66 % stick, out of ±12°.
-    hoverPitch: (3.5 * Math.PI) / 180,
+    // Its hover pitch from its November 2026 logs: the median collective flown in idle up 2 (57 % throttle) is 22 % of
+    // its ±12°, about 2.6°, at 95 % of hover rpm: 2.4° at hover rpm. Idle ups 1 and 3 agree (34 % at 46 %, 14.5 % at
+    // 75 %), lift growing with head speed squared.
+    hoverPitch: (2.4 * Math.PI) / 180,
     maxPitch: (12 * Math.PI) / 180,
-    cyclicRate: (360 * Math.PI) / 180,
-    yawRate: (500 * Math.PI) / 180,
+    // The FBL's rates at full stick, before the radio's own rates and expo: a sport set-up, not a 3D one.
+    cyclicRate: (240 * Math.PI) / 180,
+    yawRate: (280 * Math.PI) / 180,
     inertia: 0.015 * mass * radius * radius,
     maxPower: 300 * mass,
-    spoolRate: hoverRpm / 3,
+    spoolRate: hoverRpm / 1.3,
     crashSpeed: 2.5,
+    blowback: 0.006,
   };
 }
 
@@ -93,10 +112,14 @@ export interface HeliState {
   power: number;
   /** The rates the servos have reached (the sticks', a moment late), rad/s. */
   command: Vector3;
+  /** How fast the rates are changing, rad/s²: they settle like a spring. */
+  rateChange: Vector3;
   /** The motor's power, smoothed: a sudden rise kicks the tail. */
   steadyPower: number;
   /** Seconds flown, for the turbulence. */
   time: number;
+  /** Seconds the rescue has been held. */
+  rescueFor: number;
 }
 
 /** What a step did. */
@@ -119,8 +142,10 @@ export function restingState(at: Vector3, heading = 0): HeliState {
     thrust: 0,
     power: 0,
     command: new Vector3(),
+    rateChange: new Vector3(),
     steadyPower: 0,
     time: 0,
+    rescueFor: 0,
   };
 }
 
@@ -161,13 +186,30 @@ export function tiltOf(attitude: Quaternion) {
 /** Further than this from the pilot, or higher, the heli is out of sight: a crash. */
 const RANGE = 150;
 const CEILING = 80;
-/** The servos follow the sticks with this lag, then the heli the servos with this one, s: an S-shaped start. */
-const SERVO_LAG = 0.035;
-const RATE_LAG = 0.05;
+/** The servos follow the sticks with this lag, s. */
+const SERVO_LAG = 0.045;
+/**
+ * The heli follows the servos as a spring settles (rad/s, and its damping): the cyclic in about a sixth of a second
+ * with a little overshoot when a turn stops, the tail softer, so it wags.
+ */
+const CYCLIC_SPRING = {frequency: 13, damping: 0.6};
+const TAIL_SPRING = {frequency: 11, damping: 0.42};
 /** Thrust builds with the air through the disc over this, s. */
 const THRUST_LAG = 0.06;
 /** The governor closes the gap to its head speed over this, s: a punch makes the head speed sag first. */
 const GOVERNOR = 0.35;
+/**
+ * The friction in the head and motor would stop the rotor from hover speed in SPIN_DOWN alone, s. Under SLOW (a share
+ * of the hover's head speed), below any autorotation's, it brakes BRAKE times harder at a stop (the motor's drag):
+ * with the blades' drag it stops in hold in about 3.5 s, and keeps its head speed in an autorotation.
+ */
+const SPIN_DOWN = 9;
+const SLOW = 0.65;
+const BRAKE = 8;
+/**
+ * Drag on the air going by: N for each m/s (the rotor's in-plane drag), and for each (m/s)² (the body and tail).
+ */
+const DRAG = {linear: 0.01, square: 0.006};
 /** The motor's power is smoothed over this, s, to find a sudden rise. */
 const POWER_LAG = 0.25;
 
@@ -200,6 +242,7 @@ const scratch = {
   air: new Vector3(),
   body: new Vector3(),
   inverse: new Quaternion(),
+  sky: new Vector3(),
   force: new Vector3(),
   target: new Vector3(),
   axis: new Vector3(),
@@ -242,7 +285,7 @@ export function step(
   const windSpeed = wind.length();
   const hub = state.position.y + up.y * hubHeight(params);
   const wash = state.thrust > 0.3 * weight ? Math.max(0, 1 - hub / (2 * radius)) : 0;
-  const rough = turbulence * (0.05 + 0.025 * windSpeed + 0.08 * wash) * Math.min(1, speed);
+  const rough = turbulence * (0.08 + 0.025 * windSpeed + 0.12 * wash) * Math.min(1, speed);
 
   // Rates of turn: the FBL asks for the sticks' rates, as far as the head speed lets the swash and tail follow; the
   // servos get there a moment late. On top: turbulence; the disc blowing back from the way it moves (the nose rises
@@ -254,12 +297,45 @@ export function step(
     -controls.yaw * params.yawRate * Math.min(1, speed),
     -controls.roll * params.cyclicRate * authority,
   );
+  // Levelling, in the rescue and self-level: the rates (body frame) that turn the mast back to the sky, faster the
+  // further off it is (`gain` a second for each radian off).
+  const levelling = (gain: number) => {
+    const toSky = scratch.sky.set(-up.z, 0, up.x);
+    const off = Math.acos(Math.max(-1, Math.min(1, up.y)));
+    // Upside down exactly, any way round will do: it rolls.
+    if (toSky.lengthSq() < 1e-6) toSky.set(0, 0, 1).applyQuaternion(state.attitude);
+    toSky.normalize().applyQuaternion(scratch.inverse.copy(state.attitude).invert());
+    return toSky.multiplyScalar(Math.min(params.cyclicRate, gain * off) * authority);
+  };
+  // The rescue, while held: whatever the cyclic says, the FBL turns the mast to the sky, the pitch flat, then climbs
+  // once upright and held 0.1 s (as the M2 EVO's and the K110S's are set up). The rudder stays the pilot's.
+  // Self-level (the M2 EVO's SC): it levels when the cyclic is let go, the cyclic leans it (at 70 % rates, up to about
+  // 35° at full stick, where the two balance), and no negative pitch.
+  let collective = controls.collective;
+  if (controls.rescue) {
+    state.rescueFor += dt;
+    const back = levelling(6);
+    target.x = back.x;
+    target.z = back.z;
+    collective = up.y > 0.8 && state.rescueFor > 0.1 ? 0.6 : 0;
+  } else {
+    state.rescueFor = 0;
+    if (controls.level) {
+      const back = levelling(4);
+      target.x = 0.7 * target.x + back.x;
+      target.z = 0.7 * target.z + back.z;
+      collective = Math.max(0, collective);
+    }
+  }
   state.command.lerp(target, 1 - Math.exp(-dt / SERVO_LAG));
   const kick = (0.6 * (state.power - state.steadyPower)) / params.maxPower;
+  // The disc blows back against the way it moves in proportion to its lift, and the lift's sign turns it round:
+  // upside down, the body reacts the other way.
+  const blowback = params.blowback * authority * Math.max(-1.5, Math.min(1.5, state.thrust / weight));
   target.set(
-    state.command.x + rough * wave(state.time, 0) + 0.035 * -body.z * authority,
+    state.command.x + rough * wave(state.time, 0) + blowback * -body.z,
     state.command.y + 0.5 * rough * wave(state.time, 1) - 0.05 * body.x + kick,
-    state.command.z + rough * wave(state.time, 2) + 0.035 * body.x * authority,
+    state.command.z + rough * wave(state.time, 2) + blowback * body.x,
   );
   // Sitting on its skids, it cannot lean, and turns only once it is light on them.
   if (state.grounded && state.thrust < 0.8 * weight) {
@@ -267,7 +343,16 @@ export function step(
     target.z = 0;
     if (state.thrust < 0.5 * weight) target.y = 0;
   }
-  state.rates.lerp(target, 1 - Math.exp(-dt / RATE_LAG));
+  // The rates follow, as a spring settles.
+  const settle = (axis: 'x' | 'y' | 'z', {frequency, damping}: {frequency: number; damping: number}) => {
+    state.rateChange[axis] +=
+      (frequency * frequency * (target[axis] - state.rates[axis]) - 2 * damping * frequency * state.rateChange[axis]) *
+      dt;
+    state.rates[axis] += state.rateChange[axis] * dt;
+  };
+  settle('x', CYCLIC_SPRING);
+  settle('y', TAIL_SPRING);
+  settle('z', CYCLIC_SPRING);
   const turn = state.rates.length() * dt;
   if (turn > 0) {
     scratch.turn.setFromAxisAngle(scratch.axis.copy(state.rates).normalize(), turn);
@@ -277,9 +362,9 @@ export function step(
   // Thrust: the blades' pitch, less the air coming through the disc in a climb (more in a descent, and in a gust
   // from below); more near the ground, and a little more once moving through clean air (translational lift). It
   // builds a moment after the pitch changes.
-  const gustUp = turbulence * (0.15 + 0.08 * windSpeed) * wave(state.time, 3);
+  const gustUp = turbulence * (0.3 + 0.08 * windSpeed) * wave(state.time, 3);
   const through = air.dot(up) - gustUp;
-  const pitch = Math.max(-1, Math.min(1, controls.collective)) * params.maxPitch;
+  const pitch = Math.max(-1, Math.min(1, collective)) * params.maxPitch;
   const attack = Math.max(-0.3, Math.min(0.3, pitch - through / Math.max(1, 0.75 * omega * radius)));
   const groundEffect = 1 + 0.3 * Math.max(0, 1 - hub / (2 * radius)) ** 2;
   const clean = 1 + 0.1 * Math.max(0, Math.min(1, (Math.hypot(body.x, body.z) - 1.5) / 4));
@@ -291,7 +376,13 @@ export function step(
   // The rotor's energy: the motor, through the governor, against what lift and the blades' drag take.
   const induced = Math.sqrt(Math.abs(thrust) / (2 * AIR * area));
   const profile = 0.25 * weight * Math.sqrt(weight / (2 * AIR * area)) * speed ** 3;
-  const needed = profile + thrust * (through + induced);
+  // The bearings' and the motor's friction: alone, it would stop the rotor from hover speed in SPIN_DOWN, sooner once
+  // slow.
+  const brake = 1 + BRAKE * Math.max(0, 1 - speed / SLOW);
+  const friction = ((inertia * hoverOmega) / SPIN_DOWN) * omega * brake;
+  // Lift costs its induced power whichever way it pulls (upside down too); a climb along the thrust costs more, a
+  // descent gives back.
+  const needed = profile + friction + Math.abs(thrust) * induced + thrust * through;
   let power = 0;
   if (controls.throttle > 0.05) {
     // The soft start: the governor aims no further ahead than its spool rate over the time it takes to close a gap.
@@ -311,7 +402,7 @@ export function step(
   const force = scratch.force.copy(up).multiplyScalar(thrust);
   force.y -= weight;
   const airspeed = air.length();
-  force.addScaledVector(air, -(0.05 + 0.012 * airspeed));
+  force.addScaledVector(air, -(DRAG.linear + DRAG.square * airspeed));
   state.velocity.addScaledVector(force, dt / mass);
   state.position.addScaledVector(state.velocity, dt);
 

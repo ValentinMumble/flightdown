@@ -50,6 +50,27 @@ describe('the heli', () => {
     expect(rpmOf(state, params)).toBeCloseTo(params.hoverRpm, -2);
   });
 
+  it('hovers upside down at negative hover pitch, the motor working as hard', () => {
+    const state = flying(5);
+    state.attitude.setFromAxisAngle(new Vector3(0, 0, 1), Math.PI);
+    fly(state, {...hover, collective: -hoverStick}, 3);
+    expect(state.crashed).toBeNull();
+    expect(state.position.y).toBeGreaterThan(4.5);
+    expect(state.position.y).toBeLessThan(5.5);
+    expect(state.velocity.length()).toBeLessThan(0.3);
+    expect(rpmOf(state, params)).toBeCloseTo(params.hoverRpm, -2);
+    const upright = flying(5);
+    fly(upright, hover, 3);
+    expect(state.power).toBeCloseTo(upright.power, 0);
+  });
+
+  it('climbs upside down with full negative pitch', () => {
+    const state = flying(5);
+    state.attitude.setFromAxisAngle(new Vector3(0, 0, 1), Math.PI);
+    fly(state, {...hover, collective: -1}, 1);
+    expect(state.velocity.y).toBeGreaterThan(2);
+  });
+
   it('climbs with more collective and sinks with less', () => {
     const up = flying(3);
     fly(up, {...hover, collective: 0.6}, 1);
@@ -61,9 +82,11 @@ describe('the heli', () => {
 
   it('spools up on the ground to the head speed asked, with a soft start', () => {
     const state = restingState(new Vector3(0, 0, -5));
-    fly(state, {...hover, collective: 0}, 1);
+    fly(state, {...hover, collective: 0}, 0.25);
     expect(rpmOf(state, params)).toBeLessThan(params.hoverRpm * 0.5);
-    fly(state, {...hover, collective: 0}, 4);
+    fly(state, {...hover, collective: 0}, 1.25);
+    expect(rpmOf(state, params)).toBeGreaterThan(params.hoverRpm * 0.95);
+    fly(state, {...hover, collective: 0}, 2);
     expect(rpmOf(state, params)).toBeCloseTo(params.hoverRpm, -2);
     expect(state.grounded).toBe(true);
   });
@@ -76,13 +99,15 @@ describe('the heli', () => {
     expect(state.position.y).toBeGreaterThan(0.3);
   });
 
-  it('coasts down slowly in throttle hold at flat pitch', () => {
+  it('coasts down in throttle hold at flat pitch, and stops', () => {
     const state = restingState(new Vector3(0, 0, -5));
     state.energy = energyAt(params.hoverRpm, params);
-    fly(state, {...hover, collective: 0, throttle: 0}, 5);
+    fly(state, {...hover, collective: 0, throttle: 0}, 2);
     const rpm = rpmOf(state, params);
-    expect(rpm).toBeLessThan(params.hoverRpm * 0.9);
+    expect(rpm).toBeLessThan(params.hoverRpm * 0.85);
     expect(rpm).toBeGreaterThan(params.hoverRpm * 0.4);
+    fly(state, {...hover, collective: 0, throttle: 0}, 2);
+    expect(rpmOf(state, params)).toBe(0);
   });
 
   it('keeps its head speed in an autorotation with low pitch', () => {
@@ -95,17 +120,17 @@ describe('the heli', () => {
 
   it('rolls at the rate the stick asks for', () => {
     const state = flying(20);
-    // 360°/s, the servos and the heli a little behind the stick: about 80° after 0.3 s.
-    fly(state, {...hover, roll: 1}, 0.3);
-    expect((tiltOf(state.attitude) * 180) / Math.PI).toBeGreaterThan(65);
-    expect((tiltOf(state.attitude) * 180) / Math.PI).toBeLessThan(105);
+    // 240°/s, the servos and the heli a little behind the stick: about 90° after half a second.
+    fly(state, {...hover, roll: 1}, 0.5);
+    expect((tiltOf(state.attitude) * 180) / Math.PI).toBeGreaterThan(60);
+    expect((tiltOf(state.attitude) * 180) / Math.PI).toBeLessThan(115);
   });
 
   it('turns its nose right with right rudder', () => {
     const state = flying(5);
-    fly(state, {...hover, yaw: 0.5}, 0.3);
+    fly(state, {...hover, yaw: 0.5}, 0.6);
     const heading = (headingOf(state.attitude) * 180) / Math.PI;
-    expect(heading).toBeLessThan(-40);
+    expect(heading).toBeLessThan(-30);
   });
 
   it('lands softly with a gentle descent', () => {
@@ -127,7 +152,7 @@ describe('the heli', () => {
 
   it('strikes its blades leaning hard near the ground', () => {
     const state = flying(0.15);
-    fly(state, {...hover, roll: 1}, 0.3);
+    fly(state, {...hover, roll: 1}, 0.5);
     expect(state.crashed).toBe('Blade strike');
   });
 
@@ -137,12 +162,25 @@ describe('the heli', () => {
     expect((tiltOf(state.attitude) * 180) / Math.PI).toBeGreaterThan(1);
   });
 
-  it('raises its nose as it gathers speed, the disc blowing back', () => {
+  it('raises its nose a little as it gathers speed, what the FBL leaves of the disc blowing back', () => {
     const state = flying(10);
     state.velocity.set(0, 0, -8);
-    fly(state, hover, 0.5);
+    fly(state, hover, 1);
     const nose = new Vector3(0, 0, -1).applyQuaternion(state.attitude);
-    expect(nose.y).toBeGreaterThan(0.05);
+    expect(nose.y).toBeGreaterThan(0.02);
+    expect(nose.y).toBeLessThan(0.1);
+  });
+
+  it('carries its speed once level, as a heli does, and holds a lean when the stick is let go', () => {
+    const coasting = flying(20);
+    coasting.velocity.set(0, 0, -4);
+    fly(coasting, hover, 2);
+    expect(-coasting.velocity.z).toBeGreaterThan(2.5);
+    const leaning = flying(20);
+    fly(leaning, {...hover, pitch: 0.3}, 0.25);
+    const lean = tiltOf(leaning.attitude);
+    fly(leaning, hover, 2);
+    expect(tiltOf(leaning.attitude)).toBeGreaterThan(0.8 * lean);
   });
 
   it('kicks its tail when the collective is punched', () => {
@@ -150,6 +188,30 @@ describe('the heli', () => {
     fly(state, hover, 0.5);
     fly(state, {...hover, collective: 1}, 0.15);
     expect(state.rates.y).toBeGreaterThan(0.05);
+  });
+
+  it('rights itself and climbs on the rescue, even upside down', () => {
+    const state = flying(30);
+    state.attitude.setFromAxisAngle(new Vector3(0, 0, 1), Math.PI * 0.95);
+    fly(state, {...hover, roll: 0.5, rescue: true}, 1.4);
+    expect(tiltOf(state.attitude)).toBeLessThan(0.4);
+    fly(state, {...hover, rescue: true}, 1.5);
+    expect(state.velocity.y).toBeGreaterThan(0);
+    expect(state.crashed).toBeNull();
+  });
+
+  it('levels itself in self-level with the cyclic let go, and leans with it held, no negative pitch', () => {
+    const state = flying(20);
+    state.attitude.setFromAxisAngle(new Vector3(0, 0, 1), 0.6);
+    fly(state, {...hover, level: true}, 1);
+    expect(tiltOf(state.attitude)).toBeLessThan(0.05);
+    fly(state, {...hover, roll: 1, level: true}, 1.5);
+    const lean = (tiltOf(state.attitude) * 180) / Math.PI;
+    expect(lean).toBeGreaterThan(25);
+    expect(lean).toBeLessThan(55);
+    const sinking = flying(20);
+    fly(sinking, {...hover, collective: -1, level: true}, 0.5);
+    expect(sinking.thrust).toBeGreaterThanOrEqual(0);
   });
 
   it('drifts with the wind', () => {

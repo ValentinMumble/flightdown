@@ -81,20 +81,52 @@ const KEY_IDLE_UPS = [0.54, 0.6, 0.75];
 
 /**
  * The keyboard as sticks: the arrows the cyclic, A and D the rudder, W and S move the collective (it stays where it is
- * left), 1, 2 and 3 the idle ups, Space throttle hold. Springs back to centre like sticks.
+ * left), 1, 2 and 3 the idle ups, X arms and disarms (it starts disarmed), Space throttle hold, Q cuts the motor, E
+ * the rescue while held, L self-level on and off, P steps through the rates. Springs back to centre like sticks.
  */
 export class KeyboardSticks {
   private down = new Set<string>();
   private collective = -0.2;
   private idleUp = 1;
   private hold = true;
+  private level = false;
+  private rates = 0;
+
+  private armed = false;
+
+  /** The idle up (1 to 3), whether the motor is held, and whether it is armed. */
+  get status() {
+    return {idleUp: this.idleUp + 1, hold: this.hold, armed: this.armed};
+  }
 
   /** Gives the key to the sticks; true when it is theirs (the page should not scroll for it). */
   press(key: string): boolean {
-    const known = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 's', 'a', 'd', ' ', '1', '2', '3'];
+    const known = [
+      'ArrowUp',
+      'ArrowDown',
+      'ArrowLeft',
+      'ArrowRight',
+      'w',
+      's',
+      'a',
+      'd',
+      'e',
+      'q',
+      'l',
+      'p',
+      'x',
+      ' ',
+      '1',
+      '2',
+      '3',
+    ];
     const name = key.length === 1 ? key.toLowerCase() : key;
     if (!known.includes(name)) return false;
     if (name === ' ') this.hold = !this.hold;
+    else if (name === 'q') this.hold = true;
+    else if (name === 'l') this.level = !this.level;
+    else if (name === 'x') this.armed = !this.armed;
+    else if (name === 'p') this.rates = (this.rates + 1) % RATES.length;
     else if (['1', '2', '3'].includes(name)) this.idleUp = Number(name) - 1;
     else this.down.add(name);
     return true;
@@ -104,17 +136,23 @@ export class KeyboardSticks {
     this.down.delete(key.length === 1 ? key.toLowerCase() : key);
   }
 
-  /** The sticks now, after `dt` seconds of the collective keys held. */
-  read(dt: number): Controls {
+  /** The sticks now, after `dt` seconds of the collective keys held; `raw` leaves the rates to the model's mixer. */
+  read(dt: number, raw = false): Controls {
     const axis = (plus: string, minus: string) => Number(this.down.has(plus)) - Number(this.down.has(minus));
     this.collective = clamp(this.collective + axis('w', 's') * 0.8 * dt);
     // The keys give full rate at once: a third of it is plenty.
+    const {cyclic, rudder} = raw ? RATES[0] : RATES[this.rates];
     return {
-      roll: axis('ArrowRight', 'ArrowLeft') * 0.35,
-      pitch: axis('ArrowUp', 'ArrowDown') * 0.35,
-      yaw: axis('d', 'a') * 0.4,
+      roll: axis('ArrowRight', 'ArrowLeft') * 0.35 * cyclic,
+      pitch: axis('ArrowUp', 'ArrowDown') * 0.35 * cyclic,
+      yaw: axis('d', 'a') * 0.4 * rudder,
       collective: this.collective,
-      throttle: this.hold ? 0 : KEY_IDLE_UPS[this.idleUp],
+      throttle: this.hold || !this.armed ? 0 : KEY_IDLE_UPS[this.idleUp],
+      rescue: this.down.has('e'),
+      level: this.level,
+      rates: RATES[this.rates].label,
+      armed: this.armed,
+      throttleOn: !this.hold,
     };
   }
 }
@@ -128,8 +166,21 @@ export function connectedPads(): Gamepad[] {
 /** A game controller (an Xbox pad) rather than a radio: the browser knows its layout. */
 export const isGameController = (pad: Pick<Gamepad, 'mapping'>) => pad.mapping === 'standard';
 
-/** The standard layout's buttons. */
-const BUTTON = {a: 0, y: 3};
+/** The standard layout's buttons, the triggers among them (pressed past half way). */
+const BUTTON = {y: 3, leftBumper: 4, rightBumper: 5, leftTrigger: 6, rightTrigger: 7, up: 12};
+
+/**
+ * Rates to pick from on a game controller or the keyboard, as SD picks them on the radio: full, or the practice rates
+ * (practice_rates.py in edge-tx), named by the cyclic's share. With the model's mixer the model applies them; without
+ * it, these shares do.
+ */
+export const RATES = [
+  {label: '100 %', cyclic: 1, rudder: 1},
+  {label: '70 %', cyclic: 0.7, rudder: 0.8},
+];
+
+/** Rates lower than full: the radio's PRACTICE light. */
+export const isLowered = (rates: string | undefined) => !!rates && rates !== RATES[0].label;
 /** Game controller sticks rest a little off centre. */
 const DEADZONE = 0.08;
 
@@ -138,38 +189,61 @@ const dead = (value: number) =>
 
 /**
  * A game controller as a radio in mode 2: the left stick the collective (up and down) and the rudder, the right stick
- * the cyclic. Its sticks spring back to centre, so the collective's centre is the hover pitch (`hover`, -1 to 1). A
- * starts and stops the motor (throttle hold), Y steps through the idle ups.
+ * the cyclic. Its sticks spring back to centre, so the collective's centre is the hover pitch (`hover`, -1 to 1). Each
+ * pull of the left trigger turns the motor on or off (throttle hold, as SF), the right trigger is the rescue while
+ * held (as SH), the left bumper steps through the idle ups, the right one through the rates (as SD), Y turns
+ * self-level on and off (as SC), the D-pad's up arrow arms and disarms it (as SA): it starts disarmed, and the motor
+ * runs only armed and out of hold, as on the M2 EVO.
  */
 export class GameControllerSticks {
   private idleUp = 1;
   private hold = true;
+  private armed = false;
+  private level = false;
+  private rates = 0;
   private pressed = new Set<number>();
 
-  /** The idle up (1 to 3) and whether the motor is held, for the screen. */
+  /** The idle up (1 to 3), whether the motor is held, and whether it is armed. */
   get status() {
-    return {idleUp: this.idleUp + 1, hold: this.hold};
+    return {idleUp: this.idleUp + 1, hold: this.hold, armed: this.armed};
   }
 
-  read(pad: Pick<Gamepad, 'axes' | 'buttons'>, hover: number): Controls {
+  /**
+   * The sticks and switches now. `hover` is the collective stick's centre (-1 to 1). With `raw`, the sticks as a radio's
+   * (the model's mixer applies the rates and curves); without, shaped and rated here.
+   */
+  read(pad: Pick<Gamepad, 'axes' | 'buttons'>, hover: number, raw = false): Controls {
+    const held = (button: number) => (pad.buttons[button]?.value ?? 0) > 0.5 || !!pad.buttons[button]?.pressed;
     const tapped = (button: number) => {
-      const down = !!pad.buttons[button]?.pressed;
+      const down = held(button);
       const fresh = down && !this.pressed.has(button);
       if (down) this.pressed.add(button);
       else this.pressed.delete(button);
       return fresh;
     };
-    if (tapped(BUTTON.a)) this.hold = !this.hold;
-    if (tapped(BUTTON.y)) this.idleUp = (this.idleUp + 1) % KEY_IDLE_UPS.length;
-    const lift = -dead(pad.axes[1] ?? 0);
-    // Short game controller sticks: half expo, so the centre is gentle and the ends still give full rate.
-    const expo = (value: number) => value * (0.5 + 0.5 * value * value);
+    if (tapped(BUTTON.leftTrigger)) this.hold = !this.hold;
+    if (tapped(BUTTON.up)) this.armed = !this.armed;
+    if (tapped(BUTTON.leftBumper)) this.idleUp = (this.idleUp + 1) % KEY_IDLE_UPS.length;
+    if (tapped(BUTTON.y)) this.level = !this.level;
+    if (tapped(BUTTON.rightBumper)) this.rates = (this.rates + 1) % RATES.length;
+    const {cyclic, rudder} = raw ? RATES[0] : RATES[this.rates];
+    // Short game controller sticks, shaped: the cyclic with a light expo (full rate at the ends); the rudder softer
+    // round the centre (and 80 % at the ends when not mixed: the model's own rudder line is softer); the collective
+    // very soft round hover pitch, so a nudge does not shoot the heli up, yet reaching the full pitch at the ends, so
+    // it climbs upside down too.
+    const expo = (value: number, amount: number) => value * (1 - amount + amount * value * value);
+    const lift = expo(-dead(pad.axes[1] ?? 0), 0.8);
     return {
-      roll: expo(dead(pad.axes[2] ?? 0)),
-      pitch: expo(-dead(pad.axes[3] ?? 0)),
-      yaw: expo(dead(pad.axes[0] ?? 0)),
+      roll: cyclic * expo(dead(pad.axes[2] ?? 0), 0.25),
+      pitch: cyclic * expo(-dead(pad.axes[3] ?? 0), 0.25),
+      yaw: raw ? expo(dead(pad.axes[0] ?? 0), 0.3) : 0.8 * rudder * expo(dead(pad.axes[0] ?? 0), 0.6),
       collective: lift >= 0 ? hover + lift * (1 - hover) : hover + lift * (1 + hover),
-      throttle: this.hold ? 0 : KEY_IDLE_UPS[this.idleUp],
+      throttle: this.hold || !this.armed ? 0 : KEY_IDLE_UPS[this.idleUp],
+      rescue: held(BUTTON.rightTrigger),
+      level: this.level,
+      rates: RATES[this.rates].label,
+      armed: this.armed,
+      throttleOn: !this.hold,
     };
   }
 }

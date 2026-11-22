@@ -80,7 +80,8 @@ export function placeScreen(model: CardModel, screen: number): {rect: Rect; zone
   return placed;
 }
 
-const loaded = new Map<string, Promise<{name: string; options: WidgetOption[]}>>();
+/** Each Lua engine's widgets loaded, by folder: the Radio tab and the Sim each run their own. */
+const engines = new WeakMap<WidgetRunner, Map<string, Promise<{name: string; options: WidgetOption[]}>>>();
 
 /**
  * A card widget, ready to create: its Lua files and pictures fetched (for loadScript and Bitmap.open), its main.lua
@@ -89,6 +90,8 @@ const loaded = new Map<string, Promise<{name: string; options: WidgetOption[]}>>
 export function loadCardWidget(card: Card, name: string, runner: WidgetRunner, radio: Radio) {
   const widget = card.widgets.find(one => one.name === name);
   if (!widget) return null;
+  const loaded = engines.get(runner) ?? new Map<string, Promise<{name: string; options: WidgetOption[]}>>();
+  engines.set(runner, loaded);
   const known = loaded.get(widget.folder);
   if (known) return known.then(result => ({...result, key: widget.folder}));
   const load = async () => {
@@ -243,17 +246,26 @@ export function drawChrome(context: CanvasRenderingContext2D, options: LayoutOpt
     // EdgeTX paints the top bar in the theme's SECONDARY1: near black in the radio's Cockpit theme.
     context.fillStyle = hex(THEME.COLOR_THEME_SECONDARY1);
     context.fillRect(0, 0, SCREEN.width, TOP_BAR);
-    // The EdgeTX button.
-    context.fillStyle = hex(THEME.COLOR_THEME_SECONDARY2);
+    // The EdgeTX button, as the radio draws it: the logo in the theme's FOCUS, the top bar's height, its right side an
+    // arrow's point, EDGE small over a big TX in PRIMARY2 (measured on EdgeTX 2.12's simulator).
+    context.fillStyle = hex(THEME.COLOR_THEME_FOCUS);
     context.beginPath();
-    context.roundRect(4, 4, 39, TOP_BAR - 8, 6);
+    context.moveTo(0, 0);
+    context.lineTo(36, 0);
+    context.lineTo(44.5, TOP_BAR / 2);
+    context.lineTo(36, TOP_BAR);
+    context.lineTo(0, TOP_BAR);
+    context.closePath();
     context.fill();
     context.fillStyle = hex(THEME.COLOR_THEME_PRIMARY2);
-    context.font = '700 11px Roboto, Arial, sans-serif';
     context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillText('ETX', 23.5, TOP_BAR / 2);
+    context.textBaseline = 'alphabetic';
+    context.font = '700 12px Roboto, Arial, sans-serif';
+    context.fillText('EDGE', 19.5, 17, 29);
+    context.font = '700 25px Roboto, Arial, sans-serif';
+    context.fillText('TX', 19.5, 37, 28);
     context.textAlign = 'left';
+    context.textBaseline = 'middle';
   }
   const view = mainView(shown);
   const top = shown.topbar ? TOP_BAR : 0;

@@ -56,11 +56,19 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
 - **Weather:** each outdoor sortie at a located spot gets the wind, gusts, temperature and rain over the hours it flew
   (its logs', else 12 to 17), from Open-Meteo's history, filled in by the app and shown on the sortie, with an emoji
   on its strip (rain, wind, frost, or how cloudy).
-- **Sim:** fly the low-poly Huey, in the heli's colour, from the pilot's spot, with the TX16S plugged in as a USB joystick
-  (Classic mode: the model's own outputs, so its rates, curves, idle ups and holds), a game controller (mode 2) or the
-  keyboard. Flybarless rate-mode physics sized from the heli's weight and rotor: servo lag, turbulence, disc blowback,
-  translational lift, tail kick, a governor that sags, hold and autorotation, ground effect, wind, crashes. Drills:
-  hover in a box over the pad in each facing, and soft landings graded by touchdown speed.
+- **Sim:** fly the low-poly Huey (in the heli's colour, windows added) on a page of its own, from the pilot's spot,
+  with the TX16S plugged in as a USB joystick (Classic mode: the model's own outputs, so its rates, curves, idle ups
+  and holds), a game controller (mode 2, drawn beside the view with the radio switch each control stands for) or the
+  keyboard, these two flown through the model's own mixer from the card (its rates, curves and switches; it gives back
+  the logged outputs from the logged sticks). A logged pack replays beside the sticks, or flies the heli with a stand-in pilot adding the corrections a log
+  cannot hold (tuned on the November packs: 57 % flown before a crash; a crash is picked up
+  and the log goes on); touching a stick takes over. Its hover pitch and current draw are fitted to the logs. Flybarless rate-mode physics sized from the heli's weight and rotor: rates that settle with a little
+  overshoot, momentum (it keeps a lean and carries its speed, the FBL taking out most of the disc's blowback), a quick soft start, turbulence, translational lift, tail kick, a governor that sags, hold and autorotation, the
+  rescue, self-level, ground effect, wind, crashes; the rotor and motor heard. The eyes see through a fixed lens (the heli
+  shrinks as it goes away), with a zoom slider on the view. The TX16S's screen in a corner, its own
+  widgets (the Cockpit, the top bar) running on the sim's flight and a simulated pack (current from the load, sized on
+  the logs, volts sagging). Drills: hover in a box over the pad in each facing, and soft landings graded by touchdown
+  speed.
 - **Hangar:** the flight line and the helis that left (stamped sold or lost), the radio and other gear (a tab), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
   the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), notes. Helis and packs keep the day they were bought, helis and radios
