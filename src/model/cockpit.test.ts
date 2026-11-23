@@ -43,7 +43,7 @@ const battery = {
   cells: 3,
   capacity: 700,
   packs: [],
-  heliIds: [],
+  heliIds: ['h'],
 } as Battery;
 const record = (readings: number[]): PackRecord => ({
   battery,

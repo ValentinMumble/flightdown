@@ -2,7 +2,7 @@ import {useMemo} from 'react';
 import {CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import type {Sortie} from '../../types';
 import {useStore} from '../../data/store';
-import {buttonBattery, groupPacks, packLabel} from '../../model/packs';
+import {buttonBattery, packLabel, sortiePacks} from '../../model/packs';
 import {formatDay, formatNumber, fromDay, pad} from '../../model/format';
 import {useChartInk, useSeriesColor} from '../colors';
 
@@ -36,11 +36,11 @@ export function PackResistance({sorties}: {sorties: Sortie[]}) {
     const byName = new Map<string, Reading[]>();
     const deadOn = new Map<string, string>();
     for (const sortie of sorties) {
-      for (const pack of groupPacks(sortie.telemetry)) {
+      for (const pack of sortiePacks(sortie)) {
         const values = pack.files.flatMap(file => (file.resistance === undefined ? [] : [file.resistance]));
         if (!values.length) continue;
         const day = pack.start?.slice(0, 10) ?? sortie.date;
-        const found = buttonBattery(pack.packButton ?? 0, doc.batteries, day);
+        const found = buttonBattery(pack.packButton ?? 0, doc.batteries, day, sortie.heliId);
         const name = found ? packLabel(found.battery, found.pack) : BEFORE;
         const cells = found?.battery.cells ?? 3;
         if (found?.pack.dead) deadOn.set(name, found.pack.dead);

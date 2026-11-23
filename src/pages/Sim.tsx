@@ -12,7 +12,7 @@ import {emptyFeed, packFor} from '../sim/radioFeed';
 import {useCard} from '../sim/card';
 import {loggedControls, replayStart, type Replay, type ReplayMode} from '../sim/replay';
 import {manoeuvres, motorCuts} from '../sim/standIn';
-import {groupPacks, joinSeries} from '../model/packs';
+import {joinSeries, sortiePacks} from '../model/packs';
 import {formatDay, formatTimer, plural} from '../model/format';
 import type {TelemetrySeries} from '../types';
 import {modelMapping} from '../sim/modelMixer';
@@ -156,7 +156,7 @@ function PadMap({info, live}: {info: SimInfo | null; live: boolean}) {
     {pad: '▲', radio: 'SA', does: 'Arm', state: controls && (lit.up ? 'Armed' : 'Safe'), lit: lit.up},
     {pad: 'LB', radio: 'SE', does: 'Idle up', state: controls && info ? `IU ${info.idleUp}` : undefined},
     {pad: 'RT', radio: 'SH', does: 'Rescue, held', state: lit.rt ? 'Rescue' : undefined, lit: lit.rt},
-    {pad: 'RB', radio: 'SD', does: 'Rates', state: controls?.rates, lit: lit.rb},
+    {pad: 'RB', radio: 'SG', does: 'Rates', state: controls?.rates, lit: lit.rb},
     {pad: 'Y', radio: 'SC', does: 'Self-level', state: controls && (controls.level ? 'On' : 'Off'), lit: lit.y},
   ];
   const part = (on: boolean) => `sim-pad-part${on ? ' lit' : ''}`;
@@ -187,7 +187,7 @@ function PadMap({info, live}: {info: SimInfo | null; live: boolean}) {
         </text>
         <rect className={part(lit.rb)} x="154" y="29" width="68" height="15" rx="7" />
         <text className="sim-pad-text small" x="188" y="40">
-          RB · SD
+          RB · SG
         </text>
         <path
           className="sim-pad-body"
@@ -346,7 +346,7 @@ export function Sim() {
         .filter(sortie => sortie.heliId === heli?.id && sortie.telemetry.length)
         .sort((left, right) => right.date.localeCompare(left.date))
         .flatMap(sortie => {
-          const flights = groupPacks(sortie.telemetry);
+          const flights = sortiePacks(sortie);
           return flights.map((flown, index) => ({
             key: `${sortie.id}:${index}`,
             pack: flown,

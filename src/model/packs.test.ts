@@ -22,6 +22,24 @@ describe('groupPacks', () => {
     expect(groupPacks(swapped).map(pack => pack.files.map(one => one.id))).toEqual([['one'], ['two', 'split']]);
   });
 
+  it('joins the closest files when the sortie says fewer packs, never across two buttons', () => {
+    // The K110S on 23 Nov 2026: a crash after 24 s, relaunched on the same pack 48 s later; 3 packs said.
+    const day = [
+      file('first', '2026-11-23T16:24:56', 321),
+      file('crash', '2026-11-23T16:44:52', 24),
+      file('again', '2026-11-23T16:46:04', 203),
+      file('last', '2026-11-23T17:13:37', 276),
+    ];
+    expect(groupPacks(day).length).toBe(4);
+    expect(groupPacks(day, 3).map(pack => pack.files.map(one => one.id))).toEqual([
+      ['first'],
+      ['crash', 'again'],
+      ['last'],
+    ]);
+    const buttons = day.map((one, index) => ({...one, packButton: index + 1}));
+    expect(groupPacks(buttons, 3).length).toBe(4);
+  });
+
   it('joins files a few seconds apart into one pack, in the order flown', () => {
     const packs = groupPacks(logs);
     expect(packs.map(pack => pack.files.map(one => one.id))).toEqual([['first'], ['second', 'third']]);
@@ -106,6 +124,12 @@ describe('buttonPack', () => {
     expect(buttonPack(2, batteries, '2026-11-12')).toBe('Gens Ace #2');
     expect(buttonPack(3, batteries, '2026-11-12')).toBe('OMPHobby #1');
     expect(buttonPack(2, batteries, '2026-11-10')).toBeNull();
+  });
+
+  it("names a button only by the flown heli's own kinds of pack", () => {
+    const flown = batteries.map(battery => ({...battery, heliIds: battery.id === 'gens' ? ['m2'] : []}));
+    expect(buttonPack(1, flown, '2026-11-12', 'm2')).toBe('Gens Ace #1');
+    expect(buttonPack(1, flown, '2026-11-12', 'k110s')).toBeNull();
   });
 
   it("gives a dead pack's button to the pack given it last", () => {

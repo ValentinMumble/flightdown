@@ -960,3 +960,113 @@ textarea.input.radio-code {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* The idle ups: the throttle and pitch charts side by side (stacked on a phone), then each idle up's values. */
+.idle-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.idle-legend i {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  margin-right: 6px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.idle-legend .idle-dashed {
+  background: repeating-linear-gradient(90deg, var(--muted) 0 5px, transparent 5px 9px);
+}
+
+.idle-legend-now {
+  color: var(--ink);
+}
+
+.idle-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 10px 0 12px;
+}
+
+.idle-chart {
+  min-width: 0;
+  margin: 0;
+}
+
+.idle-chart figcaption {
+  margin-bottom: 4px;
+  font-size: 0.8125rem;
+  color: var(--label);
+}
+
+.idle-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+
+.idle-tick {
+  font: 10px var(--mono);
+}
+
+.idle-table {
+  display: grid;
+  font-size: 0.8125rem;
+}
+
+.idle-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(110px, 1.2fr) minmax(150px, 1.6fr) minmax(150px, 1.6fr) minmax(
+      130px,
+      1.3fr
+    );
+  gap: 4px 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--bezel);
+  color: var(--ink-2);
+}
+
+.idle-head {
+  border-top: none;
+  color: var(--muted);
+}
+
+.idle-now {
+  color: var(--ink);
+}
+
+.idle-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.idle-name i {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+@media (max-width: 640px) {
+  .idle-head {
+    display: none;
+  }
+
+  .idle-row {
+    grid-template-columns: 1fr;
+  }
+
+  .idle-row > [data-label]::before {
+    content: attr(data-label) ': ';
+    color: var(--muted);
+  }
+}

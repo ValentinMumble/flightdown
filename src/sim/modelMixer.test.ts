@@ -13,7 +13,7 @@ const mix = (channel: number, source: string, weight = 100, swtch = 'NONE'): Car
   name: '',
 });
 
-/** A small heli model: practice rates on SD down for the aileron, the throttle cut in hold, CH2 and CH6 reversed. */
+/** A small heli model: practice rates on SG down for the aileron, the throttle cut in hold, CH2 and CH6 reversed. */
 const model = {
   id: 'model1',
   name: 'Test',
@@ -25,7 +25,7 @@ const model = {
   switches: [],
   reversed: [1, 5],
   inputs: [
-    {input: 0, name: 'Prac', source: 'Ail', weight: 70, swtch: 'SD2'},
+    {input: 0, name: 'Prac', source: 'Ail', weight: 70, swtch: 'SG2'},
     {input: 0, name: 'Ail', source: 'Ail', weight: 100, swtch: 'NONE'},
     {input: 1, name: 'Ele', source: 'Ele', weight: 100, swtch: 'NONE'},
     {input: 2, name: 'Thr', source: 'Thr', weight: 100, swtch: 'NONE'},
@@ -64,7 +64,7 @@ describe('the model mixer', () => {
     expect(radioSource(state({}), 'SA')).toBe(1024);
     expect(radioSource(state({motor: false}), 'SF')).toBe(1024);
     expect(radioSource(state({idleUp: 1}), 'SE')).toBe(-1024);
-    expect(radioSource(state({practice: true}), 'SD')).toBe(1024);
+    expect(radioSource(state({practice: true}), 'SG')).toBe(1024);
     expect(radioSource(state({ail: 0.5}), 'Ail')).toBe(512);
   });
 

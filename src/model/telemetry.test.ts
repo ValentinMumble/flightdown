@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {Sortie} from '../types';
 import {parseCsv} from './csv';
-import {activeSpan, matchSortie, modelFromFileName, readDay, readTelemetry, sampleAt} from './telemetry';
+import {activeSpan, matchSortie, modelFromFileName, motorRunning, readDay, readTelemetry, sampleAt} from './telemetry';
 import {
   describeFlips,
   estimateCells,
@@ -193,6 +193,15 @@ describe('packOf with several kinds of packs', () => {
   it('takes the kind with most live packs, the bigger one on a tie', () => {
     expect(packOf(heli, packs)).toEqual({cells: 3, capacity: 750});
     expect(packOf(heli, [{...packs[0], packs: numbered(4)}, packs[1]])).toEqual({cells: 3, capacity: 700});
+  });
+});
+
+describe('motorRunning', () => {
+  it('reads a log with no current by its motor output, cut at an end of its travel', () => {
+    // The K110S logs only once its motor may run: it starts in Low RPM (1602 µs), and a cut is at -100 % (988 µs).
+    expect(motorRunning({ch3: [1602, 1602, 1807, 988, 1909]})).toEqual([true, true, true, false, true]);
+    // Reversed, the cut is at +100 %.
+    expect(motorRunning({ch3: [2012, 1400, 2012]})).toEqual([false, true, false]);
   });
 });
 

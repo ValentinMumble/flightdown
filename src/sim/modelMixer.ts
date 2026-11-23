@@ -1,7 +1,7 @@
 /**
  * A game controller or the keyboard flown through the model's own mixer, as the TX16S would fly it: their sticks and
  * buttons become the radio's sticks and switches (Ail, Ele, Rud, Thr; SA armed, SF hold, SE the idle up, SC
- * self-level, SD practice rates, SH the rescue, the pack's 6-position button), and the model's inputs, curves, mixes
+ * self-level, SG practice rates, SH the rescue, the pack's 6-position button), and the model's inputs, curves, mixes
  * and logical switches (from the edge-tx card) make the outputs the sim flies, CH1 to CH8, as the radio would send
  * them over USB. So the rates, expo, pitch curves, idle ups and holds are the model's, not guesses.
  */
@@ -54,12 +54,12 @@ export function radioSource(state: RadioState, name: string): number {
       return state.idleUp === 1 ? UP : state.idleUp === 2 ? MIDDLE : DOWN;
     case 'SC':
       return state.level ? DOWN : UP;
-    case 'SD':
+    case 'SG':
       return state.practice ? DOWN : UP;
     case 'SH':
       return state.rescue ? DOWN : UP;
     case 'SB':
-    case 'SG':
+    case 'SD':
       return UP;
     case '6P':
       return buttonValue(state.button);

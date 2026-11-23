@@ -14,7 +14,7 @@ import {useStore} from '../data/store';
 import {Segmented} from '../components/ui';
 import {Panel} from '../components/instruments';
 import {cutout} from '../components/HeliPhoto';
-import {buttonPack, groupPacks, joinSeries} from '../model/packs';
+import {buttonPack, joinSeries, sortiePacks} from '../model/packs';
 import {formatDay, formatTimer, plural} from '../model/format';
 import {buttonOf, isOutput} from '../model/telemetry';
 import {Radio, SCREEN, startLua, type RadioInputs, type WidgetOption, type WidgetRunner} from '../radio/edgetx';
@@ -22,6 +22,7 @@ import {ModelTimers} from '../radio/timers';
 import {channelOutput, mixSource, outputIndex} from '../radio/mixer';
 import {describeLogic} from '../radio/logic';
 import {RadioLogic} from '../components/RadioLogic';
+import {IdleUps} from '../components/IdleUps';
 import {RadioKnob} from '../components/RadioKnob';
 import {RadioStick} from '../components/RadioStick';
 import type {Card, CardModel} from '../radio/card';
@@ -53,8 +54,8 @@ import {
 import '../styles/radio.css';
 
 type Mode = 'screen' | 'widget';
-/** What the tab shows: a mode, or the model's screens with its logic under them. */
-type Shown = Mode | 'logic';
+/** What the tab shows: a mode, or the model's screens with its logic or its idle ups under them. */
+type Shown = Mode | 'logic' | 'idle';
 
 /** Zones a widget can sit in on the TX16S, measured from EdgeTX: the M2 EVO's first. */
 const ALL_DECORATIONS = {topbar: true, flightMode: true, sliders: true, trims: true, mirrored: false};
@@ -537,6 +538,7 @@ export default function RadioView() {
   const flying = doc.helis.find(heli => heli.status === 'active') ?? doc.helis[0];
   const [mode, setMode] = useState<Mode>(saved.mode === 'widget' ? 'widget' : 'screen');
   const [logic, setLogic] = useState(saved.mode === 'logic');
+  const [idle, setIdle] = useState(saved.mode === 'idle');
   const [card, setCard] = useState<Card | null>(null);
   const [modelId, setModelId] = useState(saved.model ?? '');
   const [screenIndex, setScreenIndex] = useState(0);
@@ -622,7 +624,7 @@ export default function RadioView() {
         .filter(sortie => sortie.telemetry.length)
         .sort((left, right) => right.date.localeCompare(left.date))
         .flatMap(sortie => {
-          const flights = groupPacks(sortie.telemetry);
+          const flights = sortiePacks(sortie);
           const name = doc.helis.find(one => one.id === sortie.heliId)?.name ?? 'A heli';
           return flights.map((pack, index) => ({
             key: `${sortie.id}:${index}`,
@@ -1095,6 +1097,7 @@ export default function RadioView() {
   const chooseMode = (next: Shown) => {
     setMode(next === 'widget' ? 'widget' : 'screen');
     setLogic(next === 'logic');
+    setIdle(next === 'idle');
     remember('mode', next);
     setProblem('');
   };
@@ -1222,11 +1225,12 @@ export default function RadioView() {
       <div className="radio-bar">
         <Segmented<Shown>
           label="Show"
-          value={mode === 'widget' ? 'widget' : logic ? 'logic' : 'screen'}
+          value={mode === 'widget' ? 'widget' : logic ? 'logic' : idle ? 'idle' : 'screen'}
           onChange={chooseMode}
           options={[
             {value: 'screen', label: 'Model screens'},
             {value: 'logic', label: 'Logic'},
+            {value: 'idle', label: 'Idle ups'},
             {value: 'widget', label: 'One widget'},
           ]}
         />
@@ -1374,6 +1378,18 @@ export default function RadioView() {
           <span className="muted">No radio log yet: add one to a sortie to replay it here.</span>
         )}
       </div>
+
+      {/* The idle ups under the screen: the stick and switches set by hand, or a replay, read along every curve. */}
+      {idle && mode === 'screen' && model && (
+        <IdleUps
+          model={model}
+          now={{
+            stick: valueAt('Thr') / 10.24,
+            idleUp: Math.round(valueAt('SE') / 1024) + 2,
+            practice: valueAt('SG') > 512,
+          }}
+        />
+      )}
 
       {/* The logic under the screen and the replay, the whole width: flip a switch or play a pack and watch both. */}
       {showLogic && (

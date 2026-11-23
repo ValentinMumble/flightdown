@@ -24,8 +24,8 @@ export const FAIR_RAIN_CHANCE = 50;
 /** Any rain forecast for the hour (mm) rules it out, as a likely one does: water and the electronics do not mix. */
 export const NO_RAIN = 0.1;
 
-/** How many spots the panel shows, and how many days. */
-export const WEATHER_SPOTS = 2;
+/** How many spots the panel shows (the latest one), and how many days. */
+export const WEATHER_SPOTS = 1;
 export const FORECAST_DAYS = 3;
 
 /** A kept forecast younger than this is used as it is, with no new request. */
@@ -71,8 +71,7 @@ export const rateHour = (hour: HourWeather): Rating => (ruledOutBy(hour) ? 'no' 
 export const whyNot = (hour: HourWeather): Reason | null => ruledOutBy(hour) ?? fairBy(hour);
 
 /**
- * The spots to show: the spot of the latest sortie that has one, then the most used others, only spots with a GPS
- * point.
+ * The spots to show: the spot of the latest sortie that has one, else the most used, only spots with a GPS point.
  */
 export function weatherSpots(spots: Spot[], sorties: Sortie[], count = WEATHER_SPOTS): (Spot & LatLng)[] {
   const uses = new Map<string, number>();

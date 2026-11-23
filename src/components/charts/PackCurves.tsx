@@ -5,7 +5,7 @@ import type {Sortie, TelemetryLog, TelemetrySeries} from '../../types';
 import {useStore} from '../../data/store';
 import {estimateCells, packOf} from '../../model/insights';
 import {formatDay, formatNumber, formatTimer, fromDay, shortMonth} from '../../model/format';
-import {groupPacks} from '../../model/packs';
+import {sortiePacks} from '../../model/packs';
 import {useChartInk, useSeriesColor} from '../colors';
 
 const IDLE_AMPS = 2;
@@ -89,7 +89,7 @@ export function PackCurves({sorties}: {sorties: Sortie[]}) {
   // "28 Apr ’23 · pack 2": short enough for a phone's table, the pack counted as the sortie's cards count it, and a
   // letter for each file of a pack the radio logged in several (2a, 2b).
   const shortName = (curve: Curve) => {
-    const packs = groupPacks(curve.sortie.telemetry);
+    const packs = sortiePacks(curve.sortie);
     const index = packs.findIndex(pack => pack.files.some(file => file.id === curve.log.id));
     const day = `${fromDay(curve.sortie.date).getDate()} ${shortMonth(curve.sortie.date)} ’${curve.sortie.date.slice(2, 4)}`;
     if (index < 0 || (packs.length < 2 && packs[index].files.length < 2)) return day;

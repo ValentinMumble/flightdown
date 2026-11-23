@@ -9,11 +9,6 @@
   min-width: 0;
 }
 
-.weather-spot + .weather-spot {
-  padding-top: 14px;
-  border-top: 1px solid var(--bezel);
-}
-
 .weather-spot-head {
   display: flex;
   align-items: baseline;

@@ -5,7 +5,7 @@ import {useStore} from '../data/store';
 import {Empty} from './ui';
 import {InvertedMark, Panel} from './instruments';
 import {packDebrief} from '../model/cockpit';
-import {groupPacks, joinSeries, packRecords} from '../model/packs';
+import {joinSeries, packRecords, sortiePacks} from '../model/packs';
 import {clockAt, lastSession, packEvents, type SessionEvent} from '../model/session';
 import {modelFromFileName} from '../model/telemetry';
 import {ago, formatAirtime, formatDay} from '../model/format';
@@ -21,7 +21,7 @@ import type {TelemetrySeries} from '../types';
 export function LastSession({className = ''}: {className?: string}) {
   const {doc, loadSeries} = useStore();
   const session = useMemo(() => lastSession(sortSorties(doc.sorties)), [doc.sorties]);
-  const packs = useMemo(() => (session ? groupPacks(session.telemetry) : []), [session]);
+  const packs = useMemo(() => (session ? sortiePacks(session) : []), [session]);
   const notes = useMemo(
     () => (session ? packDebrief(session, doc.batteries, packRecords(doc.sorties, doc.batteries)) : []),
     [session, doc.batteries, doc.sorties],

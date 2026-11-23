@@ -170,7 +170,7 @@ export const isGameController = (pad: Pick<Gamepad, 'mapping'>) => pad.mapping =
 const BUTTON = {y: 3, leftBumper: 4, rightBumper: 5, leftTrigger: 6, rightTrigger: 7, up: 12};
 
 /**
- * Rates to pick from on a game controller or the keyboard, as SD picks them on the radio: full, or the practice rates
+ * Rates to pick from on a game controller or the keyboard, as SG picks them on the radio: full, or the practice rates
  * (practice_rates.py in edge-tx), named by the cyclic's share. With the model's mixer the model applies them; without
  * it, these shares do.
  */
@@ -191,7 +191,7 @@ const dead = (value: number) =>
  * A game controller as a radio in mode 2: the left stick the collective (up and down) and the rudder, the right stick
  * the cyclic. Its sticks spring back to centre, so the collective's centre is the hover pitch (`hover`, -1 to 1). Each
  * pull of the left trigger turns the motor on or off (throttle hold, as SF), the right trigger is the rescue while
- * held (as SH), the left bumper steps through the idle ups, the right one through the rates (as SD), Y turns
+ * held (as SH), the left bumper steps through the idle ups, the right one through the rates (as SG), Y turns
  * self-level on and off (as SC), the D-pad's up arrow arms and disarms it (as SA): it starts disarmed, and the motor
  * runs only armed and out of hold, as on the M2 EVO.
  */

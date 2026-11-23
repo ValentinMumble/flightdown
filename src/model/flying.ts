@@ -1,12 +1,16 @@
 /**
  * How a pack was flown, from its log's switches and sticks: the rescues pulled, the time in self-level, on practice
  * rates and in each idle up, how busy the cyclic was, and the current each idle up drew. The switches are the M2 EVO's
- * and the K110S's (src/radio/roles.ts): SC down self-level, SD down practice rates, SE the idle up, SH held the rescue.
+ * and the K110S's (src/radio/roles.ts): SC down self-level, SG down practice rates (SD down before 23 Nov 2026), SE the
+ * idle up, SH held the rescue.
  */
 import type {TelemetrySeries} from '../types';
 import {motorRunning} from './telemetry';
 
-/** SD meant something else before the practice rates (practice_rates.py in edge-tx): its time counts from this day. */
+/**
+ * SD meant something else before the practice rates (practice_rates.py in edge-tx): its time counts from this day. They
+ * moved to SG on 23 Nov 2026 (practice_on_sg.py); neither switch has had another job since, so either one down counts.
+ */
 export const PRACTICE_SINCE = '2026-11-21';
 
 /** A gap between samples longer than this is a gap in the log, not flying time. */
@@ -45,7 +49,7 @@ export function flyingStats(series: TelemetrySeries, day: string): FlyingStats |
     flying: 0,
     rescues: 0,
     level: 0,
-    practice: day >= PRACTICE_SINCE && channels.sd ? 0 : null,
+    practice: day >= PRACTICE_SINCE && (channels.sd || channels.sg) ? 0 : null,
     idleUps: [0, 0, 0],
     amps: [null, null, null],
     travel: null,
@@ -60,7 +64,7 @@ export function flyingStats(series: TelemetrySeries, day: string): FlyingStats |
     stats.flying += step;
     if (at('sh', index) === 1 && at('sh', index - 1) !== 1) stats.rescues += 1;
     if (at('sc', index) === 1) stats.level += step;
-    if (stats.practice !== null && at('sd', index) === 1) stats.practice += step;
+    if (stats.practice !== null && (at('sd', index) === 1 || at('sg', index) === 1)) stats.practice += step;
     const switchE = at('se', index);
     if (switchE !== undefined) {
       const idleUp = Math.round(switchE) + 1;

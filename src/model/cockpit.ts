@@ -10,7 +10,7 @@ import {hoverSide, invertedStretches} from './insights';
 import {startCharge, usedMah} from './battery';
 import {partKey} from './parts';
 import {airtime} from './stats';
-import {buttonBattery, groupPacks, packLabel, type PackRecord} from './packs';
+import {buttonBattery, packLabel, type PackRecord, sortiePacks} from './packs';
 
 /** A cell under load below this is past its limit. */
 export const CELL_FLOOR = 3.3;
@@ -461,8 +461,13 @@ export function packDebrief(
   records: PackRecord[],
 ): {name: string; notes: PackNote[]}[] {
   const freshest = Math.min(...records.filter(one => !one.pack.dead && one.latest).map(one => one.latest!));
-  const packs = groupPacks(sortie.telemetry).map((flown, index) => {
-    const found = buttonBattery(flown.packButton ?? 0, batteries, flown.start?.slice(0, 10) ?? sortie.date);
+  const packs = sortiePacks(sortie).map((flown, index) => {
+    const found = buttonBattery(
+      flown.packButton ?? 0,
+      batteries,
+      flown.start?.slice(0, 10) ?? sortie.date,
+      sortie.heliId,
+    );
     const flying = flown.files.reduce((sum, file) => sum + (file.flying ?? 0), 0);
     return {
       flown,

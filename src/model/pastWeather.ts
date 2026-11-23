@@ -5,14 +5,14 @@
  */
 import type {Sortie, SortieWeather, Spot} from '../types';
 import {hasLocation, type LatLng} from './geo';
-import {groupPacks} from './packs';
+import {sortiePacks} from './packs';
 
 /** The hours a sortie with no log is taken to have flown: the afternoon, when the logs that say start. */
 export const DEFAULT_HOURS = {from: 12, to: 17};
 
 /** The hours a sortie flew, the spot's local time, both counted: from its first log's start to its last one's end. */
 export function flyingHours(sortie: Sortie): {from: number; to: number} {
-  const spans = groupPacks(sortie.telemetry).flatMap(pack =>
+  const spans = sortiePacks(sortie).flatMap(pack =>
     pack.files.flatMap(file => {
       const at = /T(\d\d):(\d\d)/.exec(file.start ?? '');
       if (!at) return [];

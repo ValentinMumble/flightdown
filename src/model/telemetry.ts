@@ -7,6 +7,8 @@ import {flipCounts, invertedStretches, packResistance} from './insights';
 const FLYING_AMPS = 2;
 /** How far (µs) the motor's output strays from cut before it counts as on: past the output's jitter. */
 const MOTOR_SLACK = 20;
+/** An output's ends (µs), -100 % and +100 %: a motor cut sits at one of them. */
+const CUT_ENDS = [988, 2012];
 
 /** The value a list holds most often. */
 function mostFrequent(values: number[]): number {
@@ -150,8 +152,13 @@ export function motorRunning(channels: TelemetrySeries['channels']): boolean[] {
   const currents = channels.current ?? [];
   if (motor?.length) {
     const idle = currents.length ? motor.filter((_, index) => (currents[index] ?? 0) < 0.5) : [];
-    const cut = mostFrequent(idle.length ? idle : [motor[0]]);
-    return motor.map(value => Math.abs(value - cut) > MOTOR_SLACK);
+    if (idle.length) {
+      const cut = mostFrequent(idle);
+      return motor.map(value => Math.abs(value - cut) > MOTOR_SLACK);
+    }
+    // No current to tell (the K110S has no telemetry, and logs only once its motor may run): the motor is cut at an
+    // end of the output's travel (-100 %, or +100 % on a reversed channel), where a running one never sits.
+    return motor.map(value => value > CUT_ENDS[0] + MOTOR_SLACK && value < CUT_ENDS[1] - MOTOR_SLACK);
   }
   return currents.map(value => value >= FLYING_AMPS);
 }

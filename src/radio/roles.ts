@@ -82,9 +82,9 @@ const K110S: Record<string, SwitchRole> = {
   },
   SE: {
     job: 'Idle up',
-    up: ['Low RPM', 'throttle 60%, a gentler pitch'],
-    middle: ['Idle up 2', 'throttle 80%'],
-    down: ['Idle up 3', 'throttle 90%'],
+    up: ['Low RPM', 'throttle 55%, a soft pitch (-80% to +48%)'],
+    middle: ['Idle up 2', 'throttle 70%, pitch ±70%'],
+    down: ['Idle up 3', 'throttle 90%, pitch ±90%'],
   },
   SC: {
     job: 'Flight mode',
@@ -97,7 +97,7 @@ const K110S: Record<string, SwitchRole> = {
     up: ['Released'],
     down: ['Rescue', '6G, the pitch flat, then a climb at 60% after 0.1 s'],
   },
-  SD: {
+  SG: {
     job: 'Practice rates',
     up: ['Off', 'full rates'],
     middle: ['Off', 'full rates'],
@@ -115,7 +115,7 @@ const M2_PRACTICE: SwitchRole = {
 
 // S1 adds -20 to +20 % to the M2 EVO's idle ups (-10 to +10 in idle up 3): half that on the throttle's 0 to 100 %.
 const ROLES: Record<string, Record<string, SwitchRole>> = {
-  'M2 EVO': {...heli([54, 60, 75], [', S1 ±10', ', S1 ±10', ', S1 ±5']), SD: M2_PRACTICE},
+  'M2 EVO': {...heli([54, 60, 75], [', S1 ±10', ', S1 ±10', ', S1 ±5']), SG: M2_PRACTICE},
   K110S,
   M4: heli([55, 65, 63], [', S1 takes it down to 40%', '', '']),
 };

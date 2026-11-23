@@ -70,9 +70,11 @@ function summarise(files: TelemetryLog[]): PackLog {
 /**
  * A sortie's log files as the packs flown, in the order flown: files that follow each other within SAME_PACK_GAP
  * seconds are one pack, unless their 6-position buttons say two packs (a pack swapped that quickly). A file with no
- * start time stands alone, after the others.
+ * start time stands alone, after the others. Given how many packs were flown (`count`, the sortie's), files closer
+ * than that in time join too, the closest first, while the buttons allow: a K110S relaunched on its pack after a crash
+ * starts a new file a minute later, as long as a pack swap takes, and it has no button or sensor to tell them apart.
  */
-export function groupPacks(logs: TelemetryLog[]): PackLog[] {
+export function groupPacks(logs: TelemetryLog[], count?: number): PackLog[] {
   const timed = logs
     .filter(log => startSeconds(log) !== null)
     .sort((left, right) => (startSeconds(left) ?? 0) - (startSeconds(right) ?? 0));
@@ -86,9 +88,26 @@ export function groupPacks(logs: TelemetryLog[]): PackLog[] {
     if (group && gap <= SAME_PACK_GAP && !otherPack) group.push(log);
     else groups.push([log]);
   }
+  while (count && groups.length > count) {
+    // The two packs flown closest together, the first's last file and the second's first, of the same button or none.
+    let closest: {index: number; gap: number} | null = null;
+    for (let index = 1; index < groups.length; index += 1) {
+      const previous = groups[index - 1][groups[index - 1].length - 1];
+      const next = groups[index][0];
+      if (previous.packButton !== undefined && next.packButton !== undefined && previous.packButton !== next.packButton)
+        continue;
+      const gap = (startSeconds(next) ?? 0) - ((startSeconds(previous) ?? 0) + previous.duration);
+      if (!closest || gap < closest.gap) closest = {index, gap};
+    }
+    if (!closest) break;
+    groups.splice(closest.index - 1, 2, [...groups[closest.index - 1], ...groups[closest.index]]);
+  }
   for (const log of logs) if (startSeconds(log) === null) groups.push([log]);
   return groups.map(summarise);
 }
+
+/** A sortie's packs, as its logs flew them and as many as it says. */
+export const sortiePacks = (sortie: Pick<Sortie, 'telemetry' | 'packs'>) => groupPacks(sortie.telemetry, sortie.packs);
 
 /**
  * A pack's samples as one log: each file's times moved to when it started within the pack, and the sensors every file
@@ -116,20 +135,21 @@ export function joinSeries(pack: PackLog, parts: TelemetrySeries[]): TelemetrySe
 
 /**
  * The pack a flight was flown on, from the 6-position button pressed (once its kind was given buttons, and from the day
- * it was): "OMPHobby #1", the kind's name up to its cells.
+ * it was), among the packs its heli flies: "OMPHobby #1", the kind's name up to its cells.
  */
-export function packName(pack: PackLog, batteries: Battery[]): string | null {
-  return buttonPack(pack.packButton ?? 0, batteries, pack.start?.slice(0, 10) ?? '');
+export function packName(pack: PackLog, batteries: Battery[], heliId: string): string | null {
+  return buttonPack(pack.packButton ?? 0, batteries, pack.start?.slice(0, 10) ?? '', heliId);
 }
 
 /**
  * The pack a 6-position button stood for on a day (else today), and its kind: of the packs that had the button by
  * then (and had not moved off it), the one given it last, so a new pack on a dead one's button takes over from the day
- * it got it.
+ * it got it. Given a heli, only the kinds it flies: the K110S's logs read the button the M2 EVO's packs are on, untouched.
  */
-export function buttonBattery(button: number, batteries: Battery[], day = today()) {
+export function buttonBattery(button: number, batteries: Battery[], day = today(), heliId?: string) {
   let found: {battery: Battery; pack: Pack; since: string} | null = null;
   for (const battery of batteries) {
+    if (heliId && !battery.heliIds.includes(heliId)) continue;
     for (const pack of battery.packs) {
       const held = [...(pack.earlier ?? []), ...(pack.button ? [{button: pack.button, since: pack.since}] : [])];
       for (const spell of held) {
@@ -148,9 +168,9 @@ export const kindName = (name: string) => name.split(/\s\d+S\s/)[0].trim();
 /** A pack's name: its kind's up to the cells, and its number ("OMPHobby #1"). */
 export const packLabel = (battery: Battery, pack: Pack) => `${kindName(battery.name)} #${pack.number}`;
 
-/** The pack a 6-position button stands for ("OMPHobby #1"), on a day, else today. */
-export function buttonPack(button: number, batteries: Battery[], day?: string): string | null {
-  const found = buttonBattery(button, batteries, day);
+/** The pack a 6-position button stands for ("OMPHobby #1"), on a day, else today, among a heli's kinds if given. */
+export function buttonPack(button: number, batteries: Battery[], day?: string, heliId?: string): string | null {
+  const found = buttonBattery(button, batteries, day, heliId);
   return found ? packLabel(found.battery, found.pack) : null;
 }
 
@@ -166,8 +186,13 @@ export function kindFlights(sorties: Sortie[], batteries: Battery[]) {
   const add = (id: string, count: number) => flights.set(id, (flights.get(id) ?? 0) + count);
   for (const sortie of sorties) {
     let named = 0;
-    for (const pack of groupPacks(sortie.telemetry)) {
-      const found = buttonBattery(pack.packButton ?? 0, batteries, pack.start?.slice(0, 10) ?? sortie.date);
+    for (const pack of sortiePacks(sortie)) {
+      const found = buttonBattery(
+        pack.packButton ?? 0,
+        batteries,
+        pack.start?.slice(0, 10) ?? sortie.date,
+        sortie.heliId,
+      );
       if (!found) continue;
       add(found.battery.id, 1);
       named++;
@@ -218,9 +243,9 @@ export function packRecords(sorties: Sortie[], batteries: Battery[]): PackRecord
       });
   }
   for (const sortie of [...sorties].sort((left, right) => left.date.localeCompare(right.date))) {
-    for (const flown of groupPacks(sortie.telemetry)) {
+    for (const flown of sortiePacks(sortie)) {
       const day = flown.start?.slice(0, 10) ?? sortie.date;
-      const found = buttonBattery(flown.packButton ?? 0, batteries, day);
+      const found = buttonBattery(flown.packButton ?? 0, batteries, day, sortie.heliId);
       const record = found && records.get(key(found.battery, found.pack));
       if (!found || !record) continue;
       record.flights += 1;

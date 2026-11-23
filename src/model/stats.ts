@@ -1,7 +1,7 @@
 import type {Sortie} from '../types';
 import {daysBetween, fromDay, pad, today} from './format';
 import {SKILLS} from './skills';
-import {groupPacks} from './packs';
+import {sortiePacks} from './packs';
 
 /** Seconds in the air: packs times the flight time of one pack (nothing when the timer is not known). */
 /**
@@ -10,7 +10,7 @@ import {groupPacks} from './packs';
  */
 export function loggedTimes(sortie: Sortie): number[] | null {
   if (!sortie.telemetry.length || sortie.telemetry.some(log => log.flying === undefined)) return null;
-  const packs = groupPacks(sortie.telemetry);
+  const packs = sortiePacks(sortie);
   if (packs.length < sortie.packs) return null;
   return packs.map(pack => pack.files.reduce((sum, file) => sum + (file.flying ?? 0), 0));
 }

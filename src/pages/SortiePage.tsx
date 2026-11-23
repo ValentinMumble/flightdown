@@ -268,7 +268,14 @@ export function SortiePage() {
             </>
           }
         >
-          <TelemetryPacks logs={sortie.telemetry} pack={pack} packs={packs} onRemove={removeLog} />
+          <TelemetryPacks
+            logs={sortie.telemetry}
+            packCount={sortie.packs}
+            heliId={sortie.heliId}
+            pack={pack}
+            packs={packs}
+            onRemove={removeLog}
+          />
         </Card>
       </div>
 

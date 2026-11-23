@@ -94,7 +94,7 @@ const toRadio = (value: number) => Math.round(Math.max(-1, Math.min(1, value)) *
 /**
  * A source, as a widget asks for it (getValue's name, a switch, an output CH1, a sensor, or tele(n)), from the feed.
  * The switches are set as flying it: armed (SA down), throttle hold off with the motor on (SF), the idle up on SE,
- * the rescue (SH) while held, self-level (SC) as set, the practice rates (SD) with lower rates picked. Outputs come from the radio itself when it is the controller; else from
+ * the rescue (SH) while held, self-level (SC) as set, the practice rates (SG) with lower rates picked. Outputs come from the radio itself when it is the controller; else from
  * the sticks, reversed as the model reverses them.
  */
 export function simSource(
@@ -135,10 +135,10 @@ export function simSource(
       return feed.rescue ? DOWN : UP;
     case 'sc':
       return feed.controls.level ? DOWN : UP;
-    case 'sd':
+    case 'sg':
       return isLowered(feed.controls.rates) ? DOWN : UP;
     case 'sb':
-    case 'sg':
+    case 'sd':
       return UP;
     case '6pos':
     case '6p':

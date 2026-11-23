@@ -1,14 +1,14 @@
 import type {Battery, Sortie} from '../types';
 import {formatTimer} from '../model/format';
-import {groupPacks, packName} from '../model/packs';
+import {packName, sortiePacks} from '../model/packs';
 
 /** The time upside down, in the chart palette's violet (as the recorder's bands), apart from the air time's green. */
 export const INVERTED = '#9085e9';
 
 /** A sortie's packs as its logs flew them: each one's name (from its button), its air time, the part inverted. */
 export function packTimes(sortie: Sortie, batteries: Battery[]) {
-  return groupPacks(sortie.telemetry).map((pack, index) => ({
-    name: packName(pack, batteries) ?? `Pack ${index + 1}`,
+  return sortiePacks(sortie).map((pack, index) => ({
+    name: packName(pack, batteries, sortie.heliId) ?? `Pack ${index + 1}`,
     flying: pack.files.reduce((sum, file) => sum + (file.flying ?? 0), 0),
     inverted: pack.files.reduce((sum, file) => sum + (file.inverted ?? 0), 0),
   }));

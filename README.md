@@ -12,7 +12,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   packs per crash on a tape and the time in the air per crash (all time, and the last 20 sorties), the crash-free run
   in packs and days, the last five sorties by month beside the helis on the flight line (each with its own small hour
   meter, as in the Hangar), the last session at a glance (its packs and their notes, a throttle hold undone in flight,
-  the link lost, a hard stop) beside the flying weather at your spots for three days (Open-Meteo), then the live packs
+  the link lost, a hard stop) beside the flying weather at your latest spot for three days (Open-Meteo), then the live packs
   by their buttons (flights, last flown, resistance, tiring or worn against their first reading and the freshest
   pack's) beside what changed on the radio since the last flight (edge-tx's commits).
 - **Sorties:** every sortie as a flight strip (today's and yesterday's say so), a month at a time, the airtime shown on
@@ -87,7 +87,9 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   downloadable as `main.lua`). Logic: under the screen, the model's logic and the radio's in words, live with the
   switches and a replay: controls, conditions, what each channel is made of now and why (a
   curve drawn, a dot where its input is), special and global functions,
-  timers; pick one to light what it reads and what reads it (`logic.ts`). Set the switches by hand (a click on one moves
+  timers; pick one to light what it reads and what reads it (`logic.ts`). Idle ups: the throttle and the pitch across
+  the collective stick in each idle up, practice rates dashed, from the model's own mixer, and each one's values, read
+  at the stick or wherever the chart is pointed (`idleUps.ts`). Set the switches by hand (a click on one moves
   it; SH, the red rescue switch, springs back, down only while held; SF starts in hold), the 6-position buttons and the S1
   knob above the screen, the two sticks under it (dragged; all but the throttle spring back), or
   replay a logged pack: its log drives the sensors, the buttons, the S1 knob, the switches (their real positions; in older logs, the

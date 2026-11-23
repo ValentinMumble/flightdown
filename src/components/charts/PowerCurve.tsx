@@ -2,7 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {CartesianGrid, Line, ComposedChart, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis} from 'recharts';
 import type {Sortie} from '../../types';
 import {useStore} from '../../data/store';
-import {groupPacks, packName} from '../../model/packs';
+import {packName, sortiePacks} from '../../model/packs';
 import {powerCurve, type CurvePoint} from '../../model/cockpit';
 import {formatNumber} from '../../model/format';
 import {useChartInk, useSeriesColor} from '../colors';
@@ -23,8 +23,8 @@ export function PowerCurve({sorties}: {sorties: Sortie[]}) {
   const flown = useMemo(
     () =>
       sorties.flatMap(sortie =>
-        groupPacks(sortie.telemetry).flatMap(pack => {
-          const name = packName(pack, doc.batteries);
+        sortiePacks(sortie).flatMap(pack => {
+          const name = packName(pack, doc.batteries, sortie.heliId);
           return name ? [{name, files: pack.files}] : [];
         }),
       ),

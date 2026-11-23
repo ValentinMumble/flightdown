@@ -38,17 +38,23 @@ function Sparkline({series, low, high}: {series?: TelemetrySeries | null; low: n
  */
 export function TelemetryPacks({
   logs,
+  packCount,
+  heliId,
   pack,
   packs,
   onRemove,
 }: {
   logs: TelemetryLog[];
+  /** How many packs the sortie says were flown: logs close in time join to make that many. */
+  packCount: number;
+  /** The heli flown: a button names one of its own kinds of pack. */
+  heliId: string;
   pack?: {cells?: number; capacity?: number};
   packs: number[];
   onRemove: (logId: string) => void;
 }) {
   const {doc, loadSeries} = useStore();
-  const flights = useMemo(() => groupPacks(logs), [logs]);
+  const flights = useMemo(() => groupPacks(logs, packCount), [logs, packCount]);
   const records = useMemo(() => packRecords(doc.sorties, doc.batteries), [doc.sorties, doc.batteries]);
   // Each file's samples once loaded, null when they could not be read.
   const [loaded, setLoaded] = useState<Record<string, TelemetrySeries | null>>({});
@@ -114,7 +120,7 @@ export function TelemetryPacks({
   const series = joined[selected];
   const used = usedBy[selected];
   // The pack its button names, its size and cells; else the heli's usual one.
-  const named = buttonBattery(flight.packButton ?? 0, doc.batteries, flight.start?.slice(0, 10));
+  const named = buttonBattery(flight.packButton ?? 0, doc.batteries, flight.start?.slice(0, 10), heliId);
   const flightPack = named ? {cells: named.battery.cells, capacity: named.battery.capacity} : pack;
   // The pack's resistance from this log (the whole pack, Ω), for the power margin, and how worn that is against its
   // first reading and the freshest pack's (a cell's share each), for the caution panel.
@@ -201,7 +207,7 @@ export function TelemetryPacks({
               onClick={() => setChosen(index)}
             >
               <span className="pack-card-label">
-                {packName(one, doc.batteries) ?? `pack ${index + 1}`}
+                {packName(one, doc.batteries, heliId) ?? `pack ${index + 1}`}
                 {one.start && ` · ${one.start.slice(11, 16)}`}
               </span>
               <span className="pack-card-value">

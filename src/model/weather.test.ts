@@ -73,7 +73,7 @@ const sortie = (date: string, spotId?: string): Sortie => ({
 describe('weatherSpots', () => {
   const spots = [spot('beach'), spot('field'), spot('park'), spot('garden', false)];
 
-  it('puts the latest sortie spot first, then the most used', () => {
+  it('shows only the latest sortie spot', () => {
     const sorties = [
       sortie('2026-11-01', 'field'),
       sortie('2026-11-02', 'field'),
@@ -81,12 +81,12 @@ describe('weatherSpots', () => {
       sortie('2026-11-04', 'beach'),
       sortie('2026-11-05'),
     ];
-    expect(weatherSpots(spots, sorties).map(each => each.id)).toEqual(['beach', 'field']);
+    expect(weatherSpots(spots, sorties).map(each => each.id)).toEqual(['beach']);
   });
 
-  it('skips spots with no GPS point', () => {
+  it('skips spots with no GPS point, showing the most used instead', () => {
     const sorties = [sortie('2026-11-01', 'park'), sortie('2026-11-02', 'park'), sortie('2026-11-03', 'garden')];
-    expect(weatherSpots(spots, sorties).map(each => each.id)).toEqual(['park', 'beach']);
+    expect(weatherSpots(spots, sorties).map(each => each.id)).toEqual(['park']);
   });
 
   it('is empty when no spot has a GPS point', () => {

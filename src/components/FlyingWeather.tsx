@@ -197,8 +197,8 @@ function SpotWeather({spot}: {spot: Spot & LatLng}) {
 }
 
 /**
- * Flying weather: wind, gusts and rain at the pilot's spots (the latest one, then the most used, two at most), hour by
- * hour through daylight for 3 days, each hour rated for a small heli.
+ * Flying weather: wind, gusts and rain at the pilot's latest spot (else the most used), hour by hour through daylight
+ * for 3 days, each hour rated for a small heli.
  */
 export function FlyingWeather({className = ''}: {className?: string}) {
   const {doc} = useStore();
@@ -207,7 +207,7 @@ export function FlyingWeather({className = ''}: {className?: string}) {
   return (
     <Panel
       label="Flying weather"
-      note="Wind, gusts and rain at your spots, the next 3 days"
+      note="Wind, gusts and rain at your latest spot, the next 3 days"
       className={`weather-panel ${className}`}
     >
       {spots.length ? (
