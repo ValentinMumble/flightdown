@@ -29,7 +29,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   splits a log when the link drops, unless their buttons differ; one row pinned under the top bar, so another pack is
   one tap away from anywhere in the charts), and for the chosen pack: voltage, current, signal and
   throttle as lanes of one recorder (each reads out at the cursor; the flight only, the quiet start and end cut, or the
-  whole log; its exceedances marked along the top), under it a replay of the sticks with throttle, power and battery
+  whole log; its exceedances marked along the top; crashes marked by a tap at their moment, a red line across the
+  lanes; the lines broken between a pack's files), under it a replay of the sticks with throttle, power and battery
   dials (the power with a mark for what the pack could still give before a cell drops to 3.3 V, from its resistance;
   the battery from its charge at rest when plugged in, less the mAh used) and an attitude ball (banked and pitched by
   the sticks, turned over through each flip the way they took it, the small heli fixed in its middle), then a caution

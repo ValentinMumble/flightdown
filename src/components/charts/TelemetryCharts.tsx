@@ -1,5 +1,15 @@
 import {useCallback, useMemo, useRef, useState, type ReactNode} from 'react';
-import {Area, AreaChart, CartesianGrid, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ReferenceArea,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import type {TelemetrySeries} from '../../types';
 import {activeSpan, CHANNELS, type Channel} from '../../model/telemetry';
 import {invertedStretches, telemetryInsights} from '../../model/insights';
@@ -24,6 +34,10 @@ const ORDER: Channel[] = ['voltage', 'current', 'capacity', 'rssi', 'throttle'];
 
 /** Below this the radio lost the voltage for a sample. */
 const NO_VOLTAGE = 0.5;
+/** Samples further apart than this (s) have a gap between them, a pack's two files: the lines break there. */
+const GAP = 2;
+/** A crash's line across the lanes. */
+const CRASH = '#ff5c5c';
 
 /** A sensor's value as the radio shows it: volts to the hundredth, amps to the tenth, the rest whole. */
 const reading = (channel: Channel, value: number) =>
@@ -44,6 +58,8 @@ export function TelemetryCharts({
   details,
   ohms,
   wear,
+  crashes = [],
+  onCrashes,
 }: {
   series: TelemetrySeries;
   /** The mAh the pack used, for the notes. */
@@ -59,8 +75,13 @@ export function TelemetryCharts({
   ohms?: number;
   /** Its resistance against its first reading or the freshest pack's, for the caution panel. */
   wear?: number;
+  /** When it crashed (s, the log's time): a line across the lanes. */
+  crashes?: number[];
+  /** Marks and unmarks the crashes, a tap on a lane at the moment: left out where the log cannot be changed. */
+  onCrashes?: (crashes: number[]) => void;
 }) {
   const ink = useChartInk();
+  const [marking, setMarking] = useState(false);
   // The replay's moment, a line across every lane: moved in CSS (--cursor, 0 to 1 along the time axis), so the
   // charts are not drawn again on each frame of the replay.
   const lanes = useRef<HTMLDivElement>(null);
@@ -95,16 +116,25 @@ export function TelemetryCharts({
     [first, last],
   );
 
+  // A row a sample; between two samples far apart (a pack's two files), an empty one, so the lines break there.
   const rows = useMemo(
     () =>
-      shown.time.map((second, index) =>
-        Object.fromEntries([
+      shown.time.flatMap((second, index) => {
+        const row = Object.fromEntries([
           ['time', second],
           ...Object.entries(shown.channels).map(([key, values]) => [key, values[index]]),
-        ]),
-      ),
+        ]);
+        const next = shown.time[index + 1];
+        return next !== undefined && next - second > GAP ? [row, {time: (second + next) / 2}] : [row];
+      }),
     [shown],
   );
+  const markAt = (state: {activeLabel?: unknown}) => {
+    const second = Number(state.activeLabel);
+    if (!marking || !onCrashes || !Number.isFinite(second)) return;
+    onCrashes([...crashes, second].sort((left, right) => left - right));
+    setMarking(false);
+  };
 
   const insights = useMemo(() => telemetryInsights({mAh}, series, pack), [mAh, series, pack]);
   // The whole log's exceedances and caution lights (not only the part shown).
@@ -116,7 +146,7 @@ export function TelemetryCharts({
   const channels = ORDER.filter(channel => shown.channels[channel]?.length);
   return (
     <>
-      {(span || inverted.length > 0) && (
+      {(span || inverted.length > 0 || onCrashes || crashes.length > 0) && (
         <div className="lanes-span">
           {span && (
             <button type="button" className="chip" aria-pressed={!whole} onClick={() => setWhole(current => !current)}>
@@ -134,6 +164,28 @@ export function TelemetryCharts({
             <span className="lane-legend">
               <i style={{background: INVERTED}} aria-hidden /> inverted
             </span>
+          )}
+          {crashes.map(second =>
+            onCrashes ? (
+              <button
+                key={second}
+                type="button"
+                className="chip"
+                title="Unmark this crash"
+                onClick={() => onCrashes(crashes.filter(other => other !== second))}
+              >
+                💥 {formatTimer(second)} ×
+              </button>
+            ) : (
+              <span key={second} className="lane-legend">
+                💥 crash at {formatTimer(second)}
+              </span>
+            ),
+          )}
+          {onCrashes && (
+            <button type="button" className="chip" aria-pressed={marking} onClick={() => setMarking(on => !on)}>
+              {marking ? 'Tap the moment on a chart' : 'Mark a crash'}
+            </button>
           )}
         </div>
       )}
@@ -161,6 +213,8 @@ export function TelemetryCharts({
                     data={rows}
                     syncId={`telemetry-${shown.id}`}
                     margin={{top: 4, right: 6, bottom: 0, left: 0}}
+                    onClick={markAt}
+                    style={marking ? {cursor: 'crosshair'} : undefined}
                   >
                     <CartesianGrid vertical={false} stroke={ink.grid} />
                     <XAxis
@@ -208,6 +262,16 @@ export function TelemetryCharts({
                         fillOpacity={0.14}
                         stroke="none"
                         ifOverflow="hidden"
+                      />
+                    ))}
+                    {crashes.map(second => (
+                      <ReferenceLine
+                        key={second}
+                        x={second}
+                        stroke={CRASH}
+                        strokeWidth={1.5}
+                        ifOverflow="hidden"
+                        label={index === 0 ? {value: '💥', position: 'insideTopLeft', fontSize: 12} : undefined}
                       />
                     ))}
                     <Area

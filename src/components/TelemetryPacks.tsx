@@ -10,6 +10,16 @@ import {topBarHeight} from './topBar';
 /** Below this the radio lost the voltage for a sample: left out of the lines. */
 const NO_VOLTAGE = 0.5;
 
+/** A crash marked this long (s) after a pack's last sample still belongs to it: the log stops as the motor is held. */
+const CRASH_GRACE = 5;
+
+const two = (value: number) => String(value).padStart(2, '0');
+/** A moment (ms) as the logs write it: local time, YYYY-MM-DDTHH:MM:SS. */
+function localStamp(moment: number) {
+  const date = new Date(Math.round(moment / 1000) * 1000);
+  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}T${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}`;
+}
+
 /** A pack's voltage as a small line, on a scale shared by every pack of the sortie so their sag compares. */
 function Sparkline({series, low, high}: {series?: TelemetrySeries | null; low: number; high: number}) {
   const voltage = series?.channels.voltage;
@@ -40,6 +50,8 @@ export function TelemetryPacks({
   logs,
   packCount,
   heliId,
+  crashTimes = [],
+  onCrashTimes,
   pack,
   packs,
   onRemove,
@@ -49,6 +61,9 @@ export function TelemetryPacks({
   packCount: number;
   /** The heli flown: a button names one of its own kinds of pack. */
   heliId: string;
+  /** When the sortie's crashes happened (local times), and how to change them: marked on each pack's timeline. */
+  crashTimes?: string[];
+  onCrashTimes?: (times: string[]) => void;
   pack?: {cells?: number; capacity?: number};
   packs: number[];
   onRemove: (logId: string) => void;
@@ -117,6 +132,21 @@ export function TelemetryPacks({
   if (!flights.length) return null;
   const selected = Math.min(chosen, flights.length - 1);
   const flight = flights[selected];
+  // The pack's crashes as seconds of its log (whose 0 is the pack's start), and back to times when marked or unmarked.
+  const startedAt = flight.start ? Date.parse(flight.start) : NaN;
+  const secondOf = (time: string) => (Date.parse(time) - startedAt) / 1000;
+  const inPack = (time: string) => secondOf(time) >= 0 && secondOf(time) <= flight.duration + CRASH_GRACE;
+  const crashes = Number.isNaN(startedAt) ? [] : crashTimes.filter(inPack).map(secondOf);
+  const markCrashes =
+    onCrashTimes && !Number.isNaN(startedAt)
+      ? (seconds: number[]) =>
+          onCrashTimes(
+            [
+              ...crashTimes.filter(time => !inPack(time)),
+              ...seconds.map(second => localStamp(startedAt + second * 1000)),
+            ].sort(),
+          )
+      : undefined;
   const series = joined[selected];
   const used = usedBy[selected];
   // The pack its button names, its size and cells; else the heli's usual one.
@@ -236,6 +266,8 @@ export function TelemetryPacks({
             packs={named ? [] : packs}
             ohms={ohms}
             wear={wear}
+            crashes={crashes}
+            onCrashes={markCrashes}
             summary={summary}
             details={details}
           />

@@ -102,6 +102,8 @@ export interface Sortie {
   timer: number | null;
   /** null when not known ("?" in the sheet). */
   crashes: number | null;
+  /** When each crash happened (local time, YYYY-MM-DDTHH:MM:SS), when marked on a pack's timeline. */
+  crashTimes?: string[];
   broken: BrokenPart[];
   /** Manoeuvres practised (see SKILLS). */
   skills: string[];

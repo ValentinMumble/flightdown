@@ -272,6 +272,10 @@ export function SortiePage() {
             logs={sortie.telemetry}
             packCount={sortie.packs}
             heliId={sortie.heliId}
+            crashTimes={sortie.crashTimes ?? []}
+            onCrashTimes={times =>
+              put('sorties', {...sortie, crashTimes: times, crashes: Math.max(sortie.crashes ?? 0, times.length)})
+            }
             pack={pack}
             packs={packs}
             onRemove={removeLog}
