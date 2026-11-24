@@ -26,6 +26,10 @@ export function PackHealth({sorties}: {sorties: Sortie[]}) {
   );
   if (!rows.length)
     return <div className="muted">No pack flown with its button pressed yet: give packs buttons in the Hangar.</div>;
+  // The freshest live pack's resistance: a pack far past it is worn, even one that started out high (as the debrief).
+  const freshest = Math.min(
+    ...rows.filter(row => !row.record.pack.dead && row.record.latest).map(row => row.record.latest!),
+  );
 
   return (
     <div className="health-table">
@@ -39,6 +43,10 @@ export function PackHealth({sorties}: {sorties: Sortie[]}) {
       </div>
       {rows.map(({record, trend, flightsLeft, mah, low}) => {
         const change = record.first && record.latest ? record.latest / record.first : null;
+        const againstFreshest =
+          !record.pack.dead && record.latest && Number.isFinite(freshest) ? record.latest / freshest : null;
+        const wear = Math.max(change ?? 1, againstFreshest ?? 1);
+        const worn = wear >= 2 ? 'worn' : wear >= 1.5 ? 'tiring' : null;
         return (
           <div
             key={`${record.battery.id}#${record.pack.number}`}
@@ -48,14 +56,22 @@ export function PackHealth({sorties}: {sorties: Sortie[]}) {
               <span className="name-main">{record.label}</span>
               <small className="name-note">
                 {record.pack.dead ? 'dead' : `${record.flights} ${record.flights === 1 ? 'flight' : 'flights'}`}
+                {worn && <b className={worn === 'worn' ? 'warning' : 'caution'}> · {worn}</b>}
               </small>
             </span>
             <span>
               {record.first !== undefined && record.latest !== undefined
                 ? `${formatNumber(record.first, 0)} → ${formatNumber(record.latest, 0)} mΩ`
                 : '–'}
-              {change !== null && change >= 1.5 && (
-                <small className={change >= 2 ? 'warning' : 'caution'}> ×{formatNumber(change, 1)}</small>
+              {wear >= 1.5 && (
+                <small
+                  className={wear >= 2 ? 'warning' : 'caution'}
+                  title={wear === change ? 'Against its first reading' : 'Against the freshest pack'}
+                >
+                  {' '}
+                  ×{formatNumber(wear, 1)}
+                  {wear !== change && ' the freshest'}
+                </small>
               )}
             </span>
             <span>{trend !== null ? `${trend >= 0 ? '+' : ''}${formatNumber(trend, 1)}` : '–'}</span>

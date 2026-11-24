@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {Vector3} from 'three';
 import {HOVER_HEIGHT, PAD, startDrill, updateDrill, type Frame} from './drills';
-import {DEFAULT_MAPPING, GameControllerSticks, movedAxis, readAxes} from './input';
+import {DEFAULT_MAPPING, GameControllerSticks, movedAxis, radioSwitches, readAxes} from './input';
 
 const frame = (overrides: Partial<Frame>): Frame => ({
   dt: 0.5,
@@ -51,6 +51,27 @@ describe('the sticks', () => {
     expect(readAxes([0, 0, 0, 0, 0, 0.3], {...DEFAULT_MAPPING, collective: {axis: 5, reverse: true}}).collective).toBe(
       -0.3,
     );
+  });
+
+  it('read the throttle channel cut at either end, whichever way the model reverses it', () => {
+    // The M2 EVO's CH3 is reversed: cut at +100 %, read with the K110S's mapping (not reversed) it is still cut.
+    expect(readAxes([0, 0, 1, 0, 0, 0], DEFAULT_MAPPING).throttle).toBe(0);
+    expect(readAxes([0, 0, -1, 0, 0, 0], {...DEFAULT_MAPPING, throttle: {axis: 2, reverse: true}}).throttle).toBe(0);
+    // An idle up near the top (90 % of the travel) still runs.
+    expect(readAxes([0, 0, 0.9, 0, 0, 0], DEFAULT_MAPPING).throttle).toBeCloseTo(0.95);
+  });
+
+  it('read SA and SF from the radio buttons, when the model sends them on CH10 and CH11', () => {
+    const pad = (...pressed: boolean[]) => ({buttons: pressed.map(on => ({pressed: on}))}) as unknown as Gamepad;
+    const sends = {
+      mixes: [
+        {channel: 9, name: 'SA arm'},
+        {channel: 10, name: 'SF on'},
+      ],
+    };
+    expect(radioSwitches(sends, pad(false, true, false))).toEqual({armed: true, throttleOn: false});
+    expect(radioSwitches(sends, pad(false, false, true))).toEqual({armed: false, throttleOn: true});
+    expect(radioSwitches({mixes: []}, pad(false, true, true))).toBeNull();
   });
 
   it('find the axis a stick moved, and which way', () => {

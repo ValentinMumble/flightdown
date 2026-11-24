@@ -17,6 +17,7 @@ export interface PackLog {
   mAh?: number;
   minVoltage?: number;
   maxCurrent?: number;
+  heldCurrent?: number;
   avgCurrent?: number;
   minRssi?: number;
   samples: number;
@@ -59,6 +60,7 @@ function summarise(files: TelemetryLog[]): PackLog {
     mAh: used.length ? used.reduce((sum, file) => sum + (file.mAh ?? 0) - (file.mAhFrom ?? 0), 0) : undefined,
     minVoltage: smallest(files.map(file => file.minVoltage)),
     maxCurrent: largest(files.map(file => file.maxCurrent)),
+    heldCurrent: largest(files.map(file => file.heldCurrent)),
     avgCurrent: time
       ? Math.round((timed.reduce((sum, file) => sum + (file.avgCurrent ?? 0) * file.duration, 0) / time) * 100) / 100
       : undefined,

@@ -11,8 +11,8 @@ import type {SimInfo} from '../sim/SimView';
 import {emptyFeed, packFor} from '../sim/radioFeed';
 import {useCard} from '../sim/card';
 import {loggedControls, replayStart, type Replay, type ReplayMode} from '../sim/replay';
-import {manoeuvres, motorCuts} from '../sim/standIn';
-import {joinSeries, sortiePacks} from '../model/packs';
+import {motorCuts, stickManoeuvres} from '../sim/standIn';
+import {joinSeries, packName, sortiePacks} from '../model/packs';
 import {formatDay, formatTimer, plural} from '../model/format';
 import type {TelemetrySeries} from '../types';
 import {modelMapping} from '../sim/modelMixer';
@@ -136,8 +136,8 @@ function DrillCard({info, facing, settings}: {info: SimInfo; facing: Facing; set
 }
 
 /** Each control of a game controller, the TX16S stick or switch it stands for, and its state now. */
-function PadMap({info, live}: {info: SimInfo | null; live: boolean}) {
-  const controls = live ? info?.controls : undefined;
+function PadMap({info}: {info: SimInfo | null}) {
+  const controls = info?.controls;
   const lit = {
     lt: !!controls?.throttle,
     rt: !!controls?.rescue,
@@ -164,7 +164,7 @@ function PadMap({info, live}: {info: SimInfo | null; live: boolean}) {
     <aside className="sim-side panel">
       <div className="sim-side-title">
         <b>Xbox → TX16S</b>
-        <small className="muted">{live ? 'In use' : 'Plug in a game controller'}</small>
+        <small className="muted">In use</small>
       </div>
       {/* A plain game controller seen from above, each control named after the radio's stick or switch it stands for. */}
       <svg
@@ -347,16 +347,23 @@ export function Sim() {
         .sort((left, right) => right.date.localeCompare(left.date))
         .flatMap(sortie => {
           const flights = sortiePacks(sortie);
+          // Its day and time, the heli and the pack: "24 Nov 2026, 13:19 · M2 EVO · Eachine #1".
           return flights.map((flown, index) => ({
             key: `${sortie.id}:${index}`,
             pack: flown,
-            label: `${formatDay(sortie.date, {weekday: false, year: true})}${flights.length > 1 ? ` · pack ${index + 1}` : ''}`,
+            label: [
+              `${formatDay(sortie.date, {weekday: false, year: true})}${flown.start ? `, ${flown.start.slice(11, 16)}` : ''}`,
+              heli?.name,
+              packName(flown, doc.batteries, sortie.heliId) ?? `pack ${index + 1}`,
+            ]
+              .filter(Boolean)
+              .join(' · '),
           }));
         }),
-    [doc.sorties, heli?.id],
+    [doc.sorties, doc.batteries, heli?.id, heli?.name],
   );
   const [packKey, setPackKey] = useState('');
-  const [replayMode, setReplayMode] = useState<ReplayMode>('sticks');
+  const [replayMode, setReplayMode] = useState<ReplayMode>('fly');
   const [replay, setReplay] = useState<Replay | null>(null);
   const [replayProblem, setReplayProblem] = useState('');
   const chosen = packs.find(one => one.key === packKey) ?? packs[0];
@@ -378,7 +385,7 @@ export function Sim() {
       mode: replayMode,
       startedAt: performance.now(),
       from: replayStart(series),
-      stretches: manoeuvres(series),
+      stretches: stickManoeuvres(series, second => loggedControls(series, second, logMapping), params.cyclicRate),
       cuts: motorCuts(series, second => loggedControls(series, second, logMapping).throttle),
       label: chosen.label,
     });
@@ -393,6 +400,8 @@ export function Sim() {
     if (playing) void play();
   }, [packKey, replayMode]);
   const radio = source && !source.controller;
+  // The game controller's map only with one plugged in and flown: no use for the radio or the keyboard.
+  const padMap = !!source?.controller;
 
   return (
     <div className="page sim-page">
@@ -453,100 +462,116 @@ export function Sim() {
         </button>
       </div>
 
-      <div className="sim-layout">
-        <div ref={stage} className="sim-stage" style={height ? {height} : undefined}>
-          <Suspense fallback={<div className="sim-stage-failed">Starting the sim…</div>}>
-            <SimView
-              params={params}
-              color={color(heli?.color ?? 1)}
-              drill={drill}
-              facing={facing}
-              wind={Number(wind)}
-              mapping={mapping}
-              pad={pad}
-              restart={restart}
-              replay={replay}
-              onTakeOver={() => setReplay(null)}
-              feed={feed}
-              pack={pack}
-              model={model}
-              noise={noise}
-              sound={!!settings.sound}
-              zoom={settings.zoom ?? 1}
-              onInfo={setInfo}
-            />
-          </Suspense>
-          {heli && !settings.hideRadio && (
-            <Suspense fallback={null}>
-              <SimCockpit model={radioName(heli.name)} feed={feed} />
+      <div className={padMap ? 'sim-layout' : 'sim-layout alone'}>
+        <div className="sim-main">
+          <div ref={stage} className="sim-stage" style={height ? {height} : undefined}>
+            <Suspense fallback={<div className="sim-stage-failed">Starting the sim…</div>}>
+              <SimView
+                params={params}
+                color={color(heli?.color ?? 1)}
+                drill={drill}
+                facing={facing}
+                wind={Number(wind)}
+                mapping={mapping}
+                pad={pad}
+                restart={restart}
+                replay={replay}
+                onTakeOver={() => setReplay(null)}
+                feed={feed}
+                pack={pack}
+                model={model}
+                noise={noise}
+                sound={!!settings.sound}
+                zoom={settings.zoom ?? 1}
+                onInfo={setInfo}
+              />
             </Suspense>
-          )}
-          {info && (
-            <>
-              <div className="sim-hud sim-hud-left">
-                <DrillCard info={info} facing={facing} settings={settings} />
-              </div>
-              <div className="sim-hud sim-hud-right">
-                <div className="sim-card sim-figures">
-                  <span>Height</span>
-                  <b>{info.height.toFixed(1)} m</b>
-                  <span>Climb</span>
-                  <b>{info.climb.toFixed(1)} m/s</b>
-                  <span>Head</span>
-                  <b>{Math.round(info.rpm / 10) * 10} rpm</b>
-                  <span>Motor</span>
-                  <b className={info.throttle ? 'live' : undefined}>
-                    {info.throttle ? `${Math.round(info.throttle * 100)} %` : 'Hold'}
-                  </b>
-                  {info.controls.rates && (
-                    <>
-                      <span>Rates</span>
-                      <b className={isLowered(info.controls.rates) ? 'practice' : undefined}>{info.controls.rates}</b>
-                    </>
-                  )}
+            {heli && !settings.hideRadio && (
+              <Suspense fallback={null}>
+                <SimCockpit model={radioName(heli.name)} feed={feed} />
+              </Suspense>
+            )}
+            {info && (
+              <>
+                <div className="sim-hud sim-hud-left">
+                  <DrillCard info={info} facing={facing} settings={settings} />
                 </div>
-              </div>
-              {replay && info.replay && (
-                <div className="sim-replaying" role="status">
-                  <span aria-hidden>▶</span> Replaying {replay.label} ·{' '}
-                  {replay.mode === 'fly' ? 'flying it' : 'beside your sticks'} ·{' '}
-                  {formatTimer(Math.round(info.replay.at))} of {formatTimer(Math.round(info.replay.end))}
-                  {info.replay.pickedUp > 0 && ` · picked up ${plural(info.replay.pickedUp, 'time')}`}
-                  {replay.mode === 'fly' && <small>Move a stick to take over</small>}
+                <div className="sim-hud sim-hud-right">
+                  <div className="sim-card sim-figures">
+                    <span>Height</span>
+                    <b>{info.height.toFixed(1)} m</b>
+                    <span>Climb</span>
+                    <b>{info.climb.toFixed(1)} m/s</b>
+                    <span>Head</span>
+                    <b>{Math.round(info.rpm / 10) * 10} rpm</b>
+                    <span>Motor</span>
+                    <b className={info.throttle ? 'live' : undefined}>
+                      {info.throttle ? `${Math.round(info.throttle * 100)} %` : 'Hold'}
+                    </b>
+                    {info.controls.rates && (
+                      <>
+                        <span>Rates</span>
+                        <b className={isLowered(info.controls.rates) ? 'practice' : undefined}>{info.controls.rates}</b>
+                      </>
+                    )}
+                  </div>
                 </div>
-              )}
-              {info.crashed && (
-                <div className="sim-crash">
-                  <b>💥 {info.crashed}</b>
-                  <span>Back on the pad in a moment</span>
+                {replay && info.replay && (
+                  <div className="sim-replaying" role="status">
+                    <span aria-hidden>▶</span> Replaying {replay.label} ·{' '}
+                    {replay.mode === 'fly' ? 'flying it' : 'beside your sticks'} ·{' '}
+                    {formatTimer(Math.round(info.replay.at))} of {formatTimer(Math.round(info.replay.end))}
+                    {info.replay.pickedUp > 0 && ` · picked up ${plural(info.replay.pickedUp, 'time')}`}
+                    {replay.mode === 'fly' && <small>Move a stick to take over</small>}
+                  </div>
+                )}
+                {info.crashed && (
+                  <div className="sim-crash">
+                    <b>💥 {info.crashed}</b>
+                    <span>Back on the pad in a moment</span>
+                  </div>
+                )}
+                <div className="sim-hud sim-hud-bottom">
+                  {/* Let go, it hands the keys back to the sticks; a double click sets it back to 1×. */}
+                  <label className="sim-card sim-zoom" onDoubleClick={() => save({zoom: 1})}>
+                    <ZoomIn size={14} aria-hidden />
+                    <input
+                      type="range"
+                      aria-label="Zoom"
+                      min={ZOOM_RANGE.min}
+                      max={ZOOM_RANGE.max}
+                      step={ZOOM_RANGE.step}
+                      value={settings.zoom ?? 1}
+                      onChange={event => save({zoom: Number(event.target.value)})}
+                      onPointerUp={event => event.currentTarget.blur()}
+                    />
+                    <span>{(settings.zoom ?? 1).toFixed(1)}×</span>
+                  </label>
+                  <span className="sim-card sim-source">
+                    {source
+                      ? `${radio ? 'Radio' : 'Game controller'}: ${source.id.replace(/\s*\(.*$/, '')}`
+                      : 'Keyboard: plug in the radio and move a stick'}
+                  </span>
                 </div>
-              )}
-              <div className="sim-hud sim-hud-bottom">
-                {/* Let go, it hands the keys back to the sticks; a double click sets it back to 1×. */}
-                <label className="sim-card sim-zoom" onDoubleClick={() => save({zoom: 1})}>
-                  <ZoomIn size={14} aria-hidden />
-                  <input
-                    type="range"
-                    aria-label="Zoom"
-                    min={ZOOM_RANGE.min}
-                    max={ZOOM_RANGE.max}
-                    step={ZOOM_RANGE.step}
-                    value={settings.zoom ?? 1}
-                    onChange={event => save({zoom: Number(event.target.value)})}
-                    onPointerUp={event => event.currentTarget.blur()}
-                  />
-                  <span>{(settings.zoom ?? 1).toFixed(1)}×</span>
-                </label>
-                <span className="sim-card sim-source">
-                  {source
-                    ? `${radio ? 'Radio' : 'Game controller'}: ${source.id.replace(/\s*\(.*$/, '')}`
-                    : 'Keyboard: plug in the radio and move a stick'}
-                </span>
-              </div>
-            </>
+              </>
+            )}
+          </div>
+          {/* A pack replaying: where in it, right under the view. */}
+          {replay && info?.replay && (
+            <input
+              type="range"
+              className="sim-seek"
+              min={replay.series.time[0] ?? 0}
+              max={info.replay.end}
+              step={0.1}
+              value={info.replay.at}
+              onChange={event => seek(Number(event.target.value))}
+              aria-label="Where in the pack"
+            />
           )}
         </div>
-        <PadMap info={info} live={!!source?.controller} />
+        {/* The game controller's map to the radio: none while the radio itself is plugged in. */}
+        {padMap && <PadMap info={info} />}
       </div>
 
       <div className="bento sim-panels">
@@ -618,7 +643,7 @@ export function Sim() {
 
         <Panel
           label="Replay a pack"
-          note="A logged pack of this heli: its sticks beside yours, or flying the heli"
+          note="A real pack of this heli, from its log: watch it flown again, or try to fly it yourself"
           className="span-7"
         >
           {packs.length ? (
@@ -640,8 +665,8 @@ export function Sim() {
                 value={replayMode}
                 onChange={setReplayMode}
                 options={[
-                  {value: 'sticks', label: 'Beside my sticks'},
-                  {value: 'fly', label: 'Fly it'},
+                  {value: 'fly', label: 'Watch it'},
+                  {value: 'sticks', label: 'Follow it'},
                 ]}
               />
               {replay ? (
@@ -662,24 +687,13 @@ export function Sim() {
           ) : (
             <div className="muted">No radio log for this heli yet.</div>
           )}
-          {replay && info?.replay && (
-            <input
-              type="range"
-              className="sim-seek"
-              min={replay.series.time[0] ?? 0}
-              max={info.replay.end}
-              step={0.1}
-              value={info.replay.at}
-              onChange={event => seek(Number(event.target.value))}
-              aria-label="Where in the pack"
-            />
-          )}
           {replayProblem && <p className="caption">{replayProblem}</p>}
           <p className="caption">
-            Beside my sticks: you fly while the log plays; in the Sticks panel, an amber mark on each bar shows where
-            your stick was at that moment of the pack, to copy. Fly it: the log flies the heli and the radio screen,
-            with a stand-in pilot adding the small corrections a log cannot hold (they answered the real heli), and
-            keeping out of the flips; a crash is picked up into a hover and the log goes on. Move a stick to take over.
+            Watch it: the logged sticks fly the heli, as you flew that pack, with the radio screen as it was. A log
+            holds the sticks, not where the heli was, so a stand-in pilot adds the small corrections you made by eye and
+            keeps it at a safe height (it stays out of the flips); after a crash it picks the heli up and the log goes
+            on. Move a stick to take over. Follow it: you fly, and in the Sticks panel an amber mark on each bar shows
+            where your stick was at that moment of the real pack: keep your sticks on the marks to fly it again.
           </p>
         </Panel>
 
@@ -694,6 +708,10 @@ export function Sim() {
               (HID).
             </li>
             <li>Move a stick here: the sim finds it. If a stick moves the wrong way, set up the sticks once.</li>
+            <li>
+              Pick the same heli here as on the radio. SA (arm) and SF (throttle hold) come in as two buttons the model
+              sends on CH10 and CH11, so each works on its own, as on the field.
+            </li>
           </ol>
           <p className="caption">
             Game controller (mode 2): left stick collective and rudder, centred on hover pitch (inverted when upside

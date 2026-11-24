@@ -156,6 +156,8 @@ export function MinuteMeter({seconds, small = false}: {seconds: number; small?: 
       role="img"
       aria-label={`${minutes.toLocaleString('en-GB')} minutes in the air`}
       title={formatAirtime(seconds, true)}
+      // A click rolls the drums up from zero again.
+      onClick={() => minutes > 0 && setPhase(firstPhase())}
     >
       {digits.map((_, index) => {
         const place = digits.length - 1 - index;

@@ -127,6 +127,23 @@ function thin(time: number[], channels: Record<string, number[]>) {
   return {time: thinTime, channels: thinChannels};
 }
 
+/** How long a current must last to count as held, not a punch, s. */
+const HELD_SECONDS = 2;
+
+/** The highest current held for HELD_SECONDS: the best average over any stretch that long (the whole log if shorter). */
+export function heldCurrent(time: number[], currents: number[]): number {
+  let best = 0;
+  let from = 0;
+  let sum = 0;
+  for (let to = 0; to < currents.length; to += 1) {
+    sum += currents[to] ?? 0;
+    while (time[to] - time[from] > HELD_SECONDS) sum -= currents[from++] ?? 0;
+    if (time[to] - time[from] >= HELD_SECONDS - 0.5 || to === currents.length - 1)
+      best = Math.max(best, sum / (to - from + 1));
+  }
+  return best;
+}
+
 /** Seconds kept before the motor first runs and after it last stops, when a log's quiet start and end are cut. */
 const SPAN_MARGIN = 5;
 
@@ -244,6 +261,7 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     ...(mAhFrom !== undefined && {mAhFrom}),
     ...(voltages.length && {minVoltage: round(Math.min(...voltages))}),
     ...(currents.length && {maxCurrent: round(Math.max(...currents)), avgCurrent: round(average(currents))}),
+    ...(currents.length && {heldCurrent: round(heldCurrent(time, currents))}),
     ...(signals.length && {minRssi: Math.min(...signals)}),
     ...(packButton !== undefined && {packButton}),
     ...((channels.ch3?.length || currents.length) && {flying: Math.round(flying)}),

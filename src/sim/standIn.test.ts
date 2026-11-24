@@ -1,7 +1,8 @@
 import {describe, expect, it} from 'vitest';
 import {Vector3} from 'three';
-import {heliParams, restingState, type Controls} from './physics';
-import {inManoeuvre, standIn, STAND_IN, untilCut, untilManoeuvre} from './standIn';
+import {heliParams, restingState, step, type Controls} from './physics';
+import {FlipGuide, inManoeuvre, standIn, STAND_IN, stickManoeuvres, untilCut, untilManoeuvre} from './standIn';
+import type {TelemetrySeries} from '../types';
 
 const params = heliParams({weight: 345, rotor: 434});
 const logged: Controls = {roll: 0, pitch: 0, yaw: 0, collective: 0.2, throttle: 0.6};
@@ -50,5 +51,38 @@ describe('the stand-in pilot', () => {
     expect(untilManoeuvre(stretches, 2)).toBeNull();
     expect(untilCut([100], 95)).toBe(5);
     expect(untilCut([100], 50)).toBeNull();
+  });
+
+  it('reads the flips and rolls from the sticks, as whole turns', () => {
+    const series = {time: [0, 10], channels: {}} as unknown as TelemetrySeries;
+    // A back flip at 1.3 s of full stick (390° at 300°/s), a roll right at 1.1 s, and a long nudge of the stick.
+    const controlsAt = (second: number): Controls => ({
+      ...logged,
+      pitch: second >= 1 && second < 2.3 ? -1 : second >= 6 && second < 8 ? 0.3 : 0,
+      roll: second >= 4 && second < 5.1 ? 1 : 0,
+    });
+    const found = stickManoeuvres(series, controlsAt, params.cyclicRate);
+    expect(found.map(({axis, way, turns}) => ({axis, way, turns}))).toEqual([
+      {axis: 'pitch', way: -1, turns: 1},
+      {axis: 'roll', way: 1, turns: 1},
+    ]);
+    expect(found[0].from).toBeCloseTo(1, 1);
+  });
+
+  it('flies a flip to one whole turn, whatever the stick held', () => {
+    const flip = {from: 1, to: 2.5, axis: 'pitch' as const, way: -1 as const, turns: 1};
+    const state = flying(12);
+    const guide = new FlipGuide();
+    const dt = 1 / 240;
+    let turned = 0;
+    for (let second = 0; second < 4; second += dt) {
+      // The log holds the stick 1.5 s, a turn and a quarter at the sim's rate.
+      const log = {...logged, collective: 0.16, pitch: second >= flip.from && second < flip.to ? -1 : 0};
+      const {controls} = guide.steer(log, state, second, dt, [flip]);
+      step(state, controls, params, new Vector3(), dt, 1);
+      turned += state.rates.x * dt;
+    }
+    expect(turned / (2 * Math.PI)).toBeGreaterThan(0.9);
+    expect(turned / (2 * Math.PI)).toBeLessThan(1.1);
   });
 });

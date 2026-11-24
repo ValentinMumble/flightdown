@@ -525,7 +525,7 @@ export function Hangar() {
 
   return (
     <div className="page">
-      <PageHeader title="Hangar" sub="The helis, their gear, and what keeps them flying" />
+      <PageHeader title="Hangar" menuNamed sub="The helis, their gear, and what keeps them flying" />
       <VisitorBanner />
       <nav className="segmented" aria-label="Hangar">
         {VIEWS.map(item => (

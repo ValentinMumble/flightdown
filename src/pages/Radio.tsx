@@ -8,7 +8,7 @@ const RadioView = lazy(() => import('./RadioView'));
 export function Radio() {
   return (
     <div className="page">
-      <PageHeader title="Radio" sub="The TX16S: its screens, switches and logic, by hand or replayed" />
+      <PageHeader title="Radio" menuNamed sub="The TX16S: its screens, switches and logic, by hand or replayed" />
       <VisitorBanner />
       <Suspense fallback={<div className="panel radio-loading">Starting the radio…</div>}>
         <RadioView />

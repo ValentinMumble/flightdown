@@ -59,6 +59,7 @@ export function Spots() {
     <div className="page">
       <PageHeader
         title="Spots"
+        menuNamed
         sub="Where you fly"
         actions={
           <button className="button solid" onClick={() => edit()}>

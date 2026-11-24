@@ -127,6 +127,29 @@ describe('packDebrief', () => {
       [],
     );
     expect(fine[0].notes).toEqual([{tone: 'good', text: 'within its limits'}]);
+    // A punch past the rating is no harm; a current held past it is.
+    const punch = packDebrief(
+      sortie(
+        '2026-11-24',
+        1,
+        [],
+        [log('11', {mAh: 400, minVoltage: 10.2, maxCurrent: 31.6, heldCurrent: 14, flying: 200})],
+      ),
+      batteries,
+      [],
+    );
+    expect(punch[0].notes).toEqual([{tone: 'good', text: 'within its limits'}]);
+    const pulled = packDebrief(
+      sortie(
+        '2026-11-24',
+        1,
+        [],
+        [log('11', {mAh: 400, minVoltage: 10.2, maxCurrent: 31.6, heldCurrent: 25, flying: 200})],
+      ),
+      batteries,
+      [],
+    );
+    expect(pulled[0].notes).toEqual([{tone: 'caution', text: '25.0 A held, past its 21 A rating'}]);
     // A pack its log knows nothing of (the K110S has no telemetry): no verdict at all.
     const blind = packDebrief(sortie('2026-11-24', 1, [], [log('12', {flying: 220})]), batteries, []);
     expect(blind).toEqual([]);

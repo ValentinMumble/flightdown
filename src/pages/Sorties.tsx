@@ -1,10 +1,9 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useSearchParams} from 'react-router';
-import {Activity, House, Plus, Search, SlidersHorizontal} from 'lucide-react';
+import {Activity, House, Search, SlidersHorizontal} from 'lucide-react';
 import {useStore} from '../data/store';
-import {Empty, HeliDot, PageHeader, Segmented, useOverlay} from '../components/ui';
+import {Empty, HeliDot, PageHeader, Segmented} from '../components/ui';
 import {FlightStrip} from '../components/SortieRow';
-import {SortieForm} from '../components/forms/SortieForm';
 import {VisitorBanner} from '../components/VisitorBanner';
 import {formatAirtime, formatMonth, fromDay, plural} from '../model/format';
 import {MinuteMeter} from '../components/instruments';
@@ -47,7 +46,6 @@ function remember(params: URLSearchParams) {
 /** Every sortie as a flight strip, newest first, a month at a time, with filters kept in the address. */
 export function Sorties() {
   const {doc, heli, spot} = useStore();
-  const {open} = useOverlay();
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState(params.get('q') ?? '');
   const heliId = params.get('heli') ?? '';
@@ -129,15 +127,7 @@ export function Sorties() {
 
   return (
     <div className="page">
-      <PageHeader
-        title="Sorties"
-        sub="Every sortie, a flight strip each"
-        actions={
-          <button className="button solid desktop-only" onClick={() => open(<SortieForm />)}>
-            <Plus size={16} strokeWidth={2.4} /> Log
-          </button>
-        }
-      />
+      <PageHeader title="Sorties" menuNamed sub="Every sortie, a flight strip each" />
       <VisitorBanner />
 
       <div className="filters">

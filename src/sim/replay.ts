@@ -9,13 +9,15 @@ import {activeSpan, sampleAt} from '../model/telemetry';
 import type {Controls} from './physics';
 import {readAxes, type Mapping} from './input';
 
+import type {Manoeuvre} from './standIn';
+
 export type ReplayMode = 'sticks' | 'fly';
 
 export interface Replay {
   series: TelemetrySeries;
   mode: ReplayMode;
   /** Its flips and rolls (the stand-in pilot keeps out of them) and its motor cuts (its landings). */
-  stretches: {from: number; to: number}[];
+  stretches: Manoeuvre[];
   cuts: number[];
   /** What it is called, for the banner over the view. */
   label: string;

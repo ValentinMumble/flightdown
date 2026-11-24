@@ -507,6 +507,15 @@
   box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
+/* A row with one picked: the others dimmed (their emoji too), back on hover. */
+.chips:has(> .chip[aria-pressed='true']) > .chip[aria-pressed='false'] {
+  opacity: 0.5;
+}
+
+.chips:has(> .chip[aria-pressed='true']) > .chip[aria-pressed='false']:hover {
+  opacity: 1;
+}
+
 .segmented {
   display: inline-flex;
   padding: 3px;

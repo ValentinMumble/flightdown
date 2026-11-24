@@ -1,7 +1,16 @@
 import {describe, expect, it} from 'vitest';
 import type {Sortie} from '../types';
 import {parseCsv} from './csv';
-import {activeSpan, matchSortie, modelFromFileName, motorRunning, readDay, readTelemetry, sampleAt} from './telemetry';
+import {
+  activeSpan,
+  heldCurrent,
+  matchSortie,
+  modelFromFileName,
+  motorRunning,
+  readDay,
+  readTelemetry,
+  sampleAt,
+} from './telemetry';
 import {
   describeFlips,
   estimateCells,
@@ -193,6 +202,15 @@ describe('packOf with several kinds of packs', () => {
   it('takes the kind with most live packs, the bigger one on a tie', () => {
     expect(packOf(heli, packs)).toEqual({cells: 3, capacity: 750});
     expect(packOf(heli, [{...packs[0], packs: numbered(4)}, packs[1]])).toEqual({cells: 3, capacity: 700});
+  });
+});
+
+describe('heldCurrent', () => {
+  it('reads the highest current held for 2 s, not a punch', () => {
+    const time = [...Array(51).keys()].map(index => index / 5);
+    // 8 A, a 1 s punch at 30 A, then 3.4 s at 20 A.
+    const currents = time.map(second => (second >= 2 && second < 3 ? 30 : second >= 5 && second < 8.4 ? 20 : 8));
+    expect(heldCurrent(time, currents)).toBeCloseTo(20, 0);
   });
 });
 

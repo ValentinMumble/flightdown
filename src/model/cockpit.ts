@@ -504,8 +504,12 @@ export function packDebrief(
       else if (low < CELL_FLOOR) notes.push({tone: 'caution', text: `dipped to ${low.toFixed(2)} V a cell`});
     }
     const limit = currentLimit(capacity);
-    if (limit && flown.maxCurrent !== undefined && flown.maxCurrent > limit) {
-      notes.push({tone: 'caution', text: `${flown.maxCurrent.toFixed(1)} A, past its ${Math.round(limit)} A rating`});
+    // Held for seconds, not a punch's peak: a pack gives far more for a moment than its rating.
+    if (limit && flown.heldCurrent !== undefined && flown.heldCurrent > limit) {
+      notes.push({
+        tone: 'caution',
+        text: `${flown.heldCurrent.toFixed(1)} A held, past its ${Math.round(limit)} A rating`,
+      });
     }
     if (average !== null && typical !== null && packs.length > 1 && average >= typical * 1.25) {
       notes.push({tone: 'caution', text: `flown hard: ${average.toFixed(1)} A on average`});

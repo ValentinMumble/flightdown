@@ -26,6 +26,12 @@ export const DEFAULT_MAPPING: Mapping = {
 
 /** Under this share of its travel the throttle channel is the motor off: throttle cut or hold. */
 const MOTOR_OFF = 0.05;
+/**
+ * Past this, at either end of its travel, the throttle channel is cut (disarmed or held), whichever way the model
+ * reverses it: no idle up sits there (the M2 EVO's run 34 to 95 %, the K110S's 55 to 95 %), so a heli picked here that
+ * is not the radio's model still stops when it is cut.
+ */
+const CUT = 0.98;
 
 const clamp = (value: number) => Math.max(-1, Math.min(1, value));
 
@@ -36,7 +42,8 @@ export function readAxes(axes: readonly number[], mapping: Mapping): Controls {
     const raw = clamp(axes[axis] ?? 0);
     return reverse ? -raw : raw;
   };
-  const throttle = (value('throttle') + 1) / 2;
+  const cut = Math.abs(clamp(axes[mapping.throttle.axis] ?? 0)) >= CUT;
+  const throttle = cut ? 0 : (value('throttle') + 1) / 2;
   return {
     roll: value('roll'),
     pitch: value('pitch'),
@@ -161,6 +168,21 @@ export class KeyboardSticks {
 export function connectedPads(): Gamepad[] {
   const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
   return [...pads].filter((pad): pad is Gamepad => !!pad && pad.connected && pad.axes.length >= 4);
+}
+
+/**
+ * SA and SF as the radio sends them, when the model puts them on CH10 and CH11 (sim_switches.py in edge-tx): EdgeTX's
+ * Classic joystick sends CH9 to CH32 as buttons, pressed above 0, so CH10 is button 1 and CH11 button 2. Null for a
+ * model that does not.
+ */
+export function radioSwitches(
+  model: {mixes?: {channel: number; name: string}[]} | null | undefined,
+  pad: Pick<Gamepad, 'buttons'>,
+): {armed: boolean; throttleOn: boolean} | null {
+  const sends = (channel: number, name: string) =>
+    !!model?.mixes?.some(mix => mix.channel === channel && mix.name === name);
+  if (!sends(9, 'SA arm') || !sends(10, 'SF on') || pad.buttons.length < 3) return null;
+  return {armed: !!pad.buttons[1]?.pressed, throttleOn: !!pad.buttons[2]?.pressed};
 }
 
 /** A game controller (an Xbox pad) rather than a radio: the browser knows its layout. */

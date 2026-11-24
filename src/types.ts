@@ -68,6 +68,8 @@ export interface TelemetryLog {
   mAhFrom?: number;
   minVoltage?: number;
   maxCurrent?: number;
+  /** The highest current held for 2 s (its average over them), A: what the pack gave for long, not in a punch. */
+  heldCurrent?: number;
   avgCurrent?: number;
   minRssi?: number;
   /** The 6-position button pressed through the log (1 to 6): which pack it was, when packs are given buttons. */

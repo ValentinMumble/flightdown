@@ -39,8 +39,8 @@ export interface StandInTuning {
 
 /**
  * Tuned by replaying the M2 EVO's November 2026 packs (12, 13 and 20 Nov) on the physics fitted to its calibration flight
- * (1.9° hover pitch, 300°/s at full stick): they fly 52 % of the time before a crash, 77 of their 125 logged flips and
- * rolls happen, and the heli stays between 0.3 and 15 m.
+ * (1.9° hover pitch, 300°/s at full stick). With the flip guide and the touchdown, its 21 packs to 24 Nov fly 65 % of
+ * the time before a crash, 11 of them end to end (both calibration packs among them), and 74 of their 143 turns happen.
  */
 export const STAND_IN: StandInTuning = {
   attitudeLag: 0.3,
@@ -58,6 +58,107 @@ export const STAND_IN: StandInTuning = {
   bailOut: 2,
   liftFollowsHeli: true,
 };
+
+/** A flip or roll read from the log's sticks: the stick's stretch, its axis and way, and how many whole turns it made. */
+export interface Manoeuvre {
+  from: number;
+  to: number;
+  axis: 'pitch' | 'roll';
+  way: 1 | -1;
+  turns: number;
+}
+
+/** Under this the stick is at rest, between manoeuvres; a manoeuvre's stick passes `FULL` at least once. */
+const QUIET = 0.25;
+const FULL = 0.5;
+
+/**
+ * The log's flips and rolls, from its sticks: each push of the cyclic (from rest back to rest, past half stick) that
+ * would turn the heli three quarters of a turn or more at `rate` (rad/s at full stick). The real heli came out of each
+ * upright, so it made a whole number of turns: the nearest to what the stick asked at the sim's rate.
+ */
+export function stickManoeuvres(
+  series: TelemetrySeries,
+  controlsAt: (second: number) => Controls,
+  rate: number,
+  dt = 0.01,
+): Manoeuvre[] {
+  const found: Manoeuvre[] = [];
+  const end = series.time[series.time.length - 1] ?? 0;
+  let run = {from: series.time[0] ?? 0, pitch: 0, roll: 0, peak: 0};
+  for (let second = run.from; second <= end; second += dt) {
+    const {pitch, roll} = controlsAt(second);
+    const size = Math.max(Math.abs(pitch), Math.abs(roll));
+    if (size >= QUIET) {
+      run.pitch += pitch * rate * dt;
+      run.roll += roll * rate * dt;
+      run.peak = Math.max(run.peak, size);
+      continue;
+    }
+    if (run.peak >= FULL) {
+      const axis = Math.abs(run.pitch) >= Math.abs(run.roll) ? 'pitch' : 'roll';
+      const turns = Math.abs(run[axis]) / (2 * Math.PI);
+      if (turns >= 0.75)
+        found.push({
+          from: run.from,
+          to: second,
+          axis,
+          way: run[axis] > 0 ? 1 : -1,
+          turns: Math.max(1, Math.round(turns)),
+        });
+    }
+    run = {from: second, pitch: 0, roll: 0, peak: 0};
+  }
+  return found;
+}
+
+/** The stick a manoeuvre finishes with when the log let go too soon for the sim heli, and how long it may hold it, s. */
+const FINISH_STICK = 0.7;
+const FINISH_FOR = 0.8;
+/** It lets go this early (rad), the servos and the heli's own spin carrying it the rest of the way. */
+const LET_GO = 0.35;
+
+/**
+ * Flies a replay's flips and rolls as the real heli did them: the sim's rate is not the real heli's to the degree (its
+ * head speed, the wind), so the log's stick alone over- or under-turns it. It keeps the log's stick, counts how far the
+ * sim heli has turned, lets go once it has made the log's whole turns, and holds a stick on if the log let go before.
+ */
+export class FlipGuide {
+  private current: Manoeuvre | null = null;
+  private turned = 0;
+  private doneAt: number | null = null;
+
+  /** The controls for this frame, and whether a manoeuvre is on (the stand-in keeps out). */
+  steer(
+    controls: Controls,
+    state: HeliState,
+    second: number,
+    dt: number,
+    found: Manoeuvre[],
+  ): {controls: Controls; manoeuvre: boolean} {
+    const now = found.find(one => second >= one.from - 0.2 && second <= one.to + FINISH_FOR);
+    if (!now) {
+      this.current = null;
+      return {controls, manoeuvre: false};
+    }
+    if (now !== this.current) {
+      this.current = now;
+      this.turned = 0;
+      this.doneAt = null;
+    }
+    if (second < now.from) return {controls, manoeuvre: true};
+    const rate = now.axis === 'pitch' ? state.rates.x : state.rates.z;
+    // The sim asks -rate for a stick (see physics.ts), so the way the stick pushes is -rate.
+    this.turned += -rate * now.way * dt;
+    if (this.doneAt === null && this.turned >= now.turns * 2 * Math.PI - LET_GO) this.doneAt = second;
+    if (this.doneAt !== null) {
+      // Done: the stand-in takes it from a moment after, to level it.
+      return {controls: {...controls, [now.axis]: 0}, manoeuvre: second - this.doneAt < 0.2};
+    }
+    if (second > now.to) return {controls: {...controls, [now.axis]: now.way * FINISH_STICK}, manoeuvre: true};
+    return {controls, manoeuvre: true};
+  }
+}
 
 /** The stretches of a log the stand-in keeps out of: its flips and rolls, with a second or so either side. */
 export function manoeuvres(series: TelemetrySeries, margin = 1.2) {
@@ -93,6 +194,8 @@ export function untilCut(cuts: number[], second: number, ahead = 8): number | nu
 
 /** Before the log cuts the motor, the stand-in lets the heli down a slope: so high (m) a second before the cut. */
 const GLIDE = 0.5;
+/** It sets the collective itself to touch down this long before the cut, s. */
+const TOUCHDOWN = 4;
 
 const clamp = (value: number, low = -1, high = 1) => Math.max(low, Math.min(high, value));
 const scratch = {
@@ -122,9 +225,9 @@ export function standIn(
   }
   // Landing: the height band slides down to just above the ground as the cut nears.
   if (landing !== null) {
-    const glide = 0.2 + landing * GLIDE;
-    if (glide < tuning.low)
-      tuning = {...tuning, low: glide, high: Math.max(glide + 1, Math.min(tuning.high, glide + 3))};
+    // On the ground a second before the cut, as the real heli was: the log cuts the motor once it sits.
+    const glide = Math.max(0, landing - 1) * GLIDE;
+    if (glide < tuning.low) tuning = {...tuning, low: glide, high: Math.min(tuning.high, glide + 0.8)};
   }
   const up = scratch.up.set(0, 1, 0).applyQuaternion(state.attitude);
   // In a manoeuvre the log flies, the height still kept if so tuned; low and leaning over, it takes over all the same.
@@ -139,7 +242,9 @@ export function standIn(
     const collective = tuning.liftFollowsHeli ? side * Math.abs(logged.collective) : logged.collective;
     return {
       ...logged,
-      collective: clamp(collective + (tuning.heightInManoeuvres ? side * heightLift(state, tuning) : 0)),
+      collective: clamp(
+        collective + (tuning.heightInManoeuvres ? side * heightLift(state, tuning, logged.throttle > 0) : 0),
+      ),
     };
   }
 
@@ -166,16 +271,31 @@ export function standIn(
     roll = clamp(roll - axis.z * rate);
   }
 
+  // Touching down: the last seconds before the log cuts the motor, the real heli was sitting; the stand-in puts the sim
+  // heli down on its own collective, sinking gently and slower near the ground.
+  if (landing !== null && landing <= TOUCHDOWN && up.y > 0.7) {
+    const sink = -Math.min(1.2, 0.3 + state.position.y * 0.6);
+    const hover = params.hoverPitch / params.maxPitch;
+    return {...logged, roll, pitch, collective: clamp(hover + (sink - state.velocity.y) * 0.3, -0.3, 0.6)};
+  }
+
   // The height, its collective's sign following which way up the heli is.
   const side = up.y >= 0 ? 1 : -1;
-  return {...logged, roll, pitch, collective: clamp(logged.collective + side * heightLift(state, tuning))};
+  return {
+    ...logged,
+    roll,
+    pitch,
+    collective: clamp(logged.collective + side * heightLift(state, tuning, logged.throttle > 0)),
+  };
 }
 
 /** The collective (up thrust) bringing the heli back into its height band, and softening a hard sink near the ground. */
-function heightLift(state: HeliState, tuning: StandInTuning) {
+function heightLift(state: HeliState, tuning: StandInTuning, powered: boolean) {
   const height = state.position.y;
   const climb = state.velocity.y;
   let lift = 0;
+  // The motor cut (hold, or landed): no climbing back into the band on a rotor spinning down, only a hard sink softened.
+  if (!powered) return height < 3 && climb < -tuning.sinkLimit ? (-tuning.sinkLimit - climb) * tuning.sinkGain : 0;
   if (height < tuning.low) lift += (tuning.low - height) * tuning.heightGain - Math.min(0, climb) * tuning.climbGain;
   if (height > tuning.high) lift -= (height - tuning.high) * tuning.heightGain + Math.max(0, climb) * tuning.climbGain;
   if (height < 3 && climb < -tuning.sinkLimit) lift += (-tuning.sinkLimit - climb) * tuning.sinkGain;

@@ -8,7 +8,7 @@ It looks like an 80s helicopter cockpit's green displays, made easy to read: a v
 Plex Sans, a soft phosphor green for labels, numbers and what is live (Share Tech Mono for headings and numbers),
 frames marked by corner brackets, a rolling counter of minutes in the air.
 
-- **Cockpit:** the minute counter on 3D drums (they roll up at each change of tab) beside a rotor that spools up,
+- **Cockpit:** the minute counter on 3D drums (they roll up at each change of tab, or on a click) beside a rotor that spools up,
   packs per crash on a tape and the time in the air per crash (all time, and the last 20 sorties), the crash-free run
   in packs and days, the last five sorties by month beside the helis on the flight line (each with its own small hour
   meter, as in the Hangar), the last session at a glance (its packs and their notes, a throttle hold undone in flight,
@@ -40,7 +40,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   cyclic), its exceedance events as flight data monitoring lists them (over current, a cell under 3.3 V, the link low,
   past 85 % of the pack, a strike: the current jumping then the motor stopping), and a map of the sticks. A sortie
   flown with logs shows its exact air time, each pack as a bar (named by its button, the inverted part in violet) with
-  a word or two on it (too deep, sagged, past its rating, flown hard, tiring or worn, or within its limits; none for
+  a word or two on it (too deep, sagged, past its rating for 2 s, flown hard, tiring or worn, or within its limits; none for
   a pack with no telemetry), the share upside down as a ring, and its flips and rolls, how often they came and each
   pack's. `npm run logs` brings them from the plugged-in radio.
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
@@ -50,7 +50,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   indoors, days since the last sortie) and crashes by wind, the fleet's
   history, the skill ladder, the flying season, packs a sortie, spots, hours by heli (each heli's share as a ring, in
   its chart colour), every pack's voltage under load, each pack's resistance over time (twice its first reading is
-  worn), the flips and rolls added up, pack health (resistance first to latest, its trend a flight, the flights left
+  worn), the flips and rolls added up, pack health (resistance first to latest, tiring or worn against its first reading or the freshest pack, its trend a flight, the flights left
   before it is worn at that rate, mAh a flight, lowest cell), the power curve (current against collective, a cloud
   a pack and the line they all make), the sticks from the logs (rescues, self-level, practice rates, idle ups, cyclic
   work, sortie by sortie), the current each idle up draws and the time a pack gives in it, and what it costs (helis
@@ -60,11 +60,13 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   on its strip (rain, wind, frost, or how cloudy).
 - **Sim:** fly the low-poly Huey (in the heli's colour, windows added) on a page of its own, from the pilot's spot,
   with the TX16S plugged in as a USB joystick (Classic mode: the model's own outputs, so its rates, curves, idle ups
-  and holds), a game controller (mode 2, drawn beside the view with the radio switch each control stands for) or the
+  and holds, plus SA and SF as buttons on CH10 and CH11), a game controller (mode 2, drawn beside the view while one is flown, with the radio switch each control stands for) or the
   keyboard, these two flown through the model's own mixer from the card (its rates, curves and switches; it gives back
-  the logged outputs from the logged sticks). A logged pack replays beside the sticks, or flies the heli with a stand-in pilot adding the corrections a log
-  cannot hold (tuned on the November packs: 52 % flown before a crash; a crash is picked up
-  and the log goes on); touching a stick takes over. Its current draw is fitted to the logs, its hover pitch (1.9°) and full-stick rate (300°/s) to the M2 EVO's
+  the logged outputs from the logged sticks). A logged pack replays: Watch it (its sticks fly the heli, a stand-in pilot adding the corrections a log
+  cannot hold, each flip and roll read from the sticks and flown to the whole turns the real heli made, the heli put down
+  before each motor cut (on the November packs: 65 % flown before a crash, the calibration packs end to end; a crash is picked up
+  and the log goes on); touching a stick takes over), or Follow it (you fly, an amber mark on each stick where the real
+  pack's was). Its current draw is fitted to the logs, its hover pitch (1.9°) and full-stick rate (300°/s) to the M2 EVO's
   calibration flight of 24 Nov 2026 (10 s hovers in each idle up, flips and rolls at full stick, each marked with SB). Flybarless rate-mode physics sized from the heli's weight and rotor: rates that settle with a little
   overshoot, momentum (it keeps a lean and carries its speed, the FBL taking out most of the disc's blowback), a quick soft start, turbulence, translational lift, tail kick, a governor that sags, hold and autorotation, the
   rescue, self-level, ground effect, wind, crashes; the rotor and motor heard. The eyes see through a fixed lens (the heli

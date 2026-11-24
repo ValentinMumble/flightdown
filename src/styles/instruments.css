@@ -91,6 +91,7 @@
   padding: 6px;
   border-radius: 10px;
   background: #000;
+  cursor: pointer;
   box-shadow:
     inset 0 2px 8px rgba(0, 0, 0, 0.9),
     0 0 0 1px var(--bezel-strong);
@@ -1176,15 +1177,18 @@
   font-weight: 600;
 }
 
-/* A name over a small note (when it was last flown, the heli), each cut on its own line. */
+/* A name over a small note (when it was last flown, the heli, a pack's flights), each cut on its own line. */
 .spot-row .name-main,
-.spot-row .name-note {
+.spot-row .name-note,
+.health-row .name-main,
+.health-row .name-note {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.spot-row .name-note {
+.spot-row .name-note,
+.health-row .name-note {
   font-size: 0.75rem;
   font-weight: 400;
   color: var(--muted);
@@ -1950,11 +1954,13 @@
   opacity: 0.5;
 }
 
-.health-row small.caution {
+.health-row small.caution,
+.health-row b.caution {
   color: var(--caution);
 }
 
-.health-row small.warning {
+.health-row small.warning,
+.health-row b.warning {
   color: var(--warning);
 }
 

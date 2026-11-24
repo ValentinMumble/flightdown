@@ -70,12 +70,19 @@ export function Home() {
         title="Cockpit"
         menuNamed
         phone={{title: 'Flightdown', icon: <RotorMark size={20} className="accent-mark" />}}
-        sub={sorties.length ? `Flying since ${formatDay(sorties[0].date, {weekday: false, year: true})}` : undefined}
       />
       <VisitorBanner />
 
       <div className="bento">
-        <Panel label="Airtime" note="Every minute in the air" className="span-5 hobbs-panel">
+        <Panel
+          label="Airtime"
+          note={
+            sorties.length
+              ? `Every minute in the air since ${formatDay(sorties[0].date, {weekday: false, year: true})}`
+              : 'Every minute in the air'
+          }
+          className="span-5 hobbs-panel"
+        >
           <div className="hobbs-row">
             <Rotor />
             <span className="meter-stack">

@@ -17,6 +17,7 @@ import {
   isGameController,
   isLowered,
   KeyboardSticks,
+  radioSwitches,
   RATES,
   readAxes,
   type Mapping,
@@ -25,7 +26,7 @@ import {drawAmps, idleUpOf, packVolts, type SimFeed, type SimPack} from './radio
 import type {RotorSound} from './sound';
 import {ModelMixer, modelMapping} from './modelMixer';
 import {loggedControls, loggedOutputs, loggedSticks, replayEnd, type Replay} from './replay';
-import {inManoeuvre, STAND_IN, standIn, untilCut, untilManoeuvre} from './standIn';
+import {FlipGuide, STAND_IN, standIn, untilCut, untilManoeuvre} from './standIn';
 import {sampleAt} from '../model/telemetry';
 import type {CardModel} from '../radio/card';
 import {FACINGS, HOVER_HEIGHT, PAD, PAD_RADIUS, startDrill, updateDrill, type Drill, type Facing} from './drills';
@@ -400,6 +401,7 @@ export default function SimView({
     let idleUp = 2;
     let mixedFor: CardModel | null = null;
     let playedFrom = -1;
+    let flips = new FlipGuide();
     let pickedUp = 0;
     let mixer: ModelMixer | null = null;
     // Which way up the heli is, for a game controller's collective: its stick springs back to centre, so the centre
@@ -458,7 +460,15 @@ export default function SimView({
       let sticks: Controls;
       if (flown && !isGameController(flown)) {
         outputs = [...flown.axes];
-        controls = readAxes(outputs, live.current.mapping);
+        // The radio sends its outputs as axes and CH9 on as buttons: SA on CH10 and SF on CH11 when the model sends
+        // them (sim_switches.py in edge-tx), else both show only as the motor's channel off cut.
+        const read = readAxes(outputs, live.current.mapping);
+        const switches = radioSwitches(live.current.model, flown);
+        controls = {
+          ...read,
+          armed: switches ? switches.armed : read.throttle > 0,
+          ...(switches && {throttleOn: switches.throttleOn}),
+        };
         sticks = controls;
       } else {
         const centre = mixer ? (side > 0 ? mixer.hover.upright : mixer.hover.inverted) : side * hoverStick;
@@ -500,6 +510,7 @@ export default function SimView({
         // Each start, or start again on another pack or way of replaying, puts the heli back on the pad.
         if (replay.startedAt !== playedFrom) {
           playedFrom = replay.startedAt;
+          flips = new FlipGuide();
           pickedUp = 0;
           state = start();
           drill = startDrill(kind, facing);
@@ -519,19 +530,24 @@ export default function SimView({
             used = 0;
             live.current.onTakeOver();
           } else if (replay.mode === 'fly') {
-            // The log flies, the stand-in pilot adding the corrections the log cannot hold (see standIn.ts).
+            // The log flies, its flips and rolls made whole turns, the stand-in pilot adding the corrections the log
+            // cannot hold (see standIn.ts).
+            const steered = flips.steer(ghost, state, second, dt, replay.stretches);
             controls = standIn(
-              ghost,
+              steered.controls,
               state,
               params,
-              inManoeuvre(replay.stretches, second),
+              steered.manoeuvre,
               STAND_IN,
               untilCut(replay.cuts, second),
               untilManoeuvre(replay.stretches, second),
             );
             outputs = loggedOutputs(replay.series, second);
             const se = sampleAt(replay.series.time, replay.series.channels.se, second) ?? 0;
-            const practice = (sampleAt(replay.series.time, replay.series.channels.sd, second) ?? -1) >= 1;
+            // Practice rates: SG down since 24 Nov 2026, SD down before.
+            const down = (name: string) =>
+              (sampleAt(replay.series.time, replay.series.channels[name], second) ?? -1) >= 1;
+            const practice = down('sg') || down('sd');
             loggedIdleUp = se < -0.5 ? 1 : se > 0.5 ? 3 : 2;
             sticks = {
               ...loggedSticks(replay.series, second),

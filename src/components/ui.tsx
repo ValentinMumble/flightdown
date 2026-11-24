@@ -85,7 +85,10 @@ export function PageHeader({
   title: ReactNode;
   sub?: ReactNode;
   icon?: ReactNode;
-  /** The desktop's top menu already names the page (the Cockpit): its head keeps the subtitle only, the title read out. */
+  /**
+   * The desktop's top menu already names the page (the Cockpit, Sorties...): its head shows only its actions there, the
+   * title left to screen readers, the subtitle left out.
+   */
   menuNamed?: boolean;
   /** A phone has no top bar with the app's name: a page can say something else there (the Cockpit says Flightdown). */
   phone?: {title: ReactNode; icon?: ReactNode};
@@ -108,21 +111,33 @@ export function PageHeader({
         </div>
         <div className="toolbar">{actions}</div>
       </header>
-      <div className="page-head desktop-only">
-        <div>
-          {back && (
-            <Link to={back} onClick={event => (event.preventDefault(), goBack())} className="back-link">
-              <ArrowLeft size={14} /> Back
-            </Link>
-          )}
-          <h1 className={menuNamed ? 'page-title read-only' : 'page-title'}>
-            {icon}
-            {title}
-          </h1>
-          {sub && <div className="page-sub">{sub}</div>}
+      {menuNamed ? (
+        // With no actions, only the title for screen readers: taken out of the flow, so it adds no gap above the page.
+        actions ? (
+          <div className="page-head desktop-only">
+            <h1 className="page-title read-only">{title}</h1>
+            <div className="toolbar">{actions}</div>
+          </div>
+        ) : (
+          <h1 className="page-title read-only">{title}</h1>
+        )
+      ) : (
+        <div className="page-head desktop-only">
+          <div>
+            {back && (
+              <Link to={back} onClick={event => (event.preventDefault(), goBack())} className="back-link">
+                <ArrowLeft size={14} /> Back
+              </Link>
+            )}
+            <h1 className="page-title">
+              {icon}
+              {title}
+            </h1>
+            {sub && <div className="page-sub">{sub}</div>}
+          </div>
+          <div className="toolbar">{actions}</div>
         </div>
-        <div className="toolbar">{actions}</div>
-      </div>
+      )}
     </>
   );
 }

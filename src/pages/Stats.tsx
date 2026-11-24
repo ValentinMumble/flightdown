@@ -176,7 +176,7 @@ export function Stats() {
 
   return (
     <div className="page">
-      <PageHeader title="Debrief" sub="What the log says about your flying" />
+      <PageHeader title="Debrief" menuNamed sub="What the log says about your flying" />
       <VisitorBanner />
 
       <div className="toolbar debrief-toolbar">
