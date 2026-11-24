@@ -61,7 +61,7 @@ describe('the stand-in pilot', () => {
       pitch: second >= 1 && second < 2.3 ? -1 : second >= 6 && second < 8 ? 0.3 : 0,
       roll: second >= 4 && second < 5.1 ? 1 : 0,
     });
-    const found = stickManoeuvres(series, controlsAt, params.cyclicRate);
+    const found = stickManoeuvres(series, controlsAt, params);
     expect(found.map(({axis, way, turns}) => ({axis, way, turns}))).toEqual([
       {axis: 'pitch', way: -1, turns: 1},
       {axis: 'roll', way: 1, turns: 1},
@@ -70,9 +70,9 @@ describe('the stand-in pilot', () => {
   });
 
   it('flies a flip to one whole turn, whatever the stick held', () => {
-    const flip = {from: 1, to: 2.5, axis: 'pitch' as const, way: -1 as const, turns: 1};
+    const flip = {from: 1, to: 2.5, axis: 'pitch' as const, way: -1 as const, turns: 1, rate: params.cyclicRate / 1.25};
     const state = flying(12);
-    const guide = new FlipGuide();
+    const guide = new FlipGuide(params);
     const dt = 1 / 240;
     let turned = 0;
     for (let second = 0; second < 4; second += dt) {
@@ -84,5 +84,16 @@ describe('the stand-in pilot', () => {
     }
     expect(turned / (2 * Math.PI)).toBeGreaterThan(0.9);
     expect(turned / (2 * Math.PI)).toBeLessThan(1.1);
+  });
+
+  it('keeps a settled heli down once the motor is cut, whatever the collective', () => {
+    const sitting = restingState(new Vector3(0, 0, -5));
+    expect(standIn({...logged, collective: 0.8, throttle: 0}, sitting, params, false).collective).toBeLessThanOrEqual(
+      0,
+    );
+    // Sinking hard, the log's collective is a cushion: left as it is.
+    const falling = flying(1.5);
+    falling.velocity.set(0, -3, 0);
+    expect(standIn({...logged, collective: 0.8, throttle: 0}, falling, params, false).collective).toBeGreaterThan(0.5);
   });
 });

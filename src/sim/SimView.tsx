@@ -401,7 +401,7 @@ export default function SimView({
     let idleUp = 2;
     let mixedFor: CardModel | null = null;
     let playedFrom = -1;
-    let flips = new FlipGuide();
+    let flips = new FlipGuide(params);
     let pickedUp = 0;
     let mixer: ModelMixer | null = null;
     // Which way up the heli is, for a game controller's collective: its stick springs back to centre, so the centre
@@ -510,7 +510,7 @@ export default function SimView({
         // Each start, or start again on another pack or way of replaying, puts the heli back on the pad.
         if (replay.startedAt !== playedFrom) {
           playedFrom = replay.startedAt;
-          flips = new FlipGuide();
+          flips = new FlipGuide(params);
           pickedUp = 0;
           state = start();
           drill = startDrill(kind, facing);

@@ -59,9 +59,9 @@ function writeSettings(change: Partial<Settings>) {
 const ZOOM_RANGE = {min: 0.5, max: 3, step: 0.05};
 
 const DRILLS: {value: DrillKind; label: string}[] = [
+  {value: 'free', label: 'Free flight'},
   {value: 'hover', label: 'Hover'},
   {value: 'landing', label: 'Soft landing'},
-  {value: 'free', label: 'Free flight'},
 ];
 
 const WINDS = [
@@ -136,6 +136,68 @@ function DrillCard({info, facing, settings}: {info: SimInfo; facing: Facing; set
 }
 
 /** Each control of a game controller, the TX16S stick or switch it stands for, and its state now. */
+/** The keyboard's keys, when nothing is plugged in: each with the radio's stick or switch it stands for. */
+function KeyMap({info}: {info: SimInfo | null}) {
+  const controls = info?.controls;
+  const rows: {keys: string; radio: string; does: string; state?: string; lit?: boolean}[] = [
+    {
+      keys: 'W S',
+      radio: 'Thr',
+      does: 'Collective, up and down',
+      state: controls && `${Math.round(controls.collective * 100)} %`,
+    },
+    {keys: 'A D', radio: 'Rud', does: 'Rudder'},
+    {keys: '← →', radio: 'Ail', does: 'Roll'},
+    {keys: '↑ ↓', radio: 'Ele', does: 'Pitch'},
+    {
+      keys: 'X',
+      radio: 'SA',
+      does: 'Arm',
+      state: controls && (controls.armed ? 'Armed' : 'Safe'),
+      lit: !!controls?.armed,
+    },
+    {
+      keys: 'Space',
+      radio: 'SF',
+      does: 'Motor on and off (Q: hold)',
+      state: controls && (controls.throttle ? 'On' : 'Hold'),
+      lit: !!controls?.throttle,
+    },
+    {keys: '1 2 3', radio: 'SE', does: 'Idle up', state: controls && info ? `IU ${info.idleUp}` : undefined},
+    {
+      keys: 'E',
+      radio: 'SH',
+      does: 'Rescue, held',
+      state: controls?.rescue ? 'Rescue' : undefined,
+      lit: !!controls?.rescue,
+    },
+    {keys: 'P', radio: 'SG', does: 'Rates', state: controls?.rates, lit: isLowered(controls?.rates)},
+    {
+      keys: 'L',
+      radio: 'SC',
+      does: 'Self-level',
+      state: controls && (controls.level ? 'On' : 'Off'),
+      lit: !!controls?.level,
+    },
+  ];
+  return (
+    <aside className="sim-side panel">
+      <div className="sim-side-title">
+        <b>Keyboard → TX16S</b>
+        <small className="muted">Plug in the radio or a game controller to fly with sticks</small>
+      </div>
+      {rows.map(row => (
+        <div key={row.keys} className="sim-map-row">
+          <span className="sim-map-pad">{row.keys}</span>
+          <span className="sim-map-radio">{row.radio}</span>
+          <span className="sim-map-does">{row.does}</span>
+          <span className={`sim-map-state ${row.lit ? 'lit' : ''}`}>{row.state ?? ''}</span>
+        </div>
+      ))}
+    </aside>
+  );
+}
+
 function PadMap({info}: {info: SimInfo | null}) {
   const controls = info?.controls;
   const lit = {
@@ -257,7 +319,7 @@ export function Sim() {
   const weight = heli?.weight;
   const rotor = heli?.rotor;
   const params = useMemo(() => heliParams({weight, rotor}), [weight, rotor]);
-  const [drill, setDrill] = useState<DrillKind>('hover');
+  const [drill, setDrill] = useState<DrillKind>('free');
   const [facing, setFacing] = useState<Facing>('tail');
   const [wind, setWind] = useState('0');
   const [pad, setPad] = useState(0);
@@ -385,7 +447,7 @@ export function Sim() {
       mode: replayMode,
       startedAt: performance.now(),
       from: replayStart(series),
-      stretches: stickManoeuvres(series, second => loggedControls(series, second, logMapping), params.cyclicRate),
+      stretches: stickManoeuvres(series, second => loggedControls(series, second, logMapping), params),
       cuts: motorCuts(series, second => loggedControls(series, second, logMapping).throttle),
       label: chosen.label,
     });
@@ -400,8 +462,9 @@ export function Sim() {
     if (playing) void play();
   }, [packKey, replayMode]);
   const radio = source && !source.controller;
-  // The game controller's map only with one plugged in and flown: no use for the radio or the keyboard.
+  // The game controller's map with one plugged in and flown, the keyboard's with nothing: none for the radio.
   const padMap = !!source?.controller;
+  const keyMap = !!info && !source;
 
   return (
     <div className="page sim-page">
@@ -462,7 +525,7 @@ export function Sim() {
         </button>
       </div>
 
-      <div className={padMap ? 'sim-layout' : 'sim-layout alone'}>
+      <div className={padMap || keyMap ? 'sim-layout' : 'sim-layout alone'}>
         <div className="sim-main">
           <div ref={stage} className="sim-stage" style={height ? {height} : undefined}>
             <Suspense fallback={<div className="sim-stage-failed">Starting the sim…</div>}>
@@ -572,6 +635,7 @@ export function Sim() {
         </div>
         {/* The game controller's map to the radio: none while the radio itself is plugged in. */}
         {padMap && <PadMap info={info} />}
+        {keyMap && <KeyMap info={info} />}
       </div>
 
       <div className="bento sim-panels">

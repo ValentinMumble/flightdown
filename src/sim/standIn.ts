@@ -38,9 +38,11 @@ export interface StandInTuning {
 }
 
 /**
- * Tuned by replaying the M2 EVO's November 2026 packs (12, 13 and 20 Nov) on the physics fitted to its calibration flight
- * (1.9° hover pitch, 300°/s at full stick). With the flip guide and the touchdown, its 21 packs to 24 Nov fly 65 % of
- * the time before a crash, 11 of them end to end (both calibration packs among them), and 74 of their 143 turns happen.
+ * Tuned by replaying every 2026 log on the physics fitted to the M2 EVO's calibration flight (1.9° hover pitch, 300°/s
+ * at full stick, the FBL answering the stick in a straight line: an expo scored worse). None of the M2 EVO's 21 packs
+ * crashed for real: they fly 93 % of the time, 18 of them to the end, 124 of their 182 turns made (two hold a third of
+ * a stick for seconds while the log shows the heli upright, which a rate FBL cannot do). The K110S's 6 fly 84 %, the
+ * one crash 12 s after its real one.
  */
 export const STAND_IN: StandInTuning = {
   attitudeLag: 0.3,
@@ -66,6 +68,18 @@ export interface Manoeuvre {
   axis: 'pitch' | 'roll';
   way: 1 | -1;
   turns: number;
+  /** How fast the real heli turned at full stick in it (rad/s): its whole turns spread over the stick's push. */
+  rate: number;
+}
+
+/** Which way up the pilot flies around a stretch of the log: the sign of the collective's mean, 0 when near nothing. */
+const SIDE_FOR = 0.8;
+function side(controlsAt: (second: number) => Controls, from: number, to: number): number {
+  let sum = 0;
+  let count = 0;
+  for (let second = from; second <= to; second += 0.05, count++) sum += controlsAt(second).collective;
+  const mean = count ? sum / count : 0;
+  return Math.abs(mean) < 0.1 ? 0 : Math.sign(mean);
 }
 
 /** Under this the stick is at rest, between manoeuvres; a manoeuvre's stick passes `FULL` at least once. */
@@ -80,9 +94,10 @@ const FULL = 0.5;
 export function stickManoeuvres(
   series: TelemetrySeries,
   controlsAt: (second: number) => Controls,
-  rate: number,
+  params: Pick<HeliParams, 'cyclicRate'>,
   dt = 0.01,
 ): Manoeuvre[] {
+  const rate = params.cyclicRate;
   const found: Manoeuvre[] = [];
   const end = series.time[series.time.length - 1] ?? 0;
   let run = {from: series.time[0] ?? 0, pitch: 0, roll: 0, peak: 0};
@@ -98,13 +113,21 @@ export function stickManoeuvres(
     if (run.peak >= FULL) {
       const axis = Math.abs(run.pitch) >= Math.abs(run.roll) ? 'pitch' : 'roll';
       const turns = Math.abs(run[axis]) / (2 * Math.PI);
-      if (turns >= 0.75)
+      // Over to the other side (the collective changes sign, as it does from upright to inverted): half turns.
+      const over = side(controlsAt, run.from - SIDE_FOR, run.from) * side(controlsAt, second, second + SIDE_FOR) < 0;
+      const made = over
+        ? Math.max(0.5, Math.round(turns - 0.5) + 0.5)
+        : turns >= 0.75
+          ? Math.max(1, Math.round(turns))
+          : 0;
+      if (made && turns >= 0.3)
         found.push({
           from: run.from,
           to: second,
           axis,
           way: run[axis] > 0 ? 1 : -1,
-          turns: Math.max(1, Math.round(turns)),
+          turns: made,
+          rate: (rate * made) / turns,
         });
     }
     run = {from: second, pitch: 0, roll: 0, peak: 0};
@@ -117,6 +140,8 @@ const FINISH_STICK = 0.7;
 const FINISH_FOR = 0.8;
 /** It lets go this early (rad), the servos and the heli's own spin carrying it the rest of the way. */
 const LET_GO = 0.35;
+/** It closes the gap to the real heli's turn over this, s. */
+const TRACK = 0.25;
 
 /**
  * Flies a replay's flips and rolls as the real heli did them: the sim's rate is not the real heli's to the degree (its
@@ -125,8 +150,17 @@ const LET_GO = 0.35;
  */
 export class FlipGuide {
   private current: Manoeuvre | null = null;
+  /** How far the real heli had turned (by the log's stick) and the sim heli has, rad. */
+  private wanted = 0;
   private turned = 0;
   private doneAt: number | null = null;
+
+  /** The sim heli's rate at full stick, rad/s. */
+  private readonly fullRate: number;
+
+  constructor(params: Pick<HeliParams, 'cyclicRate'>) {
+    this.fullRate = params.cyclicRate;
+  }
 
   /** The controls for this frame, and whether a manoeuvre is on (the stand-in keeps out). */
   steer(
@@ -143,20 +177,27 @@ export class FlipGuide {
     }
     if (now !== this.current) {
       this.current = now;
+      this.wanted = 0;
       this.turned = 0;
       this.doneAt = null;
     }
     if (second < now.from) return {controls, manoeuvre: true};
-    const rate = now.axis === 'pitch' ? state.rates.x : state.rates.z;
+    const goal = now.turns * 2 * Math.PI;
     // The sim asks -rate for a stick (see physics.ts), so the way the stick pushes is -rate.
-    this.turned += -rate * now.way * dt;
-    if (this.doneAt === null && this.turned >= now.turns * 2 * Math.PI - LET_GO) this.doneAt = second;
+    this.turned += -(now.axis === 'pitch' ? state.rates.x : state.rates.z) * now.way * dt;
+    const share = Math.max(0, controls[now.axis] * now.way);
+    this.wanted = Math.min(goal, this.wanted + share * now.rate * dt);
+    if (this.doneAt === null && this.turned >= goal - LET_GO) this.doneAt = second;
     if (this.doneAt !== null) {
       // Done: the stand-in takes it from a moment after, to level it.
       return {controls: {...controls, [now.axis]: 0}, manoeuvre: second - this.doneAt < 0.2};
     }
-    if (second > now.to) return {controls: {...controls, [now.axis]: now.way * FINISH_STICK}, manoeuvre: true};
-    return {controls, manoeuvre: true};
+    // The real heli's turn at this moment: its stick, at its own rate, and a correction for how far behind or ahead the
+    // sim heli is, so it goes round in step (the log's collective then lands at the same point of the flip).
+    const ahead = second > now.to ? goal : this.wanted;
+    const lead = second > now.to ? FINISH_STICK : (share * now.rate) / this.fullRate;
+    const stick = clamp(lead + (ahead - this.turned) / TRACK / this.fullRate, 0, 1);
+    return {controls: {...controls, [now.axis]: now.way * stick}, manoeuvre: true};
   }
 }
 
@@ -218,7 +259,12 @@ export function standIn(
   /** Seconds until the log's next manoeuvre, or null. */
   upcoming: number | null = null,
 ): Controls {
-  if (state.grounded || state.crashed) return logged;
+  if (state.crashed) return logged;
+  // The motor cut with the heli sitting, or just above the ground and not sinking hard (a cushion is still the log's):
+  // the collective the real pilot raised on the ground would hop the sim heli off on its spinning rotor.
+  const sitting = state.grounded || (state.position.y < 2 && state.velocity.y > -1);
+  if (logged.throttle <= 0 && sitting) return {...logged, collective: Math.min(logged.collective, 0)};
+  if (state.grounded) return logged;
   // A manoeuvre coming: room for it first.
   if (upcoming !== null && tuning.low < tuning.flipHeight) {
     tuning = {...tuning, low: tuning.flipHeight, high: Math.max(tuning.high, tuning.flipHeight + 4)};
@@ -250,13 +296,18 @@ export function standIn(
 
   // The attitude it wants: level (upside down, finishing a flip nearer that way), leaning back towards the pad past
   // `reach`, and against the drift.
-  const want = scratch.want.set(0, hanging && up.y < 0 ? -1 : 1, 0);
+  // Inverted with the log's collective negative, the pilot was flying inverted: it levels the heli upside down.
+  const inverted = up.y < 0 && (hanging || logged.collective < -0.05);
+  // The way it wants the thrust: up, leaning back towards the pad and against the drift; the mast along it upright,
+  // against it inverted (the blades then push down the mast).
+  const want = scratch.want.set(0, 1, 0);
   const away = scratch.away.set(state.position.x - PAD.x, 0, state.position.z - PAD.z);
   const stray = away.length() - tuning.reach;
   if (stray > 0) want.addScaledVector(away.normalize(), -Math.min(tuning.lean, stray * 0.05));
   want.x -= clamp(state.velocity.x * tuning.brake, -tuning.lean, tuning.lean);
   want.z -= clamp(state.velocity.z * tuning.brake, -tuning.lean, tuning.lean);
   want.normalize();
+  if (inverted) want.negate();
 
   // The rate (body frame) turning the mast to it over `attitudeLag`, as cyclic: the sim's stick asks -rate for pitch
   // (body x) and roll (body z).
@@ -274,7 +325,7 @@ export function standIn(
   // Touching down: the last seconds before the log cuts the motor, the real heli was sitting; the stand-in puts the sim
   // heli down on its own collective, sinking gently and slower near the ground.
   if (landing !== null && landing <= TOUCHDOWN && up.y > 0.7) {
-    const sink = -Math.min(1.2, 0.3 + state.position.y * 0.6);
+    const sink = -Math.min(2, 0.3 + state.position.y * 0.6);
     const hover = params.hoverPitch / params.maxPitch;
     return {...logged, roll, pitch, collective: clamp(hover + (sink - state.velocity.y) * 0.3, -0.3, 0.6)};
   }
