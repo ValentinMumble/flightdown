@@ -12,6 +12,7 @@ import {
 } from '../types';
 import {today} from '../model/format';
 import {sampleLog} from './sample';
+import {patchItem} from '../model/patch';
 
 /**
  * Where the log lives:
@@ -96,6 +97,10 @@ export function applyChange(doc: Doc, change: Change): Doc {
   if (change.type === 'replace') return upgrade(change.doc);
   if (change.type === 'telemetry') return doc;
   const list = doc[change.kind] as {id: string}[];
+  if (change.type === 'patch') {
+    const next = list.map(item => (item.id === change.id ? patchItem(item, change.fields, change.drop) : item));
+    return {...doc, [change.kind]: next};
+  }
   if (change.type === 'delete') return {...doc, [change.kind]: list.filter(item => item.id !== change.id)};
   const index = list.findIndex(item => item.id === change.item.id);
   const next = index < 0 ? [...list, change.item] : list.map(item => (item.id === change.item.id ? change.item : item));
@@ -105,7 +110,7 @@ export function applyChange(doc: Doc, change: Change): Doc {
 async function send(change: Change) {
   const headers = {'Content-Type': 'application/json'};
   let answer: Response;
-  if (change.type === 'put') {
+  if (change.type === 'put' || change.type === 'patch') {
     answer = await fetch('/api/data', {method: 'POST', headers, body: JSON.stringify(change)});
   } else if (change.type === 'delete') {
     answer = await fetch(`/api/data?kind=${change.kind}&id=${encodeURIComponent(change.id)}`, {method: 'DELETE'});
@@ -130,6 +135,16 @@ interface Store {
   heli: (id: string | undefined) => Heli | undefined;
   spot: (id: string | undefined) => Spot | undefined;
   put: <K extends Kind>(kind: K, item: Doc[K][number]) => void;
+  /**
+   * Sets some fields of an item and takes others out, leaving the rest as the server has it: for edits of part of an
+   * item, so an older copy of its other fields (a sortie's logs, its weather) never goes back over newer ones.
+   */
+  patch: <K extends Kind>(
+    kind: K,
+    id: string,
+    fields: Partial<Doc[K][number]>,
+    drop?: readonly (keyof Doc[K][number] & string)[],
+  ) => void;
   remove: (kind: Kind, id: string) => void;
   /** Replaces the whole log (an import). */
   replace: (doc: Doc, series: TelemetrySeries[]) => Promise<void>;
@@ -181,11 +196,14 @@ export function StoreProvider({children}: {children: ReactNode}) {
     }
   }, [showSample]);
 
-  /** Sends the outbox, oldest first; stops at the first failure and tries again later. */
+  /**
+   * Sends the outbox, oldest first; stops at the first failure and tries again later. One tab at a time (the outbox is
+   * shared): two tabs sending the same first change would each take one off, and the second change would be lost.
+   */
   const flush = useCallback(async () => {
     if (flushing.current || modeRef.current !== 'owner') return;
     flushing.current = true;
-    try {
+    const sendAll = async () => {
       for (;;) {
         const next = (readJson<Change[]>(OUTBOX) ?? [])[0];
         if (!next) break;
@@ -193,6 +211,11 @@ export function StoreProvider({children}: {children: ReactNode}) {
           await send(next);
         } catch (failure) {
           const status = (failure as {status?: number}).status;
+          // Not signed in any more (a cookie gone, a new key): the changes wait for the owner to sign in again.
+          if (status === 401 || status === 403) {
+            setError('Sign in again in Settings: your changes are kept until then');
+            break;
+          }
           // The server refused this change for good (not a lost connection): drop it and say so.
           if (status && status >= 400 && status < 500 && status !== 408 && status !== 429) {
             setError((failure as Error).message);
@@ -200,11 +223,17 @@ export function StoreProvider({children}: {children: ReactNode}) {
             break;
           }
         }
-        // Read again: changes made while this one was on its way were added behind it, and must stay.
-        const rest = (readJson<Change[]>(OUTBOX) ?? []).slice(1);
+        // Read again: changes made while this one was on its way were added behind it, and must stay. Only the change
+        // sent comes off, should another tab have taken it off already.
+        const queued = readJson<Change[]>(OUTBOX) ?? [];
+        const rest = queued.length && JSON.stringify(queued[0]) === JSON.stringify(next) ? queued.slice(1) : queued;
         writeJson(OUTBOX, rest);
         setWaiting(rest.length);
       }
+    };
+    try {
+      if (navigator.locks) await navigator.locks.request(OUTBOX, {ifAvailable: true}, lock => lock && sendAll());
+      else await sendAll();
     } finally {
       flushing.current = false;
     }
@@ -294,15 +323,25 @@ export function StoreProvider({children}: {children: ReactNode}) {
     (change: Change) => {
       setDoc(current => {
         const next = applyChange(current, change);
-        if (modeRef.current === 'local') writeJson(LOCAL, next);
+        if (modeRef.current === 'local' && !writeJson(LOCAL, next)) {
+          queueMicrotask(() => setError('This browser is full: the last change was not kept'));
+        }
         if (modeRef.current === 'owner') writeJson(OWNER_CACHE, next);
         return next;
       });
       if (modeRef.current === 'owner') {
         const outbox = [...(readJson<Change[]>(OUTBOX) ?? []), change];
-        writeJson(OUTBOX, outbox);
-        setWaiting(outbox.length);
-        void flush();
+        if (writeJson(OUTBOX, outbox)) {
+          setWaiting(outbox.length);
+          void flush();
+        } else {
+          // This browser's storage is full: the change cannot wait for a connection, so it goes now or is lost.
+          send(change).catch(() =>
+            setError(
+              'This device is full and offline: the last change was not saved. Free some space and make it again',
+            ),
+          );
+        }
       }
     },
     [flush],
@@ -320,6 +359,14 @@ export function StoreProvider({children}: {children: ReactNode}) {
       heli: id => (id ? helis.get(id) : undefined),
       spot: id => (id ? spots.get(id) : undefined),
       put: (kind, item) => commit({type: 'put', kind, item}),
+      patch: (kind, id, fields, drop) =>
+        commit({
+          type: 'patch',
+          kind,
+          id,
+          fields: fields as Record<string, unknown>,
+          ...(drop?.length && {drop: [...drop]}),
+        }),
       remove: (kind, id) => commit({type: 'delete', kind, id}),
       replace: async (next, series) => {
         if (mode === 'owner') {
@@ -372,6 +419,8 @@ export function StoreProvider({children}: {children: ReactNode}) {
           throw new Error(message ?? 'This key did not work');
         }
         if (!(await loadOwner())) throw new Error('Signed in, but the log could not be read');
+        setError(null);
+        void flush();
       },
       signOut: async () => {
         await fetch('/api/logout', {method: 'POST'}).catch(() => null);
@@ -393,7 +442,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
         showSample();
       },
     }),
-    [mode, doc, waiting, error, helis, spots, commit, loadOwner, showVisitor, showSample],
+    [mode, doc, waiting, error, helis, spots, commit, flush, loadOwner, showVisitor, showSample],
   );
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;

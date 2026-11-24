@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {useSearchParams} from 'react-router';
 import {Activity, House, Search, SlidersHorizontal} from 'lucide-react';
 import {useStore} from '../data/store';
@@ -45,7 +45,7 @@ function remember(params: URLSearchParams) {
 
 /** Every sortie as a flight strip, newest first, a month at a time, with filters kept in the address. */
 export function Sorties() {
-  const {doc, heli, spot} = useStore();
+  const {mode, doc, heli, spot} = useStore();
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState(params.get('q') ?? '');
   const heliId = params.get('heli') ?? '';
@@ -66,8 +66,12 @@ export function Sorties() {
     if (REMEMBERED.includes(key)) remember(next);
   };
 
-  // Opened with no filter in the address: the filters of last time, while their spot and heli still exist.
+  // Opened with no filter in the address: the filters of last time, while their spot and heli still exist (checked
+  // once the log is read, not against the empty one shown while it loads).
+  const restored = useRef(false);
   useEffect(() => {
+    if (mode === 'loading' || restored.current) return;
+    restored.current = true;
     if (FILTERS.some(key => params.has(key))) return;
     const saved = readRemembered();
     const known: Record<string, boolean> = {
@@ -81,7 +85,7 @@ export function Sorties() {
     for (const key of REMEMBERED) if (saved[key] && known[key]) next.set(key, saved[key]);
     if (next.toString() !== params.toString()) setParams(next, {replace: true});
     // Only when the page opens: later changes go through setParam.
-  }, []);
+  }, [mode]);
 
   const filtered = useMemo(() => {
     const words = plain(query).split(/\s+/).filter(Boolean);

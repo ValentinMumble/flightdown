@@ -14,6 +14,7 @@ import {heliParams, restingState, step} from '../src/sim/physics';
 import {loggedControls, replayStart, replayEnd} from '../src/sim/replay';
 import {modelMapping} from '../src/sim/modelMixer';
 import {windAt} from '../src/sim/wind';
+import {radioName} from '../src/radio/widgets';
 import {fetchSortieWeather, weatherSpotFor} from '../src/model/pastWeather';
 import {
   FlipGuide,
@@ -46,7 +47,7 @@ const totals: Record<string, Total> = {};
 for (const sortie of [...doc.sorties].sort((left, right) => left.date.localeCompare(right.date))) {
   if (sortie.date < since || !sortie.telemetry.length) continue;
   const heli = doc.helis.find(one => one.id === sortie.heliId);
-  const model = heli && card.models.find(one => heli.name.startsWith(one.name));
+  const model = heli && card.models.find(one => one.name === radioName(heli.name));
   if (!heli || !model || (only && !heli.name.startsWith(only))) continue;
   const params = heliParams(heli);
   const mapping = modelMapping(model);

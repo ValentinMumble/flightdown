@@ -1,5 +1,5 @@
-import {createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode} from 'react';
-import {Link, useNavigate} from 'react-router';
+import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
+import {Link, useLocation, useNavigate} from 'react-router';
 import {ArrowLeft, Minus, Plus, X} from 'lucide-react';
 import type {Heli, Spot} from '../types';
 import {useSeriesColor} from './colors';
@@ -30,6 +30,14 @@ export function OverlayProvider({children}: {children: ReactNode}) {
     timer.current = window.setTimeout(() => setMessage(null), 2600);
   }, []);
 
+  // Another page (a back swipe, a link): the sheet was for the page it opened on.
+  const {pathname} = useLocation();
+  const openedOn = useRef(pathname);
+  useEffect(() => {
+    if (pathname !== openedOn.current) close();
+    openedOn.current = pathname;
+  }, [pathname, close]);
+
   useEffect(() => {
     if (!content) return;
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && close();
@@ -41,8 +49,10 @@ export function OverlayProvider({children}: {children: ReactNode}) {
     };
   }, [content, close]);
 
+  const overlay = useMemo(() => ({open: setContent, close, toast}), [close, toast]);
+
   return (
-    <OverlayContext.Provider value={{open: setContent, close, toast}}>
+    <OverlayContext.Provider value={overlay}>
       {children}
       {content && (
         <div className="sheet-backdrop" onMouseDown={event => event.target === event.currentTarget && close()}>
@@ -96,7 +106,9 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   const navigate = useNavigate();
-  const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate(back ?? '/'));
+  // Back within the app only: opened from a link, the history before it belongs to another site.
+  const {key} = useLocation();
+  const goBack = () => (key !== 'default' ? navigate(-1) : navigate(back ?? '/'));
   return (
     <>
       <header className="topbar phone-only">

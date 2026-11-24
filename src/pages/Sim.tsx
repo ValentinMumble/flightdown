@@ -446,13 +446,16 @@ export function Sim() {
     setReplayProblem('');
     const series = joinSeries(chosen.pack, parts as TelemetrySeries[]);
     const logMapping = modelMapping(model);
+    // Found before the clock starts: reading the whole log takes a moment, which would start the replay late.
+    const stretches = stickManoeuvres(series, second => loggedControls(series, second, logMapping), params);
+    const cuts = motorCuts(series, second => loggedControls(series, second, logMapping).throttle);
     setReplay({
       series,
       mode: replayMode,
       startedAt: performance.now(),
       from: replayStart(series),
-      stretches: stickManoeuvres(series, second => loggedControls(series, second, logMapping), params),
-      cuts: motorCuts(series, second => loggedControls(series, second, logMapping).throttle),
+      stretches,
+      cuts,
       crashes: chosen.crashes,
       label: chosen.label,
     });
@@ -596,7 +599,7 @@ export function Sim() {
                 {info.crashed && (
                   <div className="sim-crash">
                     <b>💥 {info.crashed}</b>
-                    <span>Back on the pad in a moment</span>
+                    <span>{replay?.mode === 'fly' ? 'Picked up, the log goes on' : 'Back on the pad in a moment'}</span>
                   </div>
                 )}
                 <div className="sim-hud sim-hud-bottom">

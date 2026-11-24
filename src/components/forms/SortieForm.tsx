@@ -19,7 +19,7 @@ const TIMER_STEP = 15;
 
 /** Logs a sortie, or edits one: built to be quick at the field, on a phone, with one hand. */
 export function SortieForm({sortie}: {sortie?: Sortie}) {
-  const {doc, put, remove, heli: findHeli} = useStore();
+  const {doc, put, patch, remove, heli: findHeli} = useStore();
   const {close, toast} = useOverlay();
   const navigate = useNavigate();
   const sorted = useMemo(() => sortSorties(doc.sorties), [doc.sorties]);
@@ -90,8 +90,7 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
         chosenSpot = spot.id;
       }
     }
-    const saved: Sortie = {
-      id: sortie?.id ?? newId(),
+    const fields = {
       date,
       heliId,
       ...(chosenSpot && {spotId: chosenSpot}),
@@ -106,11 +105,17 @@ export function SortieForm({sortie}: {sortie?: Sortie}) {
         .split(/\s+/)
         .map(link => link.trim())
         .filter(link => /^https?:\/\//.test(link)),
-      telemetry: sortie?.telemetry ?? [],
-      loggedAt: sortie?.loggedAt ?? now(),
       ...(photos && {photos}),
-    };
-    put('sorties', saved);
+    } satisfies Partial<Sortie>;
+    if (sortie) {
+      // Only what the form shows is written: the logs, crash marks and weather stay as the server has them. The
+      // weather is read again for another day, spot or indoors.
+      const moved = date !== sortie.date || chosenSpot !== sortie.spotId || indoor !== Boolean(sortie.indoor);
+      const drop = (['spotId', 'indoor', 'photos'] as const).filter(key => !(key in fields));
+      patch('sorties', sortie.id, fields, moved ? [...drop, 'weather'] : drop);
+    } else {
+      put('sorties', {id: newId(), ...fields, telemetry: [], loggedAt: now()});
+    }
     // The heli remembers its pack time for the next sortie.
     const heli = findHeli(heliId);
     if (heli && seconds && heli.timer !== seconds && !sortie) put('helis', {...heli, timer: seconds});

@@ -717,11 +717,17 @@ export default function RadioView() {
     const read = async () => {
       try {
         const response = await fetch('/api/radio', {cache: 'no-store'});
-        if (!response.ok) throw new Error('no card');
+        if (!response.ok) throw new Error(`The radio card could not be read (the server answered ${response.status})`);
         const read = (await response.json()) as Card;
         if (current) setCard(read);
-      } catch {
-        if (current) setCard({from: '', models: [], widgets: []});
+      } catch (error) {
+        if (!current) return;
+        setCard({from: '', models: [], widgets: []});
+        setProblem(
+          error instanceof TypeError || !navigator.onLine
+            ? 'No connection: the radio card could not be read'
+            : message(error),
+        );
       }
     };
     void read();

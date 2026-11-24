@@ -15,7 +15,7 @@ const CRASH_COUNTS = [0, 1, 2, 3];
  * logs have made a sortie. Tapping the lit chip takes it off again: the crashes back to not counted, no spot.
  */
 export function SortieQuickFacts({sortie}: {sortie: Sortie}) {
-  const {doc, put} = useStore();
+  const {doc, patch} = useStore();
   const [everySpot, setEverySpot] = useState(false);
   const spots = useMemo(() => spotsByLastUse(doc.spots, sortSorties(doc.sorties)), [doc.spots, doc.sorties]);
   // The sortie's own spot always shows, even when it is not one of the last flown.
@@ -25,15 +25,11 @@ export function SortieQuickFacts({sortie}: {sortie: Sortie}) {
       ? [...CRASH_COUNTS, sortie.crashes]
       : CRASH_COUNTS;
 
-  const setCrashes = (count: number) => put('sorties', {...sortie, crashes: sortie.crashes === count ? null : count});
-  const setSpot = (spotId: string) => {
-    const {spotId: current, ...rest} = sortie;
-    put('sorties', current === spotId ? rest : {...rest, spotId});
-  };
-  const toggleIndoor = () => {
-    const {indoor, ...rest} = sortie;
-    put('sorties', indoor ? rest : {...rest, indoor: true});
-  };
+  const setCrashes = (count: number) => patch('sorties', sortie.id, {crashes: sortie.crashes === count ? null : count});
+  const setSpot = (spotId: string) =>
+    sortie.spotId === spotId ? patch('sorties', sortie.id, {}, ['spotId']) : patch('sorties', sortie.id, {spotId});
+  const toggleIndoor = () =>
+    sortie.indoor ? patch('sorties', sortie.id, {}, ['indoor']) : patch('sorties', sortie.id, {indoor: true});
 
   return (
     <div className="quick-facts">

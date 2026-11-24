@@ -1,7 +1,8 @@
 import {KINDS, type Doc, type TelemetrySeries} from '../src/types.js';
 import {handle, HttpError, json, readJson} from './_lib/http.js';
 import {requireOwner} from './_lib/owner.js';
-import {deleteItem, isKind, putItem, readDoc, replaceDoc} from './_lib/store.js';
+import {deleteItem, isKind, putItem, readDoc, readItem, replaceDoc} from './_lib/store.js';
+import {patchItem} from '../src/model/patch.js';
 
 /** No item comes near this: a bigger one is a mistake, not a sortie. */
 const MAX_ITEM = 200_000;
@@ -14,12 +15,26 @@ export function GET(request: Request) {
   });
 }
 
-/** POST /api/data { kind, item }: adds an item or replaces the one with its id. */
+/**
+ * POST /api/data { kind, item }: adds an item or replaces the one with its id.
+ * POST /api/data { type: 'patch', kind, id, fields, drop }: sets some fields of an item and takes others out.
+ */
 export function POST(request: Request) {
   return handle(async () => {
     requireOwner(request);
-    const {kind, item} = await readJson(request);
+    const {type, kind, item, id, fields, drop} = await readJson(request);
     if (!isKind(kind)) throw new HttpError(400, 'Unknown kind of item');
+    if (type === 'patch') {
+      if (typeof id !== 'string' || !fields || typeof fields !== 'object')
+        throw new HttpError(400, 'Say what to change');
+      const keys = Array.isArray(drop) ? drop.filter((key): key is string => typeof key === 'string') : [];
+      const current = await readItem(kind, id);
+      if (!current) throw new HttpError(404, 'This item is no longer in the log');
+      const next = patchItem(current, fields as Record<string, unknown>, keys);
+      if (JSON.stringify(next).length > MAX_ITEM) throw new HttpError(413, 'This item is too big');
+      await putItem(kind, next);
+      return json({ok: true});
+    }
     if (!item || typeof item !== 'object' || typeof (item as {id?: unknown}).id !== 'string') {
       throw new HttpError(400, 'An item needs an id');
     }

@@ -179,7 +179,8 @@ export class FlipGuide {
     dt: number,
     found: Manoeuvre[],
   ): {controls: Controls; manoeuvre: boolean} {
-    const now = found.find(one => second >= one.from - 0.2 && second <= one.to + FINISH_FOR);
+    // The latest one begun: a flip right after another takes over from its finish.
+    const now = found.findLast(one => second >= one.from - 0.2 && second <= one.to + FINISH_FOR);
     if (!now) {
       this.current = null;
       return {controls, manoeuvre: false};

@@ -58,6 +58,10 @@ export async function putItem(kind: Kind, item: {id: string}) {
   await redis().hset(kindKey(kind), {[item.id]: item});
 }
 
+export async function readItem(kind: Kind, id: string) {
+  return redis().hget<{id: string}>(kindKey(kind), id);
+}
+
 export async function deleteItem(kind: Kind, id: string) {
   await redis().hdel(kindKey(kind), id);
 }

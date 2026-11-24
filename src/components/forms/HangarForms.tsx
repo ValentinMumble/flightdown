@@ -714,7 +714,7 @@ export function TipForm({tip}: {tip?: Tip}) {
 
 /** A new spot, or one renamed, placed on the map, or merged into another: its sorties move there. */
 export function SpotForm({spot}: {spot?: Spot}) {
-  const {doc, put, remove} = useStore();
+  const {doc, put, patch, remove} = useStore();
   const {close, toast} = useOverlay();
   const [name, setName] = useState(spot?.name ?? '');
   const [emoji, setEmoji] = useState(spot?.emoji ?? '');
@@ -778,7 +778,7 @@ export function SpotForm({spot}: {spot?: Spot}) {
       onSubmit={event => {
         event.preventDefault();
         if (spot && into) {
-          for (const sortie of sorties) put('sorties', {...sortie, spotId: into});
+          for (const sortie of sorties) patch('sorties', sortie.id, {spotId: into});
           remove('spots', spot.id);
           close();
           toast(`Merged ${sorties.length} sorties`);

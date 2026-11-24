@@ -8,10 +8,10 @@ const AT_ONCE = 4;
 /**
  * Fills in the weather of the sorties that need it (outdoors, at a located spot, flown in hours that are past), in the
  * background: on the owner's log and a visitor's own, not the sample. A sortie Open-Meteo has nothing for is asked
- * again only on the next visit. Only the weather is written, onto the sortie as it is by then.
+ * again only on the next visit. Only the weather is written, onto the sortie as the server has it.
  */
 export function useSortieWeather() {
-  const {mode, doc, put} = useStore();
+  const {mode, doc, patch} = useStore();
   const latest = useRef(doc);
   latest.current = doc;
   const busy = useRef(false);
@@ -35,7 +35,7 @@ export function useSortieWeather() {
           const now = latest.current.sorties.find(sortie => sortie.id === next.id);
           // Written only while the sortie is still at that spot: one moved since is read again on the next pass.
           if (weather && now) {
-            if (now.spotId === weather.spotId) put('sorties', {...now, weather});
+            if (now.spotId === weather.spotId) patch('sorties', now.id, {weather});
             tried.current.delete(next.id);
           }
         }
@@ -44,5 +44,5 @@ export function useSortieWeather() {
       busy.current = false;
     };
     void run();
-  }, [mode, doc, put]);
+  }, [mode, doc, patch]);
 }

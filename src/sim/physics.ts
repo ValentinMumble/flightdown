@@ -413,7 +413,8 @@ export function step(
     lowest = Math.min(lowest, scratch.point.copy(end).applyQuaternion(state.attitude).add(state.position).y);
   }
   const tilt = tiltOf(state.attitude);
-  const tipLow = state.position.y + up.y * hubHeight(params) - radius * Math.sin(Math.min(tilt, Math.PI / 2));
+  // The disc's lowest tip: a full radius below the hub on its side, none upside down (the disc level again).
+  const tipLow = state.position.y + up.y * hubHeight(params) - radius * Math.sin(tilt);
   const crash = (why: string) => {
     state.crashed = why;
     events.crashed = why;

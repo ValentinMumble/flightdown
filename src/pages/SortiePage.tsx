@@ -1,7 +1,7 @@
 import {useMemo, useRef} from 'react';
 import {Link, useParams} from 'react-router';
 import {ChevronRight, ExternalLink, FileUp, MapPin, Pencil, Wrench} from 'lucide-react';
-import type {Sortie, TurnWay} from '../types';
+import type {TurnWay} from '../types';
 import {useStore} from '../data/store';
 import {Card, Empty, HeliName, PageHeader, spotLabel, useOverlay} from '../components/ui';
 import {FlightStrip} from '../components/SortieRow';
@@ -37,7 +37,7 @@ function linkLabel(url: string) {
 
 export function SortiePage() {
   const {id} = useParams();
-  const {doc, heli, spot, put, saveSeries} = useStore();
+  const {doc, heli, spot, patch, saveSeries} = useStore();
   const {open, toast} = useOverlay();
   const fileInput = useRef<HTMLInputElement>(null);
   const sortie = doc.sorties.find(one => one.id === id);
@@ -101,13 +101,13 @@ export function SortiePage() {
       logs.push(read.log);
       added += 1;
     }
-    if (added) put('sorties', {...sortie, telemetry: logs} satisfies Sortie);
+    if (added) patch('sorties', sortie.id, {telemetry: logs});
     toast(added ? `${plural(added, 'log')} added` : 'No EdgeTX log found in that file');
   };
 
   const removeLog = (logId: string) => {
     if (!window.confirm('Remove this log from the sortie?')) return;
-    put('sorties', {...sortie, telemetry: sortie.telemetry.filter(log => log.id !== logId)});
+    patch('sorties', sortie.id, {telemetry: sortie.telemetry.filter(log => log.id !== logId)});
   };
 
   return (
@@ -304,7 +304,7 @@ export function SortiePage() {
             heliId={sortie.heliId}
             crashTimes={sortie.crashTimes ?? []}
             onCrashTimes={times =>
-              put('sorties', {...sortie, crashTimes: times, crashes: Math.max(sortie.crashes ?? 0, times.length)})
+              patch('sorties', sortie.id, {crashTimes: times, crashes: Math.max(sortie.crashes ?? 0, times.length)})
             }
             pack={pack}
             packs={packs}

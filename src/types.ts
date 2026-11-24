@@ -235,6 +235,8 @@ export type Item<K extends Kind> = Doc[K][number];
 /** A change to the log, as the page sends it to the server. */
 export type Change =
   | {type: 'put'; kind: Kind; item: {id: string}}
+  /** Sets some fields of an item and takes others out, leaving the rest as the server has it. */
+  | {type: 'patch'; kind: Kind; id: string; fields: Record<string, unknown>; drop?: string[]}
   | {type: 'delete'; kind: Kind; id: string}
   | {type: 'replace'; doc: Doc; series: TelemetrySeries[]}
   | {type: 'telemetry'; series: TelemetrySeries};

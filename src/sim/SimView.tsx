@@ -402,6 +402,9 @@ export default function SimView({
     let idleUp = 2;
     let mixedFor: CardModel | null = null;
     let playedFrom = -1;
+    // The replay's own clock, the log's second: it moves with the physics, so a slow frame or a hidden tab never
+    // leaves the heli behind the log.
+    let replayClock = 0;
     let flips = new FlipGuide(params);
     let pickedUp = 0;
     let mixer: ModelMixer | null = null;
@@ -506,21 +509,25 @@ export default function SimView({
       const replay = live.current.replay;
       let ghost: Controls | null = null;
       let replayAt: number | null = null;
+      // Flying the log: the pilot for each physics step, as `npm run replay` scores it.
+      let flying: ((second: number) => Controls) | null = null;
       let loggedIdleUp = 0;
       if (replay) {
         // Each start, or start again on another pack or way of replaying, puts the heli back on the pad.
         if (replay.startedAt !== playedFrom) {
           playedFrom = replay.startedAt;
           flips = new FlipGuide(params);
+          replayClock = replay.from;
           pickedUp = 0;
           state = start();
           drill = startDrill(kind, facing);
           used = 0;
         }
-        const second = replay.from + (now - replay.startedAt) / 1000;
+        const second = replayClock;
         if (second <= replayEnd(replay.series)) {
           replayAt = second;
-          ghost = loggedControls(replay.series, second, mixer?.mapping ?? modelMapping(live.current.model));
+          const logMapping = mixer?.mapping ?? modelMapping(live.current.model);
+          ghost = loggedControls(replay.series, second, logMapping);
           // The pilot touching the sticks takes the heli back: the replay stops, the heli back on the pad.
           if (
             replay.mode === 'fly' &&
@@ -533,19 +540,24 @@ export default function SimView({
           } else if (replay.mode === 'fly') {
             // The log flies, its flips and rolls made whole turns, the stand-in pilot adding the corrections the log
             // cannot hold (see standIn.ts).
-            const steered = flips.steer(ghost, state, second, dt, replay.stretches);
-            const crashing = replay.crashes.some(crash => second >= crash - LET_CRASH && second <= crash + 1);
-            controls = crashing
-              ? ghost
-              : standIn(
-                  steered.controls,
-                  state,
-                  params,
-                  steered.manoeuvre,
-                  STAND_IN,
-                  untilCut(replay.cuts, second),
-                  untilManoeuvre(replay.stretches, second),
-                );
+            flying = at => {
+              const logged = loggedControls(replay.series, at, logMapping);
+              const steered = flips.steer(logged, state, at, STEP, replay.stretches);
+              const crashing = replay.crashes.some(crash => at >= crash - LET_CRASH && at <= crash + 1);
+              return crashing
+                ? logged
+                : standIn(
+                    steered.controls,
+                    state,
+                    params,
+                    steered.manoeuvre,
+                    STAND_IN,
+                    untilCut(replay.cuts, at),
+                    untilManoeuvre(replay.stretches, at),
+                  );
+            };
+            // Until the first step of the frame flies it (each call moves the flip guide on).
+            controls = ghost;
             outputs = loggedOutputs(replay.series, second);
             const se = sampleAt(replay.series.time, replay.series.channels.se, second) ?? 0;
             // Practice rates: SG down since 24 Nov 2026, SD down before.
@@ -567,8 +579,11 @@ export default function SimView({
       windAt(time, live.current.wind, undefined, gust);
 
       const happened: StepEvents = {};
-      for (spare += dt; spare >= STEP; spare -= STEP)
+      for (spare += dt; spare >= STEP; spare -= STEP) {
+        if (flying) controls = flying(replayClock);
         Object.assign(happened, step(state, controls, params, gust, STEP));
+        if (replay) replayClock += STEP;
+      }
       if (state.crashed) {
         crashedFor += dt;
         // A replay flying the heli goes on: picked up into a hover where it was, the log carrying on. Else back on the
