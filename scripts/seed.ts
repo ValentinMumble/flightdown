@@ -9,8 +9,6 @@
 import {readdir, readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {loadEnv} from 'vite';
-import {Redis} from '@upstash/redis';
-import {KINDS} from '../src/types';
 import {formatAirtime} from '../src/model/format';
 import {airtime} from '../src/model/stats';
 import {matchSortie, modelFromFileName, readTelemetry} from '../src/model/telemetry';
@@ -76,22 +74,11 @@ for (const line of report.skipped) console.log(`  Skipped ${line}`);
 
 if (flags.includes('--dry-run')) process.exit(0);
 
-const url = env.KV_REST_API_URL ?? env.UPSTASH_REDIS_REST_URL;
-const token = env.KV_REST_API_TOKEN ?? env.UPSTASH_REDIS_REST_TOKEN;
-if (!url || !token) throw new Error('Set KV_REST_API_URL and KV_REST_API_TOKEN in .env.local');
-const redis = new Redis({url, token});
-
-const existing = await redis.hlen('flightdown:sorties');
+Object.assign(process.env, env);
+const {kindKey, redis, replaceDoc} = await import('../api/_lib/store');
+const existing = await redis().hlen(kindKey('sorties'));
 if (existing && !flags.includes('--force')) {
   throw new Error(`The store already holds ${existing} sorties: run with --force to replace them`);
 }
-await redis.del(...KINDS.map(kind => `flightdown:${kind}`), 'flightdown:telemetry');
-for (const kind of KINDS) {
-  const items = doc[kind] as {id: string}[];
-  for (let start = 0; start < items.length; start += 200) {
-    const chunk = items.slice(start, start + 200);
-    await redis.hset(`flightdown:${kind}`, Object.fromEntries(chunk.map(item => [item.id, item])));
-  }
-}
-for (const one of series) await redis.hset('flightdown:telemetry', {[one.id]: one});
-console.log(`Wrote the log to ${new URL(url).hostname} under flightdown:*`);
+await replaceDoc(doc, series);
+console.log('Wrote the log to the store of .env.local under flightdown:*');

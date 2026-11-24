@@ -48,7 +48,7 @@ export default function SimCockpit({model: name, feed}: {model: string; feed: {c
     const radio = new Radio(element, inputs);
 
     const setUp = async () => {
-      const [runner, card] = await Promise.all([startLua(radio), readCard()]);
+      const [runner, {card}] = await Promise.all([startLua(radio), readCard()]);
       if (stopped) return;
       model = card?.models.find(one => one.name === name) ?? null;
       if (!card || !model) {

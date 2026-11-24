@@ -12,6 +12,9 @@ import {
 } from '../types';
 import {today} from '../model/format';
 import {sampleLog} from './sample';
+import {forget, readJson, writeJson} from './storage';
+import {forgetKept, keep, keptKeys, localSeriesKept, OWNER_DOC, readKept, seriesKept} from './deviceCache';
+import {call, readAnswer} from './http';
 import {patchItem} from '../model/patch';
 
 /**
@@ -24,37 +27,15 @@ import {patchItem} from '../model/patch';
 export type Mode = 'loading' | 'owner' | 'local' | 'sample';
 
 const LOCAL = 'flightdown.local';
+/** Where the owner's log was kept before it moved to IndexedDB: read once, then dropped. */
 const OWNER_CACHE = 'flightdown.owner-cache';
 const OUTBOX = 'flightdown.outbox';
 const PENDING_KEY = 'flightdown.owner-key';
+/** Where a visitor's samples were kept before they moved to IndexedDB: still read. */
 const seriesKey = (id: string) => `flightdown.series.${id}`;
+/** After the log is read, the samples of this many latest logs are kept on the device for the field. */
+const KEEP_LATEST = 40;
 const HINT = 'flightdown_owner=1';
-
-function readJson<T>(key: string): T | null {
-  try {
-    const text = localStorage.getItem(key);
-    return text ? (JSON.parse(text) as T) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeJson(key: string, value: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function forget(key: string) {
-  try {
-    localStorage.removeItem(key);
-  } catch {
-    // Nothing stored.
-  }
-}
 
 /** A kind of pack as kept before its packs were listed one by one: how many, how many dead, their buttons. */
 type CountedBattery = Omit<Battery, 'packs'> & {
@@ -94,7 +75,6 @@ function upgrade(doc: Partial<Doc>): Doc {
 }
 
 export function applyChange(doc: Doc, change: Change): Doc {
-  if (change.type === 'replace') return upgrade(change.doc);
   if (change.type === 'telemetry') return doc;
   const list = doc[change.kind] as {id: string}[];
   if (change.type === 'patch') {
@@ -107,17 +87,30 @@ export function applyChange(doc: Doc, change: Change): Doc {
   return {...doc, [change.kind]: next};
 }
 
+/**
+ * What becomes of a change the server did not take: kept until the owner signs in again (a cookie gone, a new key),
+ * dropped for good (the server refused it, and says why), or sent again later (no connection, the server busy).
+ */
+export function afterRefusal(status: number | undefined): 'sign-in' | 'drop' | 'retry' {
+  if (status === 401 || status === 403) return 'sign-in';
+  if (status && status >= 400 && status < 500 && status !== 408 && status !== 429) return 'drop';
+  return 'retry';
+}
+
+/** The outbox once a change went: only that change comes off its head, should another tab have taken it off already. */
+export function afterSent(queued: Change[], sent: Change): Change[] {
+  return queued.length && JSON.stringify(queued[0]) === JSON.stringify(sent) ? queued.slice(1) : queued;
+}
+
 async function send(change: Change) {
   const headers = {'Content-Type': 'application/json'};
   let answer: Response;
   if (change.type === 'put' || change.type === 'patch') {
-    answer = await fetch('/api/data', {method: 'POST', headers, body: JSON.stringify(change)});
+    answer = await call('/api/data', {method: 'POST', headers, body: JSON.stringify(change)});
   } else if (change.type === 'delete') {
-    answer = await fetch(`/api/data?kind=${change.kind}&id=${encodeURIComponent(change.id)}`, {method: 'DELETE'});
-  } else if (change.type === 'telemetry') {
-    answer = await fetch('/api/telemetry', {method: 'POST', headers, body: JSON.stringify(change.series)});
+    answer = await call(`/api/data?kind=${change.kind}&id=${encodeURIComponent(change.id)}`, {method: 'DELETE'});
   } else {
-    answer = await fetch('/api/data', {method: 'PUT', headers, body: JSON.stringify(change)});
+    answer = await call('/api/telemetry', {method: 'POST', headers, body: JSON.stringify(change.series)});
   }
   if (!answer.ok) {
     const {error} = (await answer.json().catch(() => ({}))) as {error?: string};
@@ -146,8 +139,6 @@ interface Store {
     drop?: readonly (keyof Doc[K][number] & string)[],
   ) => void;
   remove: (kind: Kind, id: string) => void;
-  /** Replaces the whole log (an import). */
-  replace: (doc: Doc, series: TelemetrySeries[]) => Promise<void>;
   saveSeries: (series: TelemetrySeries) => void;
   loadSeries: (id: string) => Promise<TelemetrySeries | null>;
   signIn: (key: string) => Promise<void>;
@@ -210,23 +201,16 @@ export function StoreProvider({children}: {children: ReactNode}) {
         try {
           await send(next);
         } catch (failure) {
-          const status = (failure as {status?: number}).status;
-          // Not signed in any more (a cookie gone, a new key): the changes wait for the owner to sign in again.
-          if (status === 401 || status === 403) {
+          const outcome = afterRefusal((failure as {status?: number}).status);
+          if (outcome === 'sign-in') {
             setError('Sign in again in Settings: your changes are kept until then');
             break;
           }
-          // The server refused this change for good (not a lost connection): drop it and say so.
-          if (status && status >= 400 && status < 500 && status !== 408 && status !== 429) {
-            setError((failure as Error).message);
-          } else {
-            break;
-          }
+          if (outcome === 'retry') break;
+          setError((failure as Error).message);
         }
-        // Read again: changes made while this one was on its way were added behind it, and must stay. Only the change
-        // sent comes off, should another tab have taken it off already.
-        const queued = readJson<Change[]>(OUTBOX) ?? [];
-        const rest = queued.length && JSON.stringify(queued[0]) === JSON.stringify(next) ? queued.slice(1) : queued;
+        // Read again: changes made while this one was on its way were added behind it, and must stay.
+        const rest = afterSent(readJson<Change[]>(OUTBOX) ?? [], next);
         writeJson(OUTBOX, rest);
         setWaiting(rest.length);
       }
@@ -240,17 +224,37 @@ export function StoreProvider({children}: {children: ReactNode}) {
   }, []);
 
   const loadOwner = useCallback(async () => {
-    const answer = await fetch('/api/data', {headers: {Accept: 'application/json'}});
+    const answer = await call('/api/data', {headers: {Accept: 'application/json'}});
     if (answer.status === 403 || answer.status === 404 || answer.status === 503) return false;
     if (!answer.ok) throw new Error(`The server answered ${answer.status}`);
-    const fresh = upgrade((await answer.json()) as Doc);
+    const fresh = upgrade(await readAnswer<Doc>(answer));
     // Changes still in the outbox are not on the server yet: laid over what it sent.
     const outbox = readJson<Change[]>(OUTBOX) ?? [];
     const merged = outbox.reduce(applyChange, fresh);
     setDoc(merged);
-    writeJson(OWNER_CACHE, merged);
+    void keep(OWNER_DOC, merged);
+    forget(OWNER_CACHE);
     setMode('owner');
-    return true;
+    return merged;
+  }, []);
+
+  /** The samples of the latest logs, kept on the device in the background, so the field has them with no signal. */
+  const keepLatestSeries = useCallback(async (log: Doc) => {
+    const kept = await keptKeys(seriesKept(''));
+    const latest = [...log.sorties]
+      .sort((left, right) => right.date.localeCompare(left.date))
+      .flatMap(sortie => sortie.telemetry.map(file => file.id))
+      .slice(0, KEEP_LATEST)
+      .filter(id => !kept.has(seriesKept(id)));
+    for (const id of latest) {
+      if (!navigator.onLine || modeRef.current !== 'owner') return;
+      try {
+        const answer = await call(`/api/telemetry?id=${encodeURIComponent(id)}`);
+        if (answer.ok) await keep(seriesKept(id), await readAnswer<TelemetrySeries>(answer));
+      } catch {
+        return;
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -271,14 +275,16 @@ export function StoreProvider({children}: {children: ReactNode}) {
         if (answer && answer.status !== 0) forget(PENDING_KEY);
       }
       const ownerBrowser = document.cookie.split(/;\s*/).includes(HINT);
-      const cached = ownerBrowser ? readJson<Doc>(OWNER_CACHE) : null;
+      const cached = ownerBrowser ? ((await readKept<Doc>(OWNER_DOC)) ?? readJson<Doc>(OWNER_CACHE)) : null;
       if (cached) {
         setDoc(upgrade(cached));
         setMode('owner');
       }
       try {
-        if (await loadOwner()) {
+        const fresh = await loadOwner();
+        if (fresh) {
           void flush();
+          void keepLatestSeries(fresh);
           return;
         }
       } catch {
@@ -286,10 +292,11 @@ export function StoreProvider({children}: {children: ReactNode}) {
         if (cached) return;
       }
       forget(OWNER_CACHE);
+      void forgetKept('owner:');
       showVisitor();
     };
     void start();
-  }, [flush, loadOwner, showVisitor]);
+  }, [flush, loadOwner, keepLatestSeries, showVisitor]);
 
   // Back on the page: the log may have changed elsewhere (another device, `npm run logs`), so it is read again
   // before an edit here sends an old copy of an item over the new one.
@@ -326,7 +333,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
         if (modeRef.current === 'local' && !writeJson(LOCAL, next)) {
           queueMicrotask(() => setError('This browser is full: the last change was not kept'));
         }
-        if (modeRef.current === 'owner') writeJson(OWNER_CACHE, next);
+        if (modeRef.current === 'owner') void keep(OWNER_DOC, next);
         return next;
       });
       if (modeRef.current === 'owner') {
@@ -350,6 +357,33 @@ export function StoreProvider({children}: {children: ReactNode}) {
   const helis = useMemo(() => new Map(doc.helis.map(heli => [heli.id, heli])), [doc.helis]);
   const spots = useMemo(() => new Map(doc.spots.map(spot => [spot.id, spot])), [doc.spots]);
 
+  // Kept the same while the mode stays, so views that read samples do not read them again on every change to the log.
+  const loadSeries = useCallback(
+    async (id: string): Promise<TelemetrySeries | null> => {
+      const cached = seriesCache.current.get(id);
+      if (cached) return cached;
+      let found: TelemetrySeries | null = null;
+      if (mode === 'sample') found = sampleSeries.current.find(series => series.id === id) ?? null;
+      else if (mode === 'local') {
+        found = (await readKept<TelemetrySeries>(localSeriesKept(id))) ?? readJson<TelemetrySeries>(seriesKey(id));
+      } else {
+        const waitingSeries = (readJson<Change[]>(OUTBOX) ?? []).find(
+          change => change.type === 'telemetry' && change.series.id === id,
+        );
+        if (waitingSeries?.type === 'telemetry') found = waitingSeries.series;
+        else found = await readKept<TelemetrySeries>(seriesKept(id));
+        if (!found) {
+          const answer = await call(`/api/telemetry?id=${encodeURIComponent(id)}`);
+          found = answer.ok ? await readAnswer<TelemetrySeries>(answer) : null;
+          if (found) void keep(seriesKept(id), found);
+        }
+      }
+      if (found) seriesCache.current.set(id, found);
+      return found;
+    },
+    [mode],
+  );
+
   const store = useMemo<Store>(
     () => ({
       mode,
@@ -368,48 +402,18 @@ export function StoreProvider({children}: {children: ReactNode}) {
           ...(drop?.length && {drop: [...drop]}),
         }),
       remove: (kind, id) => commit({type: 'delete', kind, id}),
-      replace: async (next, series) => {
-        if (mode === 'owner') {
-          await send({type: 'replace', doc: next, series});
-          writeJson(OUTBOX, []);
-          setWaiting(0);
-          seriesCache.current.clear();
-          setDoc(upgrade(next));
-          writeJson(OWNER_CACHE, next);
-          return;
-        }
-        for (const one of series) writeJson(seriesKey(one.id), one);
-        writeJson(LOCAL, next);
-        setDoc(upgrade(next));
-        setMode('local');
-      },
       saveSeries: series => {
         seriesCache.current.set(series.id, series);
-        if (mode === 'local') writeJson(seriesKey(series.id), series);
+        if (mode === 'local') void keep(localSeriesKept(series.id), series);
         if (mode === 'sample') sampleSeries.current.push(series);
-        if (mode === 'owner') commit({type: 'telemetry', series});
-      },
-      loadSeries: async id => {
-        const cached = seriesCache.current.get(id);
-        if (cached) return cached;
-        let found: TelemetrySeries | null = null;
-        if (mode === 'sample') found = sampleSeries.current.find(series => series.id === id) ?? null;
-        else if (mode === 'local') found = readJson<TelemetrySeries>(seriesKey(id));
-        else {
-          const waitingSeries = (readJson<Change[]>(OUTBOX) ?? []).find(
-            change => change.type === 'telemetry' && change.series.id === id,
-          );
-          if (waitingSeries?.type === 'telemetry') found = waitingSeries.series;
-          else {
-            const answer = await fetch(`/api/telemetry?id=${encodeURIComponent(id)}`);
-            found = answer.ok ? ((await answer.json()) as TelemetrySeries) : null;
-          }
+        if (mode === 'owner') {
+          void keep(seriesKept(series.id), series);
+          commit({type: 'telemetry', series});
         }
-        if (found) seriesCache.current.set(id, found);
-        return found;
       },
+      loadSeries,
       signIn: async key => {
-        const answer = await fetch('/api/login', {
+        const answer = await call('/api/login', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({key}),
@@ -418,7 +422,9 @@ export function StoreProvider({children}: {children: ReactNode}) {
           const {error: message} = (await answer.json().catch(() => ({}))) as {error?: string};
           throw new Error(message ?? 'This key did not work');
         }
-        if (!(await loadOwner())) throw new Error('Signed in, but the log could not be read');
+        const fresh = await loadOwner();
+        if (!fresh) throw new Error('Signed in, but the log could not be read');
+        void keepLatestSeries(fresh);
         setError(null);
         void flush();
       },
@@ -426,13 +432,14 @@ export function StoreProvider({children}: {children: ReactNode}) {
         await fetch('/api/logout', {method: 'POST'}).catch(() => null);
         forget(OWNER_CACHE);
         forget(OUTBOX);
+        void forgetKept('owner:');
         setWaiting(0);
         seriesCache.current.clear();
         showVisitor();
       },
       startLocal: from => {
         const next = from === 'sample' ? doc : emptyDoc();
-        if (from === 'sample') for (const one of sampleSeries.current) writeJson(seriesKey(one.id), one);
+        if (from === 'sample') for (const one of sampleSeries.current) void keep(localSeriesKept(one.id), one);
         writeJson(LOCAL, next);
         setDoc(next);
         setMode('local');
@@ -442,7 +449,21 @@ export function StoreProvider({children}: {children: ReactNode}) {
         showSample();
       },
     }),
-    [mode, doc, waiting, error, helis, spots, commit, flush, loadOwner, showVisitor, showSample],
+    [
+      mode,
+      doc,
+      waiting,
+      error,
+      helis,
+      spots,
+      commit,
+      flush,
+      loadSeries,
+      loadOwner,
+      keepLatestSeries,
+      showVisitor,
+      showSample,
+    ],
   );
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;

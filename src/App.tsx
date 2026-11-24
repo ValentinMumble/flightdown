@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {lazy, Suspense, useEffect, useRef, useState} from 'react';
 import {Link, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType} from 'react-router';
 import {
   BookOpen,
@@ -19,16 +19,19 @@ import {RotorMark} from './components/instruments';
 import {SortieForm} from './components/forms/SortieForm';
 import {Home} from './pages/Home';
 import {Sorties} from './pages/Sorties';
-import {SortiePage} from './pages/SortiePage';
-import {Stats} from './pages/Stats';
 import {Hangar} from './pages/Hangar';
 import {Radio} from './pages/Radio';
-import {HeliPage} from './pages/HeliPage';
 import {Settings} from './pages/Settings';
-import {Spots} from './pages/Spots';
-import {Sim} from './pages/Sim';
 import {useTabSwipe} from './components/useTabSwipe';
 import {useSortieWeather} from './data/useSortieWeather';
+
+// The heavier pages load when first opened (the sim's 3D, the charts, the maps); the service worker keeps them all on the
+// device, so they open offline too.
+const SortiePage = lazy(async () => ({default: (await import('./pages/SortiePage')).SortiePage}));
+const Stats = lazy(async () => ({default: (await import('./pages/Stats')).Stats}));
+const HeliPage = lazy(async () => ({default: (await import('./pages/HeliPage')).HeliPage}));
+const Spots = lazy(async () => ({default: (await import('./pages/Spots')).Spots}));
+const Sim = lazy(async () => ({default: (await import('./pages/Sim')).Sim}));
 
 /** The views, in the order of the wide screens' bar and the phone's dock. */
 const TABS = [
@@ -208,22 +211,24 @@ function Shell() {
     <div className="app">
       <CockpitBar />
       <main className="main">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/sorties" element={<Sorties />} />
-          <Route path="/sorties/:id" element={<SortiePage />} />
-          <Route path="/stats" element={<Stats />} />
-          <Route path="/hangar" element={<Hangar />} />
-          {/* The radio was a view of the Hangar: its old link leads to its tab. */}
-          <Route path="/hangar/radio" element={<Navigate to="/radio" replace />} />
-          <Route path="/hangar/:view" element={<Hangar />} />
-          <Route path="/radio" element={<Radio />} />
-          <Route path="/helis/:id" element={<HeliPage />} />
-          <Route path="/spots" element={<Spots />} />
-          <Route path="/sim" element={<Sim />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={<div className="page" aria-busy="true" />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/sorties" element={<Sorties />} />
+            <Route path="/sorties/:id" element={<SortiePage />} />
+            <Route path="/stats" element={<Stats />} />
+            <Route path="/hangar" element={<Hangar />} />
+            {/* The radio was a view of the Hangar: its old link leads to its tab. */}
+            <Route path="/hangar/radio" element={<Navigate to="/radio" replace />} />
+            <Route path="/hangar/:view" element={<Hangar />} />
+            <Route path="/radio" element={<Radio />} />
+            <Route path="/helis/:id" element={<HeliPage />} />
+            <Route path="/spots" element={<Spots />} />
+            <Route path="/sim" element={<Sim />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
       <Dock />
     </div>

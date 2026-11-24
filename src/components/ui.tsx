@@ -262,3 +262,13 @@ export function Segmented<T extends string>({
     </div>
   );
 }
+
+/** A figure in a row of them: its name over its value. */
+export function Figure({label, children}: {label: ReactNode; children: ReactNode}) {
+  return (
+    <div>
+      <div className="figure-label">{label}</div>
+      <div className="figure-value">{children}</div>
+    </div>
+  );
+}

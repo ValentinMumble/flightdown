@@ -214,6 +214,12 @@ export interface Gear {
   notes?: string;
   /** A link to a photo of it, cut out of its white background as the helis' are. */
   photo?: string;
+  /**
+   * A radio's clock against the local time, in hours: 1 when it still keeps summer time after the clocks went back (the
+   * TX16S's clock does not change by itself). Its logs' times are moved by it where they meet the real time: the hours
+   * a sortie's weather is read for, the radio's changes since the last flight. Left out when on time.
+   */
+  clockAhead?: number;
 }
 
 export interface Doc {
@@ -238,7 +244,6 @@ export type Change =
   /** Sets some fields of an item and takes others out, leaving the rest as the server has it. */
   | {type: 'patch'; kind: Kind; id: string; fields: Record<string, unknown>; drop?: string[]}
   | {type: 'delete'; kind: Kind; id: string}
-  | {type: 'replace'; doc: Doc; series: TelemetrySeries[]}
   | {type: 'telemetry'; series: TelemetrySeries};
 
 export const emptyDoc = (): Doc => ({

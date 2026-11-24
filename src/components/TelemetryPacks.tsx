@@ -2,23 +2,24 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {Trash} from 'lucide-react';
 import type {TelemetryLog, TelemetrySeries} from '../types';
 import {useStore} from '../data/store';
-import {buttonBattery, groupPacks, joinSeries, packName, packRecords, packUsed} from '../model/packs';
+import {useSeries} from '../data/useSeries';
+import {
+  buttonBattery,
+  crashesIn,
+  groupPacks,
+  joinSeries,
+  packName,
+  packRecords,
+  packUsed,
+  radioSeconds,
+  radioTime,
+} from '../model/packs';
 import {formatTimer, plural} from '../model/format';
 import {TelemetryCharts} from './charts/TelemetryCharts';
 import {topBarHeight} from './topBar';
 
 /** Below this the radio lost the voltage for a sample: left out of the lines. */
 const NO_VOLTAGE = 0.5;
-
-/** A crash marked this long (s) after a pack's last sample still belongs to it: the log stops as the motor is held. */
-const CRASH_GRACE = 5;
-
-const two = (value: number) => String(value).padStart(2, '0');
-/** A moment (ms) as the logs write it: local time, YYYY-MM-DDTHH:MM:SS. */
-function localStamp(moment: number) {
-  const date = new Date(Math.round(moment / 1000) * 1000);
-  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}T${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}`;
-}
 
 /** A pack's voltage as a small line, on a scale shared by every pack of the sortie so their sag compares. */
 function Sparkline({series, low, high}: {series?: TelemetrySeries | null; low: number; high: number}) {
@@ -68,11 +69,16 @@ export function TelemetryPacks({
   packs: number[];
   onRemove: (logId: string) => void;
 }) {
-  const {doc, loadSeries} = useStore();
+  const {doc} = useStore();
   const flights = useMemo(() => groupPacks(logs, packCount), [logs, packCount]);
   const records = useMemo(() => packRecords(doc.sorties, doc.batteries), [doc.sorties, doc.batteries]);
-  // Each file's samples once loaded, null when they could not be read.
-  const [loaded, setLoaded] = useState<Record<string, TelemetrySeries | null>>({});
+  // Each file's samples once loaded, null when they could not be read; none while they are read.
+  const ids = useMemo(() => logs.map(log => log.id), [logs]);
+  const read = useSeries(ids);
+  const loaded = useMemo<Record<string, TelemetrySeries | null>>(
+    () => (read ? Object.fromEntries(ids.map(id => [id, read.get(id) ?? null])) : {}),
+    [read, ids],
+  );
   const [chosen, setChosen] = useState(0);
   // The packs' row stays pinned under the top bar, so another pack is one tap away from anywhere in the charts: it sits
   // as far down as that bar is tall.
@@ -93,20 +99,6 @@ export function TelemetryPacks({
       behavior: 'smooth',
     });
   }, [chosen]);
-
-  useEffect(() => {
-    let current = true;
-    const load = async () => {
-      const entries = await Promise.all(
-        logs.map(async log => [log.id, await loadSeries(log.id).catch(() => null)] as const),
-      );
-      if (current) setLoaded(Object.fromEntries(entries));
-    };
-    void load();
-    return () => {
-      current = false;
-    };
-  }, [logs, loadSeries]);
 
   const joined = useMemo(
     () =>
@@ -133,17 +125,15 @@ export function TelemetryPacks({
   const selected = Math.min(chosen, flights.length - 1);
   const flight = flights[selected];
   // The pack's crashes as seconds of its log (whose 0 is the pack's start), and back to times when marked or unmarked.
-  const startedAt = flight.start ? Date.parse(flight.start) : NaN;
-  const secondOf = (time: string) => (Date.parse(time) - startedAt) / 1000;
-  const inPack = (time: string) => secondOf(time) >= 0 && secondOf(time) <= flight.duration + CRASH_GRACE;
-  const crashes = Number.isNaN(startedAt) ? [] : crashTimes.filter(inPack).map(secondOf);
+  const crashes = crashesIn(flight, crashTimes);
+  const startedAt = flight.start ? radioSeconds(flight.start) : null;
   const markCrashes =
-    onCrashTimes && !Number.isNaN(startedAt)
+    onCrashTimes && startedAt !== null
       ? (seconds: number[]) =>
           onCrashTimes(
             [
-              ...crashTimes.filter(time => !inPack(time)),
-              ...seconds.map(second => localStamp(startedAt + second * 1000)),
+              ...crashTimes.filter(time => !crashesIn(flight, [time]).length),
+              ...seconds.map(second => radioTime(startedAt + second)),
             ].sort(),
           )
       : undefined;

@@ -2,9 +2,10 @@ import {useEffect, useMemo, useState} from 'react';
 import {useStore} from '../data/store';
 import {Empty} from './ui';
 import {Panel} from './instruments';
-import {lastSession, sessionEnd} from '../model/session';
+import {lastSession, radioClockAhead, sessionEnd} from '../model/session';
 import {sortSorties} from '../model/stats';
 import {ago} from '../model/format';
+import {readJson, writeJson} from '../data/storage';
 
 /** Where the radio's card lives (as api/_lib/edgetx.ts reads it): its commits are what changed on the radio. */
 const REPO = 'ValentinMumble/edge-tx';
@@ -20,21 +21,12 @@ interface Change {
 
 /** The commits list kept for this `since`, while fresh enough: none when it is missing, old or unreadable. */
 function kept(since: string): {changes: Change[]; at: number} | null {
-  try {
-    const stored = JSON.parse(localStorage.getItem(KEPT) ?? 'null');
-    return stored && stored.since === since ? stored : null;
-  } catch {
-    return null;
-  }
+  const stored = readJson<{since: string; changes: Change[]; at: number}>(KEPT);
+  return stored?.since === since ? stored : null;
 }
 
-function keep(since: string, changes: Change[]) {
-  try {
-    localStorage.setItem(KEPT, JSON.stringify({since, changes, at: Date.now()}));
-  } catch {
-    // Not kept: GitHub is asked again next time.
-  }
-}
+/** Not kept (storage full or blocked): GitHub is asked again next time. */
+const keep = (since: string, changes: Change[]) => writeJson(KEPT, {since, changes, at: Date.now()});
 
 /**
  * What changed on the radio since the last flight: edge-tx's commits since the latest session's last log ended, each
@@ -44,8 +36,10 @@ export function RadioChanges({className = ''}: {className?: string}) {
   const {doc} = useStore();
   const since = useMemo(() => {
     const session = lastSession(sortSorties(doc.sorties));
-    return session ? (sessionEnd(session)?.toISOString() ?? `${session.date}T23:59:59Z`) : null;
-  }, [doc.sorties]);
+    return session
+      ? (sessionEnd(session, radioClockAhead(doc.gear))?.toISOString() ?? `${session.date}T23:59:59Z`)
+      : null;
+  }, [doc.sorties, doc.gear]);
   const [changes, setChanges] = useState<Change[] | null>(() => (since ? (kept(since)?.changes ?? null) : null));
   const [offline, setOffline] = useState(false);
 

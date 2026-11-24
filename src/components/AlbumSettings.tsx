@@ -3,6 +3,7 @@ import {Images} from 'lucide-react';
 import {reloadAlbum, useAlbum} from '../data/album';
 import {plural} from '../model/format';
 import {Card, useOverlay} from './ui';
+import {NO_CONNECTION} from '../data/http';
 
 /**
  * Where the sorties' photos live: an iCloud shared album with its public website on. Its link is kept on the server;
@@ -23,7 +24,7 @@ export function AlbumSettings() {
     }).catch(() => null);
     const body = await answer?.json().catch(() => null);
     setBusy(false);
-    if (!answer?.ok) return toast(body?.error ?? 'Could not reach the server');
+    if (!answer?.ok) return toast(body?.error ?? NO_CONNECTION);
     setLink('');
     toast(value ? `${body.name}: ${plural(body.count, 'photo')}` : 'Album forgotten');
     void reloadAlbum();

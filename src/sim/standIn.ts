@@ -7,7 +7,6 @@
  */
 import {Quaternion, Vector3} from 'three';
 import type {TelemetrySeries} from '../types';
-import {turnOvers} from '../model/insights';
 import type {Controls, HeliParams, HeliState} from './physics';
 import {PAD} from './drills';
 
@@ -216,14 +215,6 @@ export class FlipGuide {
  * sim heli about when the real one did (both K110S crashes of Nov 2026 come within 2 s).
  */
 export const LET_CRASH = 6;
-
-/** The stretches of a log the stand-in keeps out of: its flips and rolls, with a second or so either side. */
-export function manoeuvres(series: TelemetrySeries, margin = 1.2) {
-  return turnOvers(series).map(turn => ({from: turn.start - margin, to: turn.end + margin}));
-}
-
-export const inManoeuvre = (stretches: {from: number; to: number}[], second: number) =>
-  stretches.some(({from, to}) => second >= from && second <= to);
 
 /** Seconds until the log's next manoeuvre starts, or null when none does within `ahead`. */
 export function untilManoeuvre(stretches: {from: number; to: number}[], second: number, ahead = 4): number | null {

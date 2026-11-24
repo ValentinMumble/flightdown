@@ -8,7 +8,7 @@ import {FlightStrip} from '../components/SortieRow';
 import {SortieQuickFacts} from '../components/SortieQuickFacts';
 import {MinuteMeter, Panel} from '../components/instruments';
 import {SortieForm} from '../components/forms/SortieForm';
-import {SpotForm} from '../components/forms/HangarForms';
+import {SpotForm} from '../components/forms/SpotForm';
 import {MiniMap} from '../components/MiniMap';
 import {SortiePhotos} from '../components/SortiePhotos';
 import {TelemetryPacks} from '../components/TelemetryPacks';

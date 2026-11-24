@@ -1,5 +1,6 @@
 import type {TelemetrySeries} from '../types';
 import {CHANNELS, type Channel} from '../model/telemetry';
+import {call} from '../data/http';
 
 /** A file of the radio's card (WIDGETS/Pack/main.lua, IMAGES/M2EVO.png), as /api/radio reads it from edge-tx. */
 export const radioFile = (path: string) => `/api/radio?file=${encodeURIComponent(path)}`;
@@ -14,13 +15,13 @@ export interface WidgetFile {
 }
 
 export async function listWidgets(): Promise<WidgetFile[]> {
-  const response = await fetch('/api/radio?part=widgets', {cache: 'no-store'});
+  const response = await call('/api/radio?part=widgets', {cache: 'no-store'});
   if (!response.ok) throw new Error('No widgets found');
   return (await response.json()) as WidgetFile[];
 }
 
 export async function widgetCode(file: string) {
-  const response = await fetch(radioFile(file), {cache: 'no-store'});
+  const response = await call(radioFile(file), {cache: 'no-store'});
   if (!response.ok) throw new Error(`${file} did not load`);
   return response.text();
 }

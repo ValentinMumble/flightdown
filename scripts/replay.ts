@@ -9,23 +9,15 @@
  */
 import {Vector3} from 'three';
 import {loadEnv} from 'vite';
-import {sortiePacks, joinSeries} from '../src/model/packs';
+import {crashesIn, sortiePacks, joinSeries} from '../src/model/packs';
 import {heliParams, restingState, step} from '../src/sim/physics';
-import {loggedControls, replayStart, replayEnd} from '../src/sim/replay';
+import {replayStart, replayEnd} from '../src/sim/replay';
 import {modelMapping} from '../src/sim/modelMixer';
 import {windAt} from '../src/sim/wind';
 import {radioName} from '../src/radio/widgets';
 import {fetchSortieWeather, weatherSpotFor} from '../src/model/pastWeather';
-import {
-  FlipGuide,
-  LET_CRASH,
-  motorCuts,
-  standIn,
-  stickManoeuvres,
-  STAND_IN,
-  untilCut,
-  untilManoeuvre,
-} from '../src/sim/standIn';
+import {readReplay, ReplayPilot} from '../src/sim/replayPilot';
+import {radioClockAhead} from '../src/model/session';
 
 const env = {...loadEnv('development', process.cwd(), ''), ...process.env};
 Object.assign(process.env, env);
@@ -53,8 +45,9 @@ for (const sortie of [...doc.sorties].sort((left, right) => left.date.localeComp
   const mapping = modelMapping(model);
   let weather = sortie.indoor ? null : (sortie.weather ?? null);
   const spot = doc.spots.find(one => one.id === sortie.spotId);
-  const located = weatherSpotFor(sortie, spot, new Date('2100-01-01'));
-  if (windShare && !weather && !sortie.indoor && located) weather = await fetchSortieWeather(sortie, located);
+  const ahead = radioClockAhead(doc.gear);
+  const located = weatherSpotFor(sortie, spot, new Date('2100-01-01'), ahead);
+  if (windShare && !weather && !sortie.indoor && located) weather = await fetchSortieWeather(sortie, located, ahead);
   const wind = (weather?.wind ?? 0) * windShare;
   const gusts = (weather?.gusts ?? 0) * windShare;
   const air = new Vector3();
@@ -62,13 +55,9 @@ for (const sortie of [...doc.sorties].sort((left, right) => left.date.localeComp
     const parts = await Promise.all(pack.files.map(file => readSeries(file.id)));
     if (parts.some(part => !part)) continue;
     const series = joinSeries(pack, parts as never);
-    const controlsAt = (second: number) => loggedControls(series, second, mapping);
-    const found = stickManoeuvres(series, controlsAt, params);
-    const cuts = motorCuts(series, second => controlsAt(second).throttle);
-    const crashes = (sortie.crashTimes ?? [])
-      .map(time => (Date.parse(time) - Date.parse(pack.start ?? '')) / 1000)
-      .filter(second => second >= 0 && second <= pack.duration + 5);
-    const guide = new FlipGuide(params);
+    const {stretches: found, cuts} = readReplay(series, mapping, params);
+    const crashes = crashesIn(pack, sortie.crashTimes);
+    const pilot = new ReplayPilot({series, stretches: found, cuts, crashes}, params);
     const state = restingState(new Vector3(0, 0, -5));
     const from = replayStart(series);
     const to = replayEnd(series);
@@ -76,20 +65,7 @@ for (const sortie of [...doc.sorties].sort((left, right) => left.date.localeComp
     let crash = '';
     let at = to;
     for (let second = from; second < to; second += DT) {
-      const logged = controlsAt(second);
-      const steered = guide.steer(logged, state, second, DT, found);
-      const crashing = crashes.some(real => second >= real - LET_CRASH && second <= real + 1);
-      const controls = crashing
-        ? logged
-        : standIn(
-            steered.controls,
-            state,
-            params,
-            steered.manoeuvre,
-            STAND_IN,
-            untilCut(cuts, second),
-            untilManoeuvre(found, second),
-          );
+      const controls = pilot.controls(second, state, DT, mapping);
       const events = step(state, controls, params, windAt(second, wind, gusts, air), DT, 1);
       // Each manoeuvre's turn, counted until the next one starts.
       const index = found.findIndex(

@@ -1,7 +1,6 @@
-import {KINDS, type Doc, type TelemetrySeries} from '../src/types.js';
 import {handle, HttpError, json, readJson} from './_lib/http.js';
 import {requireOwner} from './_lib/owner.js';
-import {deleteItem, isKind, putItem, readDoc, readItem, replaceDoc} from './_lib/store.js';
+import {deleteItem, isKind, putItem, readDoc, readItem} from './_lib/store.js';
 import {patchItem} from '../src/model/patch.js';
 
 /** No item comes near this: a bigger one is a mistake, not a sortie. */
@@ -53,21 +52,6 @@ export function DELETE(request: Request) {
     const id = url.searchParams.get('id');
     if (!isKind(kind) || !id) throw new HttpError(400, 'Say which item to delete');
     await deleteItem(kind, id);
-    return json({ok: true});
-  });
-}
-
-/** PUT /api/data { doc, series }: replaces the whole log, as an import does. */
-export function PUT(request: Request) {
-  return handle(async () => {
-    requireOwner(request);
-    const {doc, series} = await readJson(request);
-    if (!doc || typeof doc !== 'object') throw new HttpError(400, 'Expected a log');
-    const log = doc as Doc;
-    for (const kind of KINDS) {
-      if (!Array.isArray(log[kind])) throw new HttpError(400, `The log has no ${kind} list`);
-    }
-    await replaceDoc(log, Array.isArray(series) ? (series as TelemetrySeries[]) : []);
     return json({ok: true});
   });
 }

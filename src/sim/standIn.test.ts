@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {Vector3} from 'three';
 import {heliParams, restingState, step, type Controls} from './physics';
-import {FlipGuide, inManoeuvre, standIn, STAND_IN, stickManoeuvres, untilCut, untilManoeuvre} from './standIn';
+import {FlipGuide, standIn, STAND_IN, stickManoeuvres, untilCut, untilManoeuvre} from './standIn';
 import type {TelemetrySeries} from '../types';
 
 const params = heliParams({weight: 345, rotor: 434});
@@ -46,7 +46,6 @@ describe('the stand-in pilot', () => {
 
   it('knows what the log does next', () => {
     const stretches = [{from: 10, to: 14}];
-    expect(inManoeuvre(stretches, 12)).toBe(true);
     expect(untilManoeuvre(stretches, 7)).toBe(3);
     expect(untilManoeuvre(stretches, 2)).toBeNull();
     expect(untilCut([100], 95)).toBe(5);

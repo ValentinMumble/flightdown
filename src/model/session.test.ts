@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {Sortie} from '../types';
-import {clockAt, holdsInFlight, lastSession, packEvents, sessionEnd} from './session';
+import {flyingHours} from './pastWeather';
+import {clockAt, holdsInFlight, lastSession, packEvents, radioClockAhead, sessionEnd} from './session';
 
 describe('the last session', () => {
   const sortie = (id: string, date: string, logs: number) =>
@@ -53,5 +54,30 @@ describe('throttle hold in flight', () => {
 
   it('says it as an event of the pack', () => {
     expect(packEvents(series, 'up')[0]).toMatchObject({at: 2, text: 'throttle hold at 10 A, back on after 1 s'});
+  });
+});
+
+describe("the radio's clock", () => {
+  it('is on time unless the radio in the hangar says how far it runs ahead', () => {
+    expect(radioClockAhead([])).toBe(0);
+    expect(radioClockAhead([{id: 'r', name: 'TX16S', category: 'radio', clockAhead: 1}])).toBe(1);
+    expect(radioClockAhead([{id: 'r', name: 'Old', category: 'radio', clockAhead: 1, gone: 'sold'}])).toBe(0);
+  });
+
+  it("moves a session's end back by how far the clock runs ahead", () => {
+    const sortie = {telemetry: [{start: '2026-11-24T16:17:31', duration: 29}]} as unknown as Sortie;
+    expect(sessionEnd(sortie)!.getTime() - sessionEnd(sortie, 1)!.getTime()).toBe(3_600_000);
+  });
+});
+
+describe('the hours a sortie flew', () => {
+  it("move back by how far the radio's clock runs ahead", () => {
+    const sortie = {
+      date: '2026-11-24',
+      packs: 1,
+      telemetry: [{id: 'log', name: 'K110S-2026-11-24-160809.csv', start: '2026-11-24T16:08:09', duration: 600}],
+    } as unknown as Sortie;
+    expect(flyingHours(sortie)).toEqual({from: 16, to: 16});
+    expect(flyingHours(sortie, 1)).toEqual({from: 15, to: 15});
   });
 });

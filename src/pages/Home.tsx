@@ -3,7 +3,7 @@ import type {Sortie} from '../types';
 import {Link} from 'react-router';
 import {ChevronRight} from 'lucide-react';
 import {useStore} from '../data/store';
-import {Empty, PageHeader, useOverlay} from '../components/ui';
+import {Empty, Figure, PageHeader, useOverlay} from '../components/ui';
 import {FlightStrip} from '../components/SortieRow';
 import {MinuteMeter, Panel, Rotor, RotorMark, SegmentBar, Stamp, Tape} from '../components/instruments';
 import {SortieForm} from '../components/forms/SortieForm';
@@ -91,22 +91,10 @@ export function Home() {
             </span>
           </div>
           <div className="figures">
-            <div>
-              <div className="figure-label">Sorties</div>
-              <div className="figure-value">{all.sorties}</div>
-            </div>
-            <div>
-              <div className="figure-label">Packs</div>
-              <div className="figure-value">{all.packs}</div>
-            </div>
-            <div>
-              <div className="figure-label">Flying days</div>
-              <div className="figure-value">{all.flyingDays}</div>
-            </div>
-            <div>
-              <div className="figure-label">Helis</div>
-              <div className="figure-value">{tallies.size}</div>
-            </div>
+            <Figure label="Sorties">{all.sorties}</Figure>
+            <Figure label="Packs">{all.packs}</Figure>
+            <Figure label="Flying days">{all.flyingDays}</Figure>
+            <Figure label="Helis">{tallies.size}</Figure>
           </div>
         </Panel>
 
@@ -128,10 +116,7 @@ export function Home() {
           </div>
           {/* The same in time: how long in the air between crashes. */}
           <div className="figures">
-            <div>
-              <div className="figure-label">Time / crash</div>
-              <div className="figure-value">{all.timePerCrash === null ? '–' : formatAirtime(all.timePerCrash)}</div>
-            </div>
+            <Figure label="Time / crash">{all.timePerCrash === null ? '–' : formatAirtime(all.timePerCrash)}</Figure>
             <div>
               <div className="figure-label">Last 20 sorties</div>
               <div className="figure-value">

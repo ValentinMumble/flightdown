@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {Battery, Pack, TelemetryLog, TelemetrySeries} from '../types';
-import {buttonPack, groupPacks, joinSeries, packUsed} from './packs';
+import {buttonPack, crashesIn, groupPacks, joinSeries, packUsed, radioSeconds, radioTime} from './packs';
 
 const file = (id: string, start: string | undefined, duration: number, extra: Partial<TelemetryLog> = {}) =>
   ({id, name: `${id}.csv`, start, duration, samples: duration, ...extra}) as TelemetryLog;
@@ -151,5 +151,19 @@ describe('buttonPack', () => {
     expect(buttonPack(1, moved, '2026-11-20')).toBe('Gens Ace #1');
     expect(buttonPack(1, moved, '2026-11-21')).toBe('Gens Ace #3');
     expect(buttonPack(2, moved, '2026-11-21')).toBe('Gens Ace #2');
+  });
+});
+
+describe('radio times', () => {
+  it('measure between two times with no time zone in between', () => {
+    expect(radioSeconds('2026-10-25T03:30:00') - radioSeconds('2026-10-25T01:30:00')).toBe(7200);
+    expect(radioTime(radioSeconds('2026-11-24T16:09:02') + 58)).toBe('2026-11-24T16:10:00');
+  });
+
+  it("find a sortie's crashes in a pack, as seconds of its log", () => {
+    const pack = {start: '2026-11-24T16:08:09', duration: 120};
+    const crashes = ['2026-11-24T16:09:02', '2026-11-24T16:10:12', '2026-11-24T16:15:08', '2026-11-24T16:08:00'];
+    expect(crashesIn(pack, crashes)).toEqual([53, 123]);
+    expect(crashesIn({duration: 120}, crashes)).toEqual([]);
   });
 });

@@ -1,7 +1,8 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useMemo} from 'react';
 import {Link} from 'react-router';
 import type {Battery, Sortie} from '../../types';
 import {useStore} from '../../data/store';
+import {useSeries} from '../../data/useSeries';
 import {flyingStats, type FlyingStats} from '../../model/flying';
 import {buttonBattery, kindName, sortiePacks} from '../../model/packs';
 import {formatAirtime, formatDay, formatNumber, formatTimer, plural} from '../../model/format';
@@ -43,38 +44,31 @@ const none = (): FlyingStats => ({
 
 /** The logged sorties of those given, each with what its logs say of how it was flown; null while reading them. */
 export function useFlyingStats(sorties: Sortie[]): FlownSortie[] | null {
-  const {doc, loadSeries} = useStore();
+  const {doc} = useStore();
   const logged = useMemo(() => sorties.filter(sortie => sortie.telemetry.length > 0), [sorties]);
-  const [flown, setFlown] = useState<FlownSortie[] | null>(null);
-  useEffect(() => {
-    let current = true;
-    setFlown(null);
-    const load = async () => {
-      const found: FlownSortie[] = [];
-      for (const sortie of logged) {
-        const logs: FlownSortie['logs'] = [];
-        for (const log of sortie.telemetry) {
-          const series = await loadSeries(log.id).catch(() => null);
-          const day = log.start?.slice(0, 10) ?? sortie.date;
-          const stats = series && flyingStats(series, day);
-          if (!stats) continue;
-          const battery = log.packButton
-            ? buttonBattery(log.packButton, doc.batteries, day, sortie.heliId)?.battery
-            : undefined;
-          logs.push({stats, battery});
-        }
-        if (!logs.length) continue;
-        const packs = sortiePacks(sortie).length;
-        found.push({sortie, packs, logs, stats: logs.reduce((sum, log) => addStats(sum, log.stats), none())});
+  const ids = useMemo(() => logged.flatMap(sortie => sortie.telemetry.map(log => log.id)), [logged]);
+  const loaded = useSeries(ids);
+  return useMemo(() => {
+    if (!loaded) return null;
+    const found: FlownSortie[] = [];
+    for (const sortie of logged) {
+      const logs: FlownSortie['logs'] = [];
+      for (const log of sortie.telemetry) {
+        const series = loaded.get(log.id);
+        const day = log.start?.slice(0, 10) ?? sortie.date;
+        const stats = series && flyingStats(series, day);
+        if (!stats) continue;
+        const battery = log.packButton
+          ? buttonBattery(log.packButton, doc.batteries, day, sortie.heliId)?.battery
+          : undefined;
+        logs.push({stats, battery});
       }
-      if (current) setFlown(found);
-    };
-    void load();
-    return () => {
-      current = false;
-    };
-  }, [logged, loadSeries, doc.batteries]);
-  return flown;
+      if (!logs.length) continue;
+      const packs = sortiePacks(sortie).length;
+      found.push({sortie, packs, logs, stats: logs.reduce((sum, log) => addStats(sum, log.stats), none())});
+    }
+    return found;
+  }, [logged, loaded, doc.batteries]);
 }
 
 /** The idle ups, IU1 to IU3, darker to lighter as the head speed climbs. */

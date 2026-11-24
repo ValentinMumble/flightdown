@@ -10,19 +10,22 @@ import {sortiePacks} from './packs';
 /** The hours a sortie with no log is taken to have flown: the afternoon, when the logs that say start. */
 export const DEFAULT_HOURS = {from: 12, to: 17};
 
-/** The hours a sortie flew, the spot's local time, both counted: from its first log's start to its last one's end. */
-export function flyingHours(sortie: Sortie): {from: number; to: number} {
+/**
+ * The hours a sortie flew, the spot's local time, both counted: from its first log's start to its last one's end, the
+ * radio's clock moved back by how far it runs ahead.
+ */
+export function flyingHours(sortie: Sortie, clockAhead = 0): {from: number; to: number} {
   const spans = sortiePacks(sortie).flatMap(pack =>
     pack.files.flatMap(file => {
       const at = /T(\d\d):(\d\d)/.exec(file.start ?? '');
       if (!at) return [];
-      const start = Number(at[1]) + Number(at[2]) / 60;
+      const start = Number(at[1]) + Number(at[2]) / 60 - clockAhead;
       return [[start, start + file.duration / 3600]];
     }),
   );
   if (!spans.length) return DEFAULT_HOURS;
   return {
-    from: Math.floor(Math.min(...spans.map(([start]) => start))),
+    from: Math.max(0, Math.floor(Math.min(...spans.map(([start]) => start)))),
     to: Math.min(23, Math.floor(Math.max(...spans.map(([, end]) => end)))),
   };
 }
@@ -85,10 +88,15 @@ export function readPastWeather(
  * The spot to read a sortie's weather at, when it needs one: flown outdoors at a located spot, on a day whose hours
  * are past (today's once its last hour is), and with no weather yet or one read for another spot or other hours.
  */
-export function weatherSpotFor(sortie: Sortie, spot: Spot | undefined, now = new Date()): (Spot & LatLng) | null {
+export function weatherSpotFor(
+  sortie: Sortie,
+  spot: Spot | undefined,
+  now = new Date(),
+  clockAhead = 0,
+): (Spot & LatLng) | null {
   if (sortie.indoor || !hasLocation(spot)) return null;
   const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const hours = flyingHours(sortie);
+  const hours = flyingHours(sortie, clockAhead);
   if (sortie.date > day || (sortie.date === day && now.getHours() <= hours.to)) return null;
   const kept = sortie.weather;
   const same = kept && kept.spotId === spot.id && kept.from === hours.from && kept.to === hours.to;
@@ -97,10 +105,14 @@ export function weatherSpotFor(sortie: Sortie, spot: Spot | undefined, now = new
 }
 
 /** The weather of a sortie, read now: null when Open-Meteo cannot be reached or has nothing for it. */
-export async function fetchSortieWeather(sortie: Sortie, spot: Spot & LatLng): Promise<SortieWeather | null> {
+export async function fetchSortieWeather(
+  sortie: Sortie,
+  spot: Spot & LatLng,
+  clockAhead = 0,
+): Promise<SortieWeather | null> {
   const response = await fetch(pastWeatherUrl(spot, sortie.date));
   if (!response.ok) return null;
-  return readPastWeather(await response.json(), spot.id, flyingHours(sortie));
+  return readPastWeather(await response.json(), spot.id, flyingHours(sortie, clockAhead));
 }
 
 /**

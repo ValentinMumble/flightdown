@@ -25,6 +25,7 @@ import {
 } from '../model/weather';
 import {Panel} from './instruments';
 import {Empty, spotLabel} from './ui';
+import {readJson, writeJson} from '../data/storage';
 
 /** A forecast kept on this device: when it came, and for which point. */
 interface KeptForecast {
@@ -38,24 +39,14 @@ const keptKey = (spotId: string) => `flightdown.weather.${spotId}`;
 
 /** The forecast kept for a spot, unless there is none or it was for another point (the spot moved since). */
 function readKept(spotId: string, {lat, lng}: LatLng): KeptForecast | null {
-  try {
-    const text = localStorage.getItem(keptKey(spotId));
-    const kept = text ? (JSON.parse(text) as KeptForecast) : null;
-    if (!kept || typeof kept.at !== 'number' || kept.lat !== lat || kept.lng !== lng) return null;
-    const forecast = readOpenMeteo(kept.forecast);
-    return forecast ? {...kept, forecast} : null;
-  } catch {
-    return null;
-  }
+  const kept = readJson<KeptForecast>(keptKey(spotId));
+  if (!kept || typeof kept.at !== 'number' || kept.lat !== lat || kept.lng !== lng) return null;
+  const forecast = readOpenMeteo(kept.forecast);
+  return forecast ? {...kept, forecast} : null;
 }
 
-function keep(spotId: string, kept: KeptForecast) {
-  try {
-    localStorage.setItem(keptKey(spotId), JSON.stringify(kept));
-  } catch {
-    // Storage full or blocked: the forecast still shows, it is just not kept for next time.
-  }
-}
+/** Storage full or blocked: the forecast still shows, it is just not kept for next time. */
+const keep = (spotId: string, kept: KeptForecast) => writeJson(keptKey(spotId), kept);
 
 /**
  * A spot's forecast and where it stands: checking (a request is out), live (the kept one is the latest), offline or

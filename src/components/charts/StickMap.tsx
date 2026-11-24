@@ -1,5 +1,6 @@
 import type {TelemetrySeries} from '../../types';
 import {formatNumber} from '../../model/format';
+import {Figure} from '../ui';
 
 const SIZE = 150;
 
@@ -74,20 +75,9 @@ export function StickMap({series}: {series: TelemetrySeries}) {
         <Square x={ail} y={ele} color="#49cfe6" label="Right stick" xLabel="aileron" yLabel="elevator" />
       </div>
       <div className="figures">
-        <div>
-          <div className="figure-label">Cyclic, average</div>
-          <div className="figure-value">{formatNumber(cyclic.mean)} %</div>
-        </div>
-        <div>
-          <div className="figure-label">Cyclic past 75 %</div>
-          <div className="figure-value">{formatNumber(cyclic.hard * 100)} % of the time</div>
-        </div>
-        {rud.length > 0 && (
-          <div>
-            <div className="figure-label">Rudder, average</div>
-            <div className="figure-value">{formatNumber(tail.mean)} %</div>
-          </div>
-        )}
+        <Figure label="Cyclic, average">{formatNumber(cyclic.mean)} %</Figure>
+        <Figure label="Cyclic past 75 %">{formatNumber(cyclic.hard * 100)} % of the time</Figure>
+        {rud.length > 0 && <Figure label="Rudder, average">{formatNumber(tail.mean)} %</Figure>}
       </div>
     </div>
   );

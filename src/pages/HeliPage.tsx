@@ -2,10 +2,11 @@ import {useMemo} from 'react';
 import {Link, useParams} from 'react-router';
 import {ChevronRight, Pencil, Plus} from 'lucide-react';
 import {useStore} from '../data/store';
-import {Empty, PageHeader, useOverlay} from '../components/ui';
+import {Empty, Figure, PageHeader, useOverlay} from '../components/ui';
 import {FlightStrip} from '../components/SortieRow';
 import {MinuteMeter, Panel, Stamp} from '../components/instruments';
-import {HeliForm, SpareForm} from '../components/forms/HangarForms';
+import {HeliForm} from '../components/forms/HeliForm';
+import {SpareForm} from '../components/forms/SpareForm';
 import {AirtimeChart} from '../components/charts/AirtimeChart';
 import {DamageMap} from '../components/charts/DamageMap';
 import {useSeriesColor} from '../components/colors';
@@ -87,38 +88,14 @@ export function HeliPage() {
             </div>
           </div>
           <div className="figures">
-            <div>
-              <div className="figure-label">Sorties</div>
-              <div className="figure-value">{all.sorties}</div>
-            </div>
-            <div>
-              <div className="figure-label">Packs</div>
-              <div className="figure-value">{all.packs}</div>
-            </div>
-            <div>
-              <div className="figure-label">Crashes</div>
-              <div className="figure-value">{all.crashes}</div>
-            </div>
-            <div>
-              <div className="figure-label">Packs / crash</div>
-              <div className="figure-value">{formatRate(all.packsPerCrash)}</div>
-            </div>
-            <div>
-              <div className="figure-label">Time / crash</div>
-              <div className="figure-value">{all.timePerCrash === null ? '–' : formatAirtime(all.timePerCrash)}</div>
-            </div>
-            <div>
-              <div className="figure-label">Clean packs</div>
-              <div className="figure-value">{packsSinceCrash(sorties)}</div>
-            </div>
-            <div>
-              <div className="figure-label">Days since a crash</div>
-              <div className="figure-value">{daysSinceCrash(sorties) ?? '–'}</div>
-            </div>
-            <div>
-              <div className="figure-label">Pack time</div>
-              <div className="figure-value">{heli.timer ? formatTimer(heli.timer) : '–'}</div>
-            </div>
+            <Figure label="Sorties">{all.sorties}</Figure>
+            <Figure label="Packs">{all.packs}</Figure>
+            <Figure label="Crashes">{all.crashes}</Figure>
+            <Figure label="Packs / crash">{formatRate(all.packsPerCrash)}</Figure>
+            <Figure label="Time / crash">{all.timePerCrash === null ? '–' : formatAirtime(all.timePerCrash)}</Figure>
+            <Figure label="Clean packs">{packsSinceCrash(sorties)}</Figure>
+            <Figure label="Days since a crash">{daysSinceCrash(sorties) ?? '–'}</Figure>
+            <Figure label="Pack time">{heli.timer ? formatTimer(heli.timer) : '–'}</Figure>
           </div>
           <div className="caption">
             {first

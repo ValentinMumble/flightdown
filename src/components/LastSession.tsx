@@ -1,8 +1,9 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useMemo} from 'react';
 import {Link} from 'react-router';
 import {ChevronRight} from 'lucide-react';
 import {useStore} from '../data/store';
-import {Empty} from './ui';
+import {useSeries} from '../data/useSeries';
+import {Empty, Figure} from './ui';
 import {InvertedMark, Panel} from './instruments';
 import {packDebrief} from '../model/cockpit';
 import {joinSeries, packRecords, sortiePacks} from '../model/packs';
@@ -19,38 +20,31 @@ import type {TelemetrySeries} from '../types';
  * by the samples: a throttle hold flipped under load, the link lost, a hard stop.
  */
 export function LastSession({className = ''}: {className?: string}) {
-  const {doc, loadSeries} = useStore();
+  const {doc} = useStore();
   const session = useMemo(() => lastSession(sortSorties(doc.sorties)), [doc.sorties]);
   const packs = useMemo(() => (session ? sortiePacks(session) : []), [session]);
   const notes = useMemo(
     () => (session ? packDebrief(session, doc.batteries, packRecords(doc.sorties, doc.batteries)) : []),
     [session, doc.batteries, doc.sorties],
   );
-  const [events, setEvents] = useState<{pack: string; clock: string; event: SessionEvent}[]>([]);
-
   // The samples are read for the events only, after the rest shows.
-  useEffect(() => {
-    if (!session) return;
-    let current = true;
+  const ids = useMemo(() => packs.flatMap(pack => pack.files.map(file => file.id)), [packs]);
+  const loaded = useSeries(ids);
+  const events = useMemo(() => {
+    const found: {pack: string; clock: string; event: SessionEvent}[] = [];
+    if (!session || !loaded) return found;
     const model = modelFromFileName(session.telemetry[0]?.name ?? '') ?? undefined;
     const running = switchRole(model, 'SF')?.running ?? 'up';
-    const read = async () => {
-      const found: {pack: string; clock: string; event: SessionEvent}[] = [];
-      for (const [index, pack] of packs.entries()) {
-        const parts = await Promise.all(pack.files.map(file => loadSeries(file.id).catch(() => null)));
-        if (parts.some(part => !part)) continue;
-        const series = joinSeries(pack, parts as TelemetrySeries[]);
-        for (const event of packEvents(series, running)) {
-          found.push({pack: notes[index]?.name ?? `Pack ${index + 1}`, clock: clockAt(pack.start, event.at), event});
-        }
+    for (const [index, pack] of packs.entries()) {
+      const parts = pack.files.map(file => loaded.get(file.id));
+      if (parts.some(part => !part)) continue;
+      const series = joinSeries(pack, parts as TelemetrySeries[]);
+      for (const event of packEvents(series, running)) {
+        found.push({pack: notes[index]?.name ?? `Pack ${index + 1}`, clock: clockAt(pack.start, event.at), event});
       }
-      if (current) setEvents(found);
-    };
-    void read();
-    return () => {
-      current = false;
-    };
-  }, [session, packs, notes, loadSeries]);
+    }
+    return found;
+  }, [session, packs, notes, loaded]);
 
   const heli = doc.helis.find(one => one.id === session?.heliId);
   const spot = doc.spots.find(one => one.id === session?.spotId);
@@ -85,14 +79,8 @@ export function LastSession({className = ''}: {className?: string}) {
       ) : (
         <div className="session">
           <div className="figures">
-            <div>
-              <div className="figure-label">Packs</div>
-              <div className="figure-value">{packs.length}</div>
-            </div>
-            <div>
-              <div className="figure-label">In the air</div>
-              <div className="figure-value">{formatAirtime(flying)}</div>
-            </div>
+            <Figure label="Packs">{packs.length}</Figure>
+            <Figure label="In the air">{formatAirtime(flying)}</Figure>
             <div>
               <div className="figure-label">Inverted</div>
               <div className="figure-value figure-picto">

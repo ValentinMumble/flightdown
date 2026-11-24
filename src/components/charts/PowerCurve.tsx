@@ -1,7 +1,8 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useMemo} from 'react';
 import {CartesianGrid, Line, ComposedChart, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis} from 'recharts';
 import type {Sortie} from '../../types';
 import {useStore} from '../../data/store';
+import {useSeries} from '../../data/useSeries';
 import {packName, sortiePacks} from '../../model/packs';
 import {powerCurve, type CurvePoint} from '../../model/cockpit';
 import {formatNumber} from '../../model/format';
@@ -16,7 +17,7 @@ const BIN = 10;
  * that needs more current for the same collective, or one that sags, stands out of the cloud.
  */
 export function PowerCurve({sorties}: {sorties: Sortie[]}) {
-  const {doc, loadSeries} = useStore();
+  const {doc} = useStore();
   const ink = useChartInk();
   const color = useSeriesColor();
   // The logged packs named by their buttons: the files of each, to read.
@@ -30,26 +31,20 @@ export function PowerCurve({sorties}: {sorties: Sortie[]}) {
       ),
     [sorties, doc.batteries],
   );
-  const [clouds, setClouds] = useState<Map<string, CurvePoint[]> | null>(null);
-
-  useEffect(() => {
-    let current = true;
-    const load = async () => {
-      const found = new Map<string, CurvePoint[]>();
-      for (const {name, files} of flown) {
-        for (const file of files) {
-          const series = await loadSeries(file.id).catch(() => null);
-          if (!series) continue;
-          found.set(name, [...(found.get(name) ?? []), ...powerCurve(series, 120)]);
-        }
+  const ids = useMemo(() => flown.flatMap(({files}) => files.map(file => file.id)), [flown]);
+  const loaded = useSeries(ids);
+  const clouds = useMemo(() => {
+    if (!loaded) return null;
+    const found = new Map<string, CurvePoint[]>();
+    for (const {name, files} of flown) {
+      for (const file of files) {
+        const series = loaded.get(file.id);
+        if (!series) continue;
+        found.set(name, [...(found.get(name) ?? []), ...powerCurve(series, 120)]);
       }
-      if (current) setClouds(found);
-    };
-    void load();
-    return () => {
-      current = false;
-    };
-  }, [flown, loadSeries]);
+    }
+    return found;
+  }, [flown, loaded]);
 
   if (!flown.length) return <div className="muted">No pack flown with its button pressed yet.</div>;
   if (!clouds) return <div className="muted">Reading the logs…</div>;

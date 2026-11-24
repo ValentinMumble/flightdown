@@ -5,7 +5,7 @@ import {useStore} from '../data/store';
 import {Empty, PageHeader, useOverlay} from '../components/ui';
 import {Panel} from '../components/instruments';
 import {VisitorBanner} from '../components/VisitorBanner';
-import {SpotForm} from '../components/forms/HangarForms';
+import {SpotForm} from '../components/forms/SpotForm';
 import {SpotsMap} from '../components/LazyMaps';
 import {groupBy, type GroupTally} from '../model/stats';
 import {hasLocation} from '../model/geo';

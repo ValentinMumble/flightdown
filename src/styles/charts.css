@@ -1,0 +1,261 @@
+/* Hours by heli, the sticks, the stick map. */
+
+/* Hours by heli: one whole split by heli, then a row each. */
+.split {
+  display: flex;
+  gap: 2px;
+  height: 28px;
+}
+
+.split div {
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 0 7px;
+  font-family: var(--display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.heli-table {
+  /* The columns are the table's, each row a subgrid of them: a column lines up from row to row. */
+  display: grid;
+  grid-template-columns: var(--columns, minmax(0, 1fr) auto auto auto);
+  column-gap: 14px;
+  margin-top: 14px;
+}
+
+.heli-table-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--bezel);
+  font-size: 0.875rem;
+}
+
+.heli-table-row > :not(:first-child) {
+  text-align: right;
+}
+
+.heli-table-row .name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.heli-table-row .tabular {
+  font-family: var(--display);
+}
+
+.heli-table-row.head,
+.stick-row.head {
+  border-top: 0;
+  padding-top: 0;
+  font-family: var(--display);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The sticks: a row a logged sortie, its idle ups as one bar split three ways. */
+.stick-rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto auto minmax(60px, 1fr) auto;
+  column-gap: 14px;
+  margin-top: 10px;
+}
+
+.stick-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--bezel);
+  font-size: 0.875rem;
+}
+
+/* The figures right, the idle ups' bar under its name on the left. */
+.stick-row > :nth-child(2),
+.stick-row > :nth-child(3),
+.stick-row > :nth-child(5) {
+  text-align: right;
+}
+
+.stick-row .name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.stick-row .tabular {
+  font-family: var(--display);
+  text-align: right;
+}
+
+.split-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+}
+
+.split-bar span {
+  border-radius: 4px;
+  min-width: 3px;
+}
+
+.split-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 12px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.split-legend i,
+.swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-right: 3px;
+  vertical-align: -1px;
+}
+
+@media (max-width: 640px) {
+  .stick-rows {
+    grid-template-columns: minmax(0, 1fr) auto auto minmax(48px, 0.8fr);
+  }
+  .stick-row > :last-child {
+    display: none;
+  }
+}
+
+.meter-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.meter-hours {
+  font-family: var(--display);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+}
+
+/*
+ * Heli photos are product shots on white, cut out of it in the page (HeliPhoto) so the heli stands on the panel's
+ * glow. One that cannot be cut out keeps a lit plate behind it, its white blending into it.
+ */
+.heli-photo.cut {
+  animation: photo-in 240ms ease-out both;
+}
+
+.heli-band .heli-photo.cut,
+.data-plate-photo .heli-photo.cut,
+.flight-line-photo .heli-photo.cut {
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.55));
+}
+
+.gone-thumb .heli-photo.cut {
+  filter: grayscale(0.6) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes photo-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heli-photo.cut {
+    animation: none;
+  }
+}
+
+.heli-band:has(.plain),
+.data-plate-photo:has(.plain),
+.flight-line-photo:has(.plain),
+.gone-thumb:has(.plain) {
+  background: radial-gradient(90% 90% at 50% 45%, #ffffff, #d9e0e8);
+}
+
+.heli-photo.plain {
+  mix-blend-mode: multiply;
+  filter: none;
+}
+
+.heli-band:has(.plain) {
+  box-shadow: inset 0 -4px 0 var(--hue);
+}
+
+/* Stick map: the two gimbals seen from above. */
+.stick-map {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--bezel);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stick-pair {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.stick {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stick svg {
+  width: 170px;
+  height: 170px;
+}
+
+.stick-gate {
+  fill: #020305;
+  stroke: var(--bezel-strong);
+}
+
+.stick-ring {
+  fill: none;
+  stroke: var(--grid);
+}
+
+.stick-cross {
+  stroke: rgba(150, 180, 210, 0.15);
+}
+
+.stick figcaption {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.stick figcaption b {
+  font-family: var(--display);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--label);
+}

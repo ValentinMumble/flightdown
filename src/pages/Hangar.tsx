@@ -15,8 +15,12 @@ import {
 } from 'lucide-react';
 import type {Battery, Heli} from '../types';
 import {useStore} from '../data/store';
-import {Card, Empty, HeliDot, HeliName, PageHeader, useOverlay} from '../components/ui';
-import {BatteryForm, GearForm, HeliForm, SpareForm, TipForm} from '../components/forms/HangarForms';
+import {Card, Empty, Figure, HeliDot, HeliName, PageHeader, useOverlay} from '../components/ui';
+import {BatteryForm} from '../components/forms/BatteryForm';
+import {GearForm} from '../components/forms/GearForm';
+import {HeliForm} from '../components/forms/HeliForm';
+import {SpareForm} from '../components/forms/SpareForm';
+import {TipForm} from '../components/forms/TipForm';
 import {MinuteMeter, Stamp} from '../components/instruments';
 import {useSeriesColor} from '../components/colors';
 import {VisitorBanner} from '../components/VisitorBanner';
@@ -69,14 +73,8 @@ export function HeliCard({heli, tally, wide = false}: {heli: Heli; tally?: Group
               <span className="figure-value">{formatAirtime(tally?.airtime ?? 0)}</span>
             </div>
           </div>
-          <div>
-            <div className="figure-label">Packs</div>
-            <div className="figure-value">{tally?.packs ?? 0}</div>
-          </div>
-          <div>
-            <div className="figure-label">Clean packs</div>
-            <div className="figure-value">{since}</div>
-          </div>
+          <Figure label="Packs">{tally?.packs ?? 0}</Figure>
+          <Figure label="Clean packs">{since}</Figure>
         </div>
         <div className="muted" style={{fontSize: '0.8125rem'}}>
           {tally ? `Last flown ${ago(tally.last)}` : 'Not flown yet'}
@@ -437,18 +435,9 @@ function Batteries() {
                   {battery.bought && ` · bought ${formatDay(battery.bought, {weekday: false, year: true})}`}
                 </div>
                 <div className="figures" style={{marginTop: 10}}>
-                  <div>
-                    <div className="figure-label">Cycles each</div>
-                    <div className="figure-value">≈ {formatRate(cycles)}</div>
-                  </div>
-                  <div>
-                    <div className="figure-label">Charge at 1C</div>
-                    <div className="figure-value">{formatNumber(battery.capacity / 1000, 1)} A</div>
-                  </div>
-                  <div>
-                    <div className="figure-label">Pack</div>
-                    <div className="figure-value">{formatNumber(battery.cells * 3.7, 1)} V</div>
-                  </div>
+                  <Figure label="Cycles each">≈ {formatRate(cycles)}</Figure>
+                  <Figure label="Charge at 1C">{formatNumber(battery.capacity / 1000, 1)} A</Figure>
+                  <Figure label="Pack">{formatNumber(battery.cells * 3.7, 1)} V</Figure>
                 </div>
                 <div className="chips" style={{marginTop: 10}}>
                   {onButtons.length ? (

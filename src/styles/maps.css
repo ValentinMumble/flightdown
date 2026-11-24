@@ -1,0 +1,270 @@
+/* The spots' maps. */
+
+/* Spots: the satellite map of every spot, the location picker in a spot's sheet, a sortie's mini map. */
+/* Leaflet stacks its layers up to z-index 1000: kept inside the map, so sheets and the dock stay above it. */
+.spots-map,
+.location-picker,
+.mini-map {
+  isolation: isolate;
+}
+
+.spots-map {
+  height: min(460px, 62vh);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--bezel);
+  background: var(--page);
+}
+
+.location-picker {
+  height: 240px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--bezel);
+  background: var(--page);
+}
+
+.location-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.location-row .input {
+  flex: 1;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.spots-list .spot-row {
+  width: 100%;
+  background: none;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spots-list .spot-row:not(.head):hover .name {
+  color: var(--accent);
+}
+
+.sort-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sort-head:hover {
+  color: var(--ink);
+}
+
+.sort-head.active {
+  color: var(--label);
+}
+
+.spots-list .name svg {
+  vertical-align: -2px;
+  margin-right: 6px;
+}
+
+.spots-list .placed {
+  color: var(--label);
+}
+
+.spots-list .unplaced {
+  color: var(--muted);
+}
+
+.mini-map {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--bezel);
+  background: var(--panel);
+}
+
+.mini-map-tiles {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+
+.mini-map-tiles img {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  max-width: none;
+}
+
+/* A dimmed edge so the label and pin read on any field. */
+.mini-map::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 50%, transparent 45%, rgba(5, 7, 11, 0.55));
+  pointer-events: none;
+}
+
+.mini-map-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.mini-map-label {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  z-index: 1;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: var(--glass-regular);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  font-family: var(--display);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.mini-map-credit {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  z-index: 1;
+  font-size: 0.625rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Leaflet, in the cockpit's colours. */
+.leaflet-container {
+  background: var(--page);
+  font-family: var(--font);
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--panel-2);
+  color: var(--ink);
+  border-bottom-color: var(--bezel);
+}
+
+.leaflet-bar {
+  border: 1px solid var(--bezel-strong) !important;
+  box-shadow: none !important;
+}
+
+.leaflet-control-layers {
+  background: var(--glass-thick);
+  color: var(--ink);
+  border: 1px solid var(--bezel-strong) !important;
+  border-radius: 10px !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+.leaflet-control-layers-toggle {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.leaflet-control-attribution {
+  background: rgba(5, 7, 11, 0.6) !important;
+  color: var(--muted);
+}
+
+.leaflet-control-attribution a {
+  color: var(--ink-2);
+}
+
+.map-pin {
+  background: none;
+  border: 0;
+}
+
+.map-pin-mark {
+  display: grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: rgba(5, 7, 11, 0.55);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent);
+  font-size: calc(var(--size) * 0.5);
+  line-height: 1;
+}
+
+.map-pin-mark.faint {
+  border-color: var(--label);
+  box-shadow: none;
+  opacity: 0.75;
+}
+
+/* How many spots a pin stands for, until the map is zoomed in on them. */
+.map-pin-mark {
+  position: relative;
+}
+
+.map-pin-count {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: #04110a;
+  font-family: var(--font);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.leaflet-tooltip.map-label {
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--bezel-strong);
+  background: rgba(5, 7, 11, 0.78);
+  box-shadow: none;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.leaflet-tooltip.map-label.faint {
+  color: var(--ink-2);
+}
+
+.leaflet-tooltip.map-label::before {
+  display: none;
+}

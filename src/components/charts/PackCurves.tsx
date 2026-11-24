@@ -1,8 +1,9 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useMemo} from 'react';
 import {Link} from 'react-router';
 import {CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import type {Sortie, TelemetryLog, TelemetrySeries} from '../../types';
 import {useStore} from '../../data/store';
+import {useSeries} from '../../data/useSeries';
 import {estimateCells, packOf} from '../../model/insights';
 import {formatDay, formatNumber, formatTimer, fromDay, shortMonth} from '../../model/format';
 import {sortiePacks} from '../../model/packs';
@@ -54,31 +55,25 @@ function curveOf(sortie: Sortie, log: TelemetryLog, series: TelemetrySeries, cel
  * 3.3 V a LiPo should never see. Packs flown harder sag sooner.
  */
 export function PackCurves({sorties}: {sorties: Sortie[]}) {
-  const {doc, heli, loadSeries} = useStore();
+  const {doc, heli} = useStore();
   const ink = useChartInk();
   const color = useSeriesColor();
   const logs = useMemo(() => sorties.flatMap(sortie => sortie.telemetry.map(log => ({sortie, log}))), [sorties]);
-  const [curves, setCurves] = useState<Curve[] | null>(null);
-
-  useEffect(() => {
-    let current = true;
-    const load = async () => {
-      const found: Curve[] = [];
-      for (const {sortie, log} of logs) {
-        const series = await loadSeries(log.id).catch(() => null);
-        if (!series) continue;
-        const pack = packOf(heli(sortie.heliId), doc.batteries);
-        const cells = pack.cells ?? estimateCells(Math.max(...(series.channels.voltage ?? [0])));
-        const curve = curveOf(sortie, log, series, cells);
-        if (curve && curve.flight >= 20 && curve.points.length > 2) found.push(curve);
-      }
-      if (current) setCurves(found);
-    };
-    void load();
-    return () => {
-      current = false;
-    };
-  }, [logs, loadSeries, heli, doc.batteries]);
+  const ids = useMemo(() => logs.map(({log}) => log.id), [logs]);
+  const loaded = useSeries(ids);
+  const curves = useMemo(() => {
+    if (!loaded) return null;
+    const found: Curve[] = [];
+    for (const {sortie, log} of logs) {
+      const series = loaded.get(log.id);
+      if (!series) continue;
+      const pack = packOf(heli(sortie.heliId), doc.batteries);
+      const cells = pack.cells ?? estimateCells(Math.max(...(series.channels.voltage ?? [0])));
+      const curve = curveOf(sortie, log, series, cells);
+      if (curve && curve.flight >= 20 && curve.points.length > 2) found.push(curve);
+    }
+    return found;
+  }, [logs, loaded, heli, doc.batteries]);
 
   if (!logs.length) return <div className="muted">No telemetry log yet: add EdgeTX logs to a sortie.</div>;
   if (!curves) return <div className="muted">Reading the logs…</div>;

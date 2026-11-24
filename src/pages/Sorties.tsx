@@ -10,6 +10,7 @@ import {MinuteMeter} from '../components/instruments';
 import {monthOf, sortSorties, totals} from '../model/stats';
 import {partKey} from '../model/parts';
 import {sortSpots} from '../model/geo';
+import {readJson, writeJson} from '../data/storage';
 
 type CrashFilter = 'all' | 'crashed' | 'clean';
 
@@ -26,21 +27,12 @@ const FILTERS_KEY = 'flightdown.sorties.filters';
 /** Any of these in the address: the page was opened on purpose with its own filter, which wins. */
 const FILTERS = [...REMEMBERED, 'part', 'q'];
 
-function readRemembered(): Record<string, string> {
-  try {
-    return JSON.parse(localStorage.getItem(FILTERS_KEY) ?? '{}') ?? {};
-  } catch {
-    return {};
-  }
-}
+const readRemembered = () => readJson<Record<string, string>>(FILTERS_KEY) ?? {};
 
+/** Private browsing or storage turned off: the filters just are not remembered. */
 function remember(params: URLSearchParams) {
   const kept = REMEMBERED.filter(key => params.get(key)).map(key => [key, params.get(key) ?? '']);
-  try {
-    localStorage.setItem(FILTERS_KEY, JSON.stringify(Object.fromEntries(kept)));
-  } catch {
-    // Private browsing or storage turned off: the filters just are not remembered.
-  }
+  writeJson(FILTERS_KEY, Object.fromEntries(kept));
 }
 
 /** Every sortie as a flight strip, newest first, a month at a time, with filters kept in the address. */

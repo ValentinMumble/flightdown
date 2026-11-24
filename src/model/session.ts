@@ -1,4 +1,4 @@
-import type {Sortie, TelemetrySeries} from '../types';
+import type {Gear, Sortie, TelemetrySeries} from '../types';
 import type {Position} from '../radio/roles';
 import {exceedances} from './cockpit';
 
@@ -74,10 +74,17 @@ export function clockAt(start: string | undefined, second: number): string {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-/** When a session's last log ended, as a moment (the logs keep local time). */
-export function sessionEnd(sortie: Sortie): Date | null {
+/**
+ * When a session's last log ended, as a moment: the logs keep the radio's clock, read as local time and moved back by
+ * how far that clock runs ahead (see `radioClockAhead`).
+ */
+export function sessionEnd(sortie: Sortie, clockAhead = 0): Date | null {
   const ends = sortie.telemetry.flatMap(log =>
-    log.start ? [new Date(log.start).getTime() + log.duration * 1000] : [],
+    log.start ? [new Date(log.start).getTime() + log.duration * 1000 - clockAhead * 3_600_000] : [],
   );
   return ends.length ? new Date(Math.max(...ends)) : null;
 }
+
+/** How many hours the radio's clock runs ahead of the local time: the radio's in the hangar (0 when none says). */
+export const radioClockAhead = (gear: readonly Gear[]) =>
+  gear.find(one => one.category === 'radio' && !one.gone && one.clockAhead)?.clockAhead ?? 0;

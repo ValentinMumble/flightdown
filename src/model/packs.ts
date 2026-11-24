@@ -25,8 +25,29 @@ export interface PackLog {
   packButton?: number;
 }
 
-/** Seconds of a log's start ("2023-04-28T12:43:01"), to measure the gaps between files. */
-const startSeconds = (log: TelemetryLog) => (log.start ? Date.parse(`${log.start}Z`) / 1000 : null);
+/**
+ * A time as the radio writes it ("2026-11-24T16:09:02", its own clock, no time zone) as seconds on one line, to measure
+ * between two such times: read as UTC, so no time zone or change of summer time comes in between.
+ */
+export const radioSeconds = (time: string) => Date.parse(`${time}Z`) / 1000;
+
+/** Seconds on that line back to a time as the radio writes it. */
+export const radioTime = (seconds: number) => new Date(Math.round(seconds) * 1000).toISOString().slice(0, 19);
+
+/** A crash marked this long (s) after a pack's last sample still belongs to it: the log stops as the motor is held. */
+export const CRASH_GRACE = 5;
+
+/** The crashes marked on a sortie that fall in this pack, as seconds of its log (whose 0 is the pack's start). */
+export function crashesIn(pack: {start?: string; duration: number}, crashTimes: readonly string[] = []): number[] {
+  if (!pack.start) return [];
+  const start = radioSeconds(pack.start);
+  return crashTimes
+    .map(time => radioSeconds(time) - start)
+    .filter(second => second >= 0 && second <= pack.duration + CRASH_GRACE);
+}
+
+/** Seconds of a log's start, to measure the gaps between files. */
+const startSeconds = (log: TelemetryLog) => (log.start ? radioSeconds(log.start) : null);
 
 const smallest = (values: (number | undefined)[]) => {
   const known = values.filter((value): value is number => value !== undefined);

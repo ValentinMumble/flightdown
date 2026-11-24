@@ -1,0 +1,206 @@
+/* Photos cut out, spares, a heli's page and the flight line. */
+
+/* A radio's or a pack's photo, cut out like the helis', in place of its icon; a photo that cannot be cut out sits
+   on a light plate. */
+.gear-photo,
+.battery-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.gear-photo {
+  width: 104px;
+  height: 104px;
+}
+
+/* A spare's picture at the start of its row, a wrench without one; smaller on a heli's page. */
+.spare-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 56px;
+  height: 40px;
+  overflow: hidden;
+  color: var(--muted);
+}
+
+.spare-photo.small {
+  width: 36px;
+  height: 24px;
+}
+
+.battery-photo {
+  height: 108px;
+  margin-bottom: 8px;
+}
+
+.gear-photo .heli-photo,
+.battery-photo .heli-photo,
+.spare-photo .heli-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.gear-photo .heli-photo.cut,
+.battery-photo .heli-photo.cut,
+.spare-photo .heli-photo.cut {
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+
+.gear-photo:has(.plain),
+.battery-photo:has(.plain) {
+  padding: 4px;
+  border-radius: 12px;
+  background: #eef0f2;
+}
+
+.gear-card.gone .gear-photo {
+  filter: grayscale(0.7);
+  opacity: 0.7;
+}
+
+.notes {
+  columns: 2 320px;
+  column-gap: 14px;
+}
+
+.note-card {
+  width: 100%;
+  break-inside: avoid;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-body {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  max-height: 360px;
+  overflow: hidden;
+}
+
+.battery-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 8px;
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+/* Heli page header: a data plate. */
+.data-plate {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 18px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.data-plate-photo {
+  position: relative;
+  min-height: 240px;
+  background:
+    radial-gradient(70% 80% at 50% 50%, color-mix(in srgb, var(--hue) 40%, transparent), transparent 70%), #05070b;
+  display: grid;
+  place-items: center;
+  font-size: 5.625rem;
+}
+
+.data-plate-photo img {
+  position: absolute;
+  inset: 14px;
+  width: calc(100% - 28px);
+  height: calc(100% - 28px);
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.7));
+}
+
+.data-plate-info {
+  padding: 20px 20px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 860px) {
+  .data-plate {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .data-plate-info {
+    padding: 0 16px 18px;
+  }
+}
+
+.sortie-notes {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.accent-mark {
+  color: var(--brand);
+}
+
+/* A heli on the flight line: its picture on its colour, its numbers beside. */
+.flight-line {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--bezel);
+  background: var(--panel);
+}
+
+.flight-line:hover {
+  border-color: var(--bezel-strong);
+}
+
+.flight-line-photo {
+  position: relative;
+  height: 96px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 2.75rem;
+  background:
+    radial-gradient(70% 80% at 50% 50%, color-mix(in srgb, var(--hue) 45%, transparent), transparent 75%), #05070b;
+  overflow: hidden;
+}
+
+.flight-line-photo img {
+  position: absolute;
+  inset: 6px;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  object-fit: contain;
+}
+
+.flight-line-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.flight-line-info .figures {
+  width: 100%;
+}
+
+.flight-line-info .figures > span {
+  display: flex;
+  flex-direction: column;
+}

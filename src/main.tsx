@@ -3,12 +3,25 @@ import {createRoot} from 'react-dom/client';
 import {BrowserRouter} from 'react-router';
 import {App} from './App';
 import {StoreProvider} from './data/store';
+// The fonts ship with the app (the service worker keeps their Latin files), so the field gets them with no signal.
+import '@fontsource/ibm-plex-sans/400.css';
+import '@fontsource/ibm-plex-sans/500.css';
+import '@fontsource/ibm-plex-sans/600.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/share-tech-mono/400.css';
 // Leaflet's styles first, so the cockpit's own map styles come after and win.
 import 'leaflet/dist/leaflet.css';
 import './styles/base.css';
 import './styles/shell.css';
 import './styles/ui.css';
 import './styles/instruments.css';
+import './styles/telemetry.css';
+import './styles/hangar.css';
+import './styles/debrief.css';
+import './styles/heli.css';
+import './styles/charts.css';
+import './styles/maps.css';
 import './styles/hud.css';
 import './styles/weather.css';
 import './styles/sim.css';

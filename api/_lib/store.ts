@@ -66,7 +66,7 @@ export async function deleteItem(kind: Kind, id: string) {
   await redis().hdel(kindKey(kind), id);
 }
 
-/** Replaces the whole log (an import), telemetry included. */
+/** Replaces the whole log, telemetry included: `npm run seed` only. */
 export async function replaceDoc(doc: Doc, series: TelemetrySeries[]) {
   const store = redis();
   await store.del(...KINDS.map(kindKey), TELEMETRY);

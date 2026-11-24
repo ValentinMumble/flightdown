@@ -77,7 +77,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   widgets (the Cockpit, the top bar) running on the sim's flight and a simulated pack (current from the load, sized on
   the logs, volts sagging). Free flight to start with, and two drills: hover in a box over the pad in each facing, and
   soft landings graded by touchdown speed.
-- **Hangar:** the flight line and the helis that left (stamped sold or lost), the radio and other gear (a tab), packs and their
+- **Hangar:** the flight line and the helis that left (stamped sold or lost), the radio (and whether its clock runs an hour ahead, as it keeps summer time) and other gear (a tab), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
   the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), notes. Helis and packs keep the day they were bought, helis and radios
   their price, helis their class, rotor size and weight (under the maker and model). Each heli has a data plate page (with each part's time since it last broke there, against how long it
@@ -111,7 +111,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
 - **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`): Cockpit, Sorties, Radio, Hangar and More
   (Debrief, Spots, Sim, Settings), with a round log button; swipe sideways to change tab. Add it to the home screen: it
   opens like an app, with the 🚁 icon, at once and offline at the field (as in `papyrus/guidelines/web-apps.md`),
-  and reloads into a new deploy by itself.
+  and reloads into a new deploy by itself. The log, the latest 40 logs' samples (and any opened since) and the radio's
+  card stay on the phone (IndexedDB), so packs, the Debrief and replays work with no signal.
 
 Visitors see a made-up log, or keep their own in their browser.
 
