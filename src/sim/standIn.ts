@@ -38,15 +38,15 @@ export interface StandInTuning {
 }
 
 /**
- * Tuned by replaying the M2 EVO's November 2026 packs (12, 13 and 20 Nov): they fly 57 % of the time before a crash,
- * 54 of their 125 logged flips and rolls happen, and the heli stays between 0.3 and 15 m. The heli carries its speed
- * (little blowback and drag), so it brakes harder and sooner than when the sim's heli slowed itself (73 % then).
+ * Tuned by replaying the M2 EVO's November 2026 packs (12, 13 and 20 Nov) on the physics fitted to its calibration flight
+ * (1.9° hover pitch, 300°/s at full stick): they fly 52 % of the time before a crash, 77 of their 125 logged flips and
+ * rolls happen, and the heli stays between 0.3 and 15 m.
  */
 export const STAND_IN: StandInTuning = {
-  attitudeLag: 0.2,
+  attitudeLag: 0.3,
   reach: 6,
   lean: 0.25,
-  brake: 0.08,
+  brake: 0.04,
   low: 4,
   high: 12,
   heightGain: 0.3,

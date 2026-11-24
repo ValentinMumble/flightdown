@@ -63,8 +63,9 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   and holds), a game controller (mode 2, drawn beside the view with the radio switch each control stands for) or the
   keyboard, these two flown through the model's own mixer from the card (its rates, curves and switches; it gives back
   the logged outputs from the logged sticks). A logged pack replays beside the sticks, or flies the heli with a stand-in pilot adding the corrections a log
-  cannot hold (tuned on the November packs: 57 % flown before a crash; a crash is picked up
-  and the log goes on); touching a stick takes over. Its hover pitch and current draw are fitted to the logs. Flybarless rate-mode physics sized from the heli's weight and rotor: rates that settle with a little
+  cannot hold (tuned on the November packs: 52 % flown before a crash; a crash is picked up
+  and the log goes on); touching a stick takes over. Its current draw is fitted to the logs, its hover pitch (1.9°) and full-stick rate (300°/s) to the M2 EVO's
+  calibration flight of 24 Nov 2026 (10 s hovers in each idle up, flips and rolls at full stick, each marked with SB). Flybarless rate-mode physics sized from the heli's weight and rotor: rates that settle with a little
   overshoot, momentum (it keeps a lean and carries its speed, the FBL taking out most of the disc's blowback), a quick soft start, turbulence, translational lift, tail kick, a governor that sags, hold and autorotation, the
   rescue, self-level, ground effect, wind, crashes; the rotor and motor heard. The eyes see through a fixed lens (the heli
   shrinks as it goes away), with a zoom slider on the view. The TX16S's screen in a corner, its own

@@ -176,7 +176,7 @@ const BUTTON = {y: 3, leftBumper: 4, rightBumper: 5, leftTrigger: 6, rightTrigge
  */
 export const RATES = [
   {label: '100 %', cyclic: 1, rudder: 1},
-  {label: '70 %', cyclic: 0.7, rudder: 0.8},
+  {label: '55 %', cyclic: 0.55, rudder: 0.65},
 ];
 
 /** Rates lower than full: the radio's PRACTICE light. */

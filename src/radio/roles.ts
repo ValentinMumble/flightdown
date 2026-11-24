@@ -101,7 +101,10 @@ const K110S: Record<string, SwitchRole> = {
     job: 'Practice rates',
     up: ['Off', 'full rates'],
     middle: ['Off', 'full rates'],
-    down: ['Practice', 'cyclic 70%, rudder 80%, a gentler pitch around hover in IU2 and IU3 (CPP); "low rates" said'],
+    down: [
+      'Practice',
+      'cyclic 55%, rudder 65%, a gentler pitch around hover in IU2 and IU3 (CPP); "low rates" said when armed',
+    ],
   },
 };
 
@@ -110,7 +113,10 @@ const M2_PRACTICE: SwitchRole = {
   job: 'Practice rates',
   up: ['Off', 'full rates'],
   middle: ['Off', 'full rates'],
-  down: ['Practice', 'cyclic 70%, rudder 80%, a gentler pitch around hover (CPP, -5° to +9°); "low rates" said'],
+  down: [
+    'Practice',
+    'cyclic 55%, rudder 65%, a gentler pitch around hover (CPP, -5° to +9°); "low rates" said when armed',
+  ],
 };
 
 // S1 adds -20 to +20 % to the M2 EVO's idle ups (-10 to +10 in idle up 3): half that on the throttle's 0 to 100 %.

@@ -112,7 +112,8 @@ describe('the heli', () => {
 
   it('keeps its head speed in an autorotation with low pitch', () => {
     const state = flying(40);
-    fly(state, {...hover, collective: -0.15, throttle: 0}, 4);
+    // About -2.4°, as an autorotation is entered on a heli hovering on 1.9°.
+    fly(state, {...hover, collective: -0.2, throttle: 0}, 4);
     expect(state.crashed).toBeNull();
     expect(state.velocity.y).toBeLessThan(-3);
     expect(rpmOf(state, params)).toBeGreaterThan(params.hoverRpm * 0.7);
@@ -120,7 +121,7 @@ describe('the heli', () => {
 
   it('rolls at the rate the stick asks for', () => {
     const state = flying(20);
-    // 240°/s, the servos and the heli a little behind the stick: about 90° after half a second.
+    // 300°/s, the servos and the heli a little behind the stick: about 110° after half a second.
     fly(state, {...hover, roll: 1}, 0.5);
     expect((tiltOf(state.attitude) * 180) / Math.PI).toBeGreaterThan(60);
     expect((tiltOf(state.attitude) * 180) / Math.PI).toBeLessThan(115);
@@ -135,7 +136,8 @@ describe('the heli', () => {
 
   it('lands softly with a gentle descent', () => {
     const state = flying(1);
-    const events = fly(state, {...hover, collective: hoverStick * 0.85}, 4);
+    // A quarter of a metre a second: down from a metre in about 5 s.
+    const events = fly(state, {...hover, collective: hoverStick * 0.85}, 8);
     const landed = events.find(event => event.landed)?.landed;
     expect(state.crashed).toBeNull();
     expect(landed?.speed).toBeLessThan(1);

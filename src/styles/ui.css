@@ -1149,3 +1149,13 @@ button.card {
   font-weight: 600;
   color: var(--ink);
 }
+
+/* A title only screen readers read: the top menu already shows it. */
+.read-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

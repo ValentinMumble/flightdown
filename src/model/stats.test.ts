@@ -55,6 +55,22 @@ describe('streaks', () => {
     expect(runs.daysSinceLast).toBe(2);
     expect(runs.longestBreak?.days).toBe(7);
   });
+
+  it('orders a day by when its sorties flew, not when they were written down', () => {
+    // 24 Nov 2026: the K110S crashed at Soye at 13:17, then the M2 EVO flew 5 packs; both written down together.
+    const flown = (start: string) => [{id: start, name: `${start}.csv`, start, duration: 200, samples: 1000}];
+    const crashed = {
+      ...sortie('2026-11-24', 1, 1),
+      telemetry: flown('2026-11-24T13:15:04'),
+      loggedAt: '2026-11-24T14:00:00',
+    };
+    const after = {
+      ...sortie('2026-11-24', 5, 0),
+      telemetry: flown('2026-11-24T13:19:53'),
+      loggedAt: '2026-11-24T14:00:00',
+    };
+    expect(streaks([after, crashed], '2026-11-24').crashFreePacks).toBe(5);
+  });
 });
 
 describe('crashTrend', () => {

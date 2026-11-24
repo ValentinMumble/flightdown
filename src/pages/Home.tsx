@@ -68,6 +68,7 @@ export function Home() {
     <div className="page">
       <PageHeader
         title="Cockpit"
+        menuNamed
         phone={{title: 'Flightdown', icon: <RotorMark size={20} className="accent-mark" />}}
         sub={sorties.length ? `Flying since ${formatDay(sorties[0].date, {weekday: false, year: true})}` : undefined}
       />

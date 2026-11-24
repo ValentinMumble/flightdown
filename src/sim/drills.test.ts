@@ -116,7 +116,7 @@ describe('a game controller', () => {
       })),
     });
     expect(sticks.read(press(3), 0)).toMatchObject({level: true, rates: '100 %', roll: 1});
-    expect(sticks.read(press(5), 0)).toMatchObject({level: true, rates: '70 %', roll: 0.7});
+    expect(sticks.read(press(5), 0)).toMatchObject({level: true, rates: '55 %', roll: 0.55});
     sticks.read(press(-1), 0);
     expect(sticks.read(press(5), 0)).toMatchObject({rates: '100 %', roll: 1});
     sticks.read(press(-1), 0);
@@ -124,6 +124,6 @@ describe('a game controller', () => {
     // Raw, for the model's mixer: the rates are left to the model.
     sticks.read(press(-1), 0);
     sticks.read(press(5), 0);
-    expect(sticks.read(press(-1), 0, true)).toMatchObject({rates: '70 %', roll: 1});
+    expect(sticks.read(press(-1), 0, true)).toMatchObject({rates: '55 %', roll: 1});
   });
 });

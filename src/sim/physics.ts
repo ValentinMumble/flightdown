@@ -79,13 +79,14 @@ export function heliParams(heli?: {weight?: number; rotor?: number}): HeliParams
     hoverRpm,
     // The M2 EVO's idle up 2 runs 60 % throttle: hover rpm is 60 % of the most.
     maxRpm: hoverRpm / 0.6,
-    // Its hover pitch from its November 2026 logs: the median collective flown in idle up 2 (57 % throttle) is 22 % of
-    // its ±12°, about 2.6°, at 95 % of hover rpm: 2.4° at hover rpm. Idle ups 1 and 3 agree (34 % at 46 %, 14.5 % at
-    // 75 %), lift growing with head speed squared.
-    hoverPitch: (2.4 * Math.PI) / 180,
+    // Its hover pitch from its calibration flight (24 Nov 2026), held 10 s in a hover at 1.5 m and marked with SB:
+    // 1.80° in idle up 2 (60 %, twice), 2.09° in idle up 1 (54 %, lift growing with head speed squared), on a 500 mAh
+    // pack; 1.9° on the usual 700 to 750 mAh ones, a little heavier.
+    hoverPitch: (1.9 * Math.PI) / 180,
     maxPitch: (12 * Math.PI) / 180,
-    // The FBL's rates at full stick, before the radio's own rates and expo: a sport set-up, not a 3D one.
-    cyclicRate: (240 * Math.PI) / 180,
+    // The FBL's rates at full stick, before the radio's own rates and expo: its calibration flight's 12 flips and rolls
+    // at full stick (24 Nov 2026) took 1.0 to 1.3 s each, about 300°/s both ways. Its yaw rate is not measured yet.
+    cyclicRate: (300 * Math.PI) / 180,
     yawRate: (280 * Math.PI) / 180,
     inertia: 0.015 * mass * radius * radius,
     maxPower: 300 * mass,

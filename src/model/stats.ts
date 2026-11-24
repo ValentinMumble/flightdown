@@ -22,8 +22,19 @@ export const airtime = (sortie: Sortie) => {
   return sortie.timer ? sortie.packs * sortie.timer : 0;
 };
 
-export const byDate = (left: Sortie, right: Sortie) =>
-  left.date.localeCompare(right.date) || left.loggedAt.localeCompare(right.loggedAt);
+/** When a sortie started: its first log's start (local time), or '' when it has no timed log. */
+const startOf = (sortie: Sortie) =>
+  sortie.telemetry.reduce((first, log) => (log.start && (!first || log.start < first) ? log.start : first), '');
+
+/** By day, then within a day by when they were flown (their logs' start), else by when they were written down. */
+export const byDate = (left: Sortie, right: Sortie) => {
+  const [leftStart, rightStart] = [startOf(left), startOf(right)];
+  return (
+    left.date.localeCompare(right.date) ||
+    (leftStart && rightStart ? leftStart.localeCompare(rightStart) : 0) ||
+    left.loggedAt.localeCompare(right.loggedAt)
+  );
+};
 
 export const sortSorties = (sorties: Sortie[]) => [...sorties].sort(byDate);
 

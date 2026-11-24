@@ -80,10 +80,13 @@ export function PageHeader({
   phone,
   back,
   actions,
+  menuNamed = false,
 }: {
   title: ReactNode;
   sub?: ReactNode;
   icon?: ReactNode;
+  /** The desktop's top menu already names the page (the Cockpit): its head keeps the subtitle only, the title read out. */
+  menuNamed?: boolean;
   /** A phone has no top bar with the app's name: a page can say something else there (the Cockpit says Flightdown). */
   phone?: {title: ReactNode; icon?: ReactNode};
   back?: string;
@@ -112,7 +115,7 @@ export function PageHeader({
               <ArrowLeft size={14} /> Back
             </Link>
           )}
-          <h1 className="page-title">
+          <h1 className={menuNamed ? 'page-title read-only' : 'page-title'}>
             {icon}
             {title}
           </h1>
