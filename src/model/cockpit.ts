@@ -453,7 +453,8 @@ export interface PackNote {
 /**
  * A sortie's packs, each with its words: drained too deep, a cell under 3.3 V, over its rating, flown much harder
  * than the sortie's others, tiring or worn (its resistance against its first reading or the freshest pack's, from
- * `records`), or within its limits. From what each log keeps, so no samples need reading.
+ * `records`), or within its limits. From what each log keeps, so no samples need reading. A pack its logs know
+ * nothing of (no current, voltage, mAh or resistance: the K110S has no telemetry) is left out.
  */
 export function packDebrief(
   sortie: Sortie,
@@ -482,7 +483,13 @@ export function packDebrief(
     .sort((left, right) => left - right);
   const typical = averages.length ? averages[Math.floor(averages.length / 2)] : null;
 
-  return packs.map(({flown, found, name, average}) => {
+  return packs.flatMap(({flown, found, name, average}) => {
+    const measured =
+      flown.mAh !== undefined ||
+      flown.minVoltage !== undefined ||
+      flown.maxCurrent !== undefined ||
+      flown.files.some(file => file.resistance !== undefined);
+    if (!measured) return [];
     const notes: PackNote[] = [];
     const cells = found?.battery.cells;
     const capacity = found?.battery.capacity;
@@ -516,6 +523,6 @@ export function packDebrief(
         notes.push({tone: 'caution', text: `tiring: ${Math.round(reading)} mΩ a cell, ${wear.toFixed(1)}×`});
     }
     if (!notes.length) notes.push({tone: 'good', text: 'within its limits'});
-    return {name, notes};
+    return [{name, notes}];
   });
 }

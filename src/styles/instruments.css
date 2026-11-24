@@ -387,6 +387,25 @@
   color: var(--ink-2);
 }
 
+.debrief-flips p {
+  margin: 0;
+}
+
+/* Each pack's flips, under the sortie's. */
+.debrief-flip-packs {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0;
+  padding: 0 0 0 26px;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.debrief-flip-packs span {
+  color: var(--ink-2);
+}
+
 .pack-bars {
   display: grid;
   gap: 6px;

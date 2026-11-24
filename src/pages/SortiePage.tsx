@@ -1,7 +1,7 @@
 import {useMemo, useRef} from 'react';
 import {Link, useParams} from 'react-router';
 import {ChevronRight, ExternalLink, FileUp, MapPin, Pencil, Wrench} from 'lucide-react';
-import type {Sortie} from '../types';
+import type {Sortie, TurnWay} from '../types';
 import {useStore} from '../data/store';
 import {Card, Empty, HeliName, PageHeader, spotLabel, useOverlay} from '../components/ui';
 import {FlightStrip} from '../components/SortieRow';
@@ -13,12 +13,12 @@ import {MiniMap} from '../components/MiniMap';
 import {SortiePhotos} from '../components/SortiePhotos';
 import {TelemetryPacks} from '../components/TelemetryPacks';
 import {InvertedRing, PackBars, packTimes} from '../components/PackTimes';
-import {formatAirtime, formatDay, formatTimer, plural} from '../model/format';
+import {daysBetween, formatAirtime, formatDay, formatTimer, plural, today} from '../model/format';
 import {airtime, loggedTimes, sortSorties} from '../model/stats';
 import {readTelemetry} from '../model/telemetry';
 import {addFlips, describeFlips, packOf} from '../model/insights';
 import {packDebrief} from '../model/cockpit';
-import {packRecords} from '../model/packs';
+import {packRecords, sortiePacks} from '../model/packs';
 import {parseCsv} from '../model/csv';
 import {hasLocation} from '../model/geo';
 import {weatherEmoji, weatherNote} from '../model/pastWeather';
@@ -65,11 +65,24 @@ export function SortiePage() {
   }
 
   const one = heli(sortie.heliId);
+  // Today's and yesterday's sorties say so, as their strip does, the date under it.
+  const days = daysBetween(sortie.date, today());
+  const near = days === 0 ? 'Today' : days === 1 ? 'Yesterday' : null;
   const place = spot(sortie.spotId);
   const pack = packOf(one, doc.batteries);
   const logged = sortie ? loggedTimes(sortie) !== null : false;
-  // Its whole flips and rolls, every log's added up.
-  const flips = describeFlips(sortie.telemetry.reduce((sum, log) => addFlips(sum, log.flips), {}));
+  // Its whole flips and rolls, every log's added up, how often they came, and each pack's.
+  const flipCounts = sortie.telemetry.reduce<Partial<Record<TurnWay, number>>>(
+    (sum, log) => addFlips(sum, log.flips),
+    {},
+  );
+  const flips = describeFlips(flipCounts);
+  const flipTotal = Object.values(flipCounts).reduce((sum: number, count) => sum + (count ?? 0), 0);
+  const flown = packTimes(sortie, doc.batteries);
+  const packFlips = sortiePacks(sortie).map((one, index) => ({
+    name: flown[index]?.name ?? `Pack ${index + 1}`,
+    flips: describeFlips(one.files.reduce((sum, log) => addFlips(sum, log.flips), {})),
+  }));
   // Every size of pack this heli flies, to pick from in a replay.
   const packs = [
     ...new Set(
@@ -100,7 +113,8 @@ export function SortiePage() {
   return (
     <div className="page">
       <PageHeader
-        title={formatDay(sortie.date, {year: true})}
+        title={near ?? formatDay(sortie.date, {year: true})}
+        sub={near ? formatDay(sortie.date, {year: true}) : undefined}
         back="/sorties"
         actions={
           <button className="button" onClick={() => open(<SortieForm sortie={sortie} />)}>
@@ -156,7 +170,7 @@ export function SortiePage() {
             {/* Its packs as their logs flew them, and the share upside down. */}
             {logged && (
               <div className="debrief-packs">
-                <PackBars packs={packTimes(sortie, doc.batteries)} />
+                <PackBars packs={flown} />
                 {sortie.telemetry.some(log => log.inverted !== undefined) && (
                   <InvertedRing
                     inverted={sortie.telemetry.reduce((sum, log) => sum + (log.inverted ?? 0), 0)}
@@ -164,9 +178,25 @@ export function SortiePage() {
                   />
                 )}
                 {flips && (
-                  <p className="debrief-flips">
-                    <span aria-hidden>🔄</span> {flips}
-                  </p>
+                  <div className="debrief-flips">
+                    <p>
+                      <span aria-hidden>🔄</span> {flips}
+                      <span className="muted">
+                        {' '}
+                        · {flipTotal} in {formatTimer(airtime(sortie))} of flight, one every{' '}
+                        {Math.round(airtime(sortie) / flipTotal)} s
+                      </span>
+                    </p>
+                    {packFlips.length > 1 && (
+                      <ul className="debrief-flip-packs">
+                        {packFlips.map(one => (
+                          <li key={one.name}>
+                            <span>{one.name}</span> {one.flips ?? 'no flips'}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 )}
                 <div className="pack-debrief">
                   {packDebrief(sortie, doc.batteries, packRecords(doc.sorties, doc.batteries)).map(pack => (

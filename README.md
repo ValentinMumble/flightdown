@@ -30,7 +30,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   one tap away from anywhere in the charts), and for the chosen pack: voltage, current, signal and
   throttle as lanes of one recorder (each reads out at the cursor; the flight only, the quiet start and end cut, or the
   whole log; its exceedances marked along the top; crashes marked by a tap at their moment, a red line across the
-  lanes; the lines broken between a pack's files), under it a replay of the sticks with throttle, power and battery
+  lanes; each flip and roll a gold band, its way marked, the pack's count above; the lines broken between a pack's files), under it a replay of the sticks with throttle, power and battery
   dials (the power with a mark for what the pack could still give before a cell drops to 3.3 V, from its resistance;
   the battery from its charge at rest when plugged in, less the mAh used) and an attitude ball (banked and pitched by
   the sticks, turned over through each flip the way they took it, the small heli fixed in its middle), then a caution
@@ -40,8 +40,9 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   cyclic), its exceedance events as flight data monitoring lists them (over current, a cell under 3.3 V, the link low,
   past 85 % of the pack, a strike: the current jumping then the motor stopping), and a map of the sticks. A sortie
   flown with logs shows its exact air time, each pack as a bar (named by its button, the inverted part in violet) with
-  a word or two on it (too deep, sagged, past its rating, flown hard, tiring or worn, or within its limits), the share
-  upside down as a ring, and its flips and rolls. `npm run logs` brings them from the plugged-in radio.
+  a word or two on it (too deep, sagged, past its rating, flown hard, tiring or worn, or within its limits; none for
+  a pack with no telemetry), the share upside down as a ring, and its flips and rolls, how often they came and each
+  pack's. `npm run logs` brings them from the plugged-in radio.
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
   heli breaks (a damage map on a 3D Huey you turn by dragging, a part's breaks on hover or tap; the flat drawing
   while it loads; the low-poly Huey by Sami, CC BY 4.0, turned into the zones by `scripts/huey.ts`, see

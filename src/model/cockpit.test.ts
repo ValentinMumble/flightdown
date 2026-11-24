@@ -127,5 +127,8 @@ describe('packDebrief', () => {
       [],
     );
     expect(fine[0].notes).toEqual([{tone: 'good', text: 'within its limits'}]);
+    // A pack its log knows nothing of (the K110S has no telemetry): no verdict at all.
+    const blind = packDebrief(sortie('2026-11-24', 1, [], [log('12', {flying: 220})]), batteries, []);
+    expect(blind).toEqual([]);
   });
 });
