@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import type {Battery, Heli} from '../types';
 import {useStore} from '../data/store';
-import {Card, Empty, HeliDot, PageHeader, useOverlay} from '../components/ui';
+import {Card, Empty, HeliDot, HeliName, PageHeader, useOverlay} from '../components/ui';
 import {BatteryForm, GearForm, HeliForm, SpareForm, TipForm} from '../components/forms/HangarForms';
 import {MinuteMeter, Stamp} from '../components/instruments';
 import {useSeriesColor} from '../components/colors';
@@ -258,6 +258,14 @@ function Spares() {
         ),
     [doc.spares, doc.sorties, heli],
   );
+  // A group a heli, in the order the rows have them, the parts that fit any heli last.
+  const groups = useMemo(() => {
+    const byHeli = new Map<string, typeof rows>();
+    for (const row of rows) byHeli.set(row.spare.heliId ?? '', [...(byHeli.get(row.spare.heliId ?? '') ?? []), row]);
+    return [...byHeli.entries()]
+      .sort(([left], [right]) => Number(!left) - Number(!right))
+      .map(([heliId, parts]) => ({heliId, parts}));
+  }, [rows]);
   const toBuy = rows.filter(({spare, stock}) => stock < spare.min);
   const cost = toBuy.reduce((sum, {spare, stock}) => sum + (spare.price ?? 0) * (spare.min - Math.max(0, stock)), 0);
   // Parts that broke more than once and are not stocked: worth keeping a few.
@@ -287,56 +295,63 @@ function Spares() {
         </div>
       )}
       {rows.length ? (
-        <div className="list">
-          {rows.map(({spare, stock}) => (
-            <div key={spare.id} className="list-row">
-              <span className="spare-photo">
-                {spare.photo ? <HeliPhoto url={spare.photo} alt={spare.name} /> : <Wrench size={18} />}
-              </span>
-              <div className="row-main">
-                <div className="row-title">
-                  {spare.heliId && <HeliDot heli={heli(spare.heliId)} />}
-                  <span className="name">{spare.name}</span>
-                  {spare.url && (
-                    <a href={spare.url} target="_blank" rel="noreferrer" className="muted" aria-label="Shop">
-                      <ExternalLink size={13} />
-                    </a>
-                  )}
+        groups.map(group => (
+          <section key={group.heliId || 'any'} className="spare-group">
+            <h3 className="spare-group-title">
+              {group.heliId ? <HeliName heli={heli(group.heliId)} /> : 'Any heli'}
+              <span className="muted">· {group.parts.length}</span>
+            </h3>
+            <div className="list">
+              {group.parts.map(({spare, stock}) => (
+                <div key={spare.id} className="list-row">
+                  <span className="spare-photo">
+                    {spare.photo ? <HeliPhoto url={spare.photo} alt={spare.name} /> : <Wrench size={18} />}
+                  </span>
+                  <div className="row-main">
+                    <div className="row-title">
+                      <span className="name">{spare.name}</span>
+                      {spare.url && (
+                        <a href={spare.url} target="_blank" rel="noreferrer" className="muted" aria-label="Shop">
+                          <ExternalLink size={13} />
+                        </a>
+                      )}
+                    </div>
+                    <div className="row-sub">
+                      keep {spare.min}
+                      {spare.price ? ` · ${formatPrice(spare.price)} each` : ''}
+                    </div>
+                  </div>
+                  <span className={`pill ${stock <= 0 ? 'critical' : stock < spare.min ? 'caution' : 'good'}`}>
+                    {Math.max(0, stock)} in stock
+                  </span>
+                  <div className="toolbar" style={{flexWrap: 'nowrap'}}>
+                    <button
+                      className="icon-button"
+                      aria-label={`One less ${spare.name}`}
+                      onClick={() => adjust(spare.id, stock, -1)}
+                    >
+                      <Minus size={15} />
+                    </button>
+                    <button
+                      className="icon-button"
+                      aria-label={`One more ${spare.name}`}
+                      onClick={() => adjust(spare.id, stock, 1)}
+                    >
+                      <Plus size={15} />
+                    </button>
+                    <button
+                      className="icon-button"
+                      aria-label={`Edit ${spare.name}`}
+                      onClick={() => open(<SpareForm spare={spare} />)}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </div>
                 </div>
-                <div className="row-sub">
-                  {heli(spare.heliId)?.name ?? 'Any heli'} · keep {spare.min}
-                  {spare.price ? ` · ${formatPrice(spare.price)} each` : ''}
-                </div>
-              </div>
-              <span className={`pill ${stock <= 0 ? 'critical' : stock < spare.min ? 'caution' : 'good'}`}>
-                {Math.max(0, stock)} in stock
-              </span>
-              <div className="toolbar" style={{flexWrap: 'nowrap'}}>
-                <button
-                  className="icon-button"
-                  aria-label={`One less ${spare.name}`}
-                  onClick={() => adjust(spare.id, stock, -1)}
-                >
-                  <Minus size={15} />
-                </button>
-                <button
-                  className="icon-button"
-                  aria-label={`One more ${spare.name}`}
-                  onClick={() => adjust(spare.id, stock, 1)}
-                >
-                  <Plus size={15} />
-                </button>
-                <button
-                  className="icon-button"
-                  aria-label={`Edit ${spare.name}`}
-                  onClick={() => open(<SpareForm spare={spare} />)}
-                >
-                  <Pencil size={14} />
-                </button>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </section>
+        ))
       ) : (
         <div className="panel">
           <Empty emoji="🧰">

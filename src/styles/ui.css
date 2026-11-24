@@ -1134,3 +1134,18 @@ button.card {
   margin-top: 14px;
   color: var(--muted);
 }
+
+/* The Hangar's spares, a group a heli: its name over its parts. */
+.spare-group + .spare-group {
+  margin-top: 18px;
+}
+
+.spare-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+}
