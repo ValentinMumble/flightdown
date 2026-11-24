@@ -265,4 +265,21 @@ describe('flipCounts', () => {
     expect(describeFlips(flipCounts(series))).toBe('1 back flip, 1 roll right');
     expect(describeFlips({})).toBeNull();
   });
+
+  it('reads a log with no current (the K110S) by its motor output, the other side past half its upright pitch', () => {
+    // Hovering on +20 % pitch (1602 µs), a back flip through -15 % (1423 µs): not a quarter of the travel.
+    const k110s = {
+      id: 'k110s',
+      time,
+      channels: {
+        ch3: time.map(() => 1602),
+        ch6: time.map(second => (within(second, 4, 5) ? 1423 : 1602)),
+        elevator: time.map(second => (within(second, 3.6, 5.4) ? -60 : 0)),
+        aileron: time.map(() => 0),
+      },
+    };
+    expect(flipCounts(k110s)).toEqual({back: 1});
+    // With current, a quarter of the travel still: -15 % is no flip.
+    expect(flipCounts({...k110s, channels: {...k110s.channels, current: time.map(() => 8)}})).toEqual({});
+  });
 });

@@ -1,5 +1,6 @@
 import type {Battery, Heli, TelemetryLog, TelemetrySeries, TurnWay} from '../types';
 import {formatNumber, formatTimer} from './format';
+import {motorRunning} from './motor';
 
 export interface Insight {
   tone: 'good' | 'warning' | 'critical' | 'info';
@@ -15,8 +16,21 @@ const INVERTED_SECONDS = 3;
 /** How far to the other side of hover: a quarter of the collective's travel (-3° on a ±12° heli). */
 const INVERTED_SHARE = 0.25;
 
+/** With no current sensor, the other side of hover starts at this share of the pitch it flies with upright. */
+const UPRIGHT_SHARE = 0.5;
+
 /** Collective stick (% of its travel, bottom 0) from which the pitch is positive: upright, the heli climbs. */
 const STICK_UP = 60;
+
+/**
+ * Whether the motor works under load at each sample: drawing the current of flight, or in a log with no current
+ * sensor (the K110S has no telemetry), its output away from cut.
+ */
+function underLoad(series: TelemetrySeries): boolean[] {
+  const current = series.channels.current ?? [];
+  if (current.length) return current.map(value => value >= IDLE_AMPS);
+  return motorRunning(series.channels);
+}
 
 /**
  * The side of centre the collective (CH6) sits at in a hover, upright, whatever the channel's reversal: its side while
@@ -25,9 +39,9 @@ const STICK_UP = 60;
  */
 export function hoverSide(series: TelemetrySeries): number {
   const pitch = series.channels.ch6 ?? [];
-  const current = series.channels.current ?? [];
   const stick = series.channels.throttle ?? [];
-  const loaded = (index: number) => (current[index] ?? 0) >= IDLE_AMPS;
+  const load = underLoad(series);
+  const loaded = (index: number) => load[index] ?? false;
   const raised = pitch.filter((_, index) => loaded(index) && (stick[index] ?? 0) >= STICK_UP);
   const sides = (raised.length ? raised : pitch.filter((_, index) => loaded(index))).map(value => value - 1500);
   if (!sides.length) return 0;
@@ -38,18 +52,29 @@ export function hoverSide(series: TelemetrySeries): number {
  * Each time the collective (CH6, logged in µs, 512 each way of 1500) went well to the other side of hover, the motor
  * under load, as sample indexes: from the first sample there to the first one back (or the log's end). Upright the heli
  * hovers with the pitch to one side of centre (the side of most of its time under load, whatever the channel's
- * reversal); past a quarter of the travel the other side, it is on its back, or diving.
+ * reversal); past a quarter of the travel the other side, it is on its back, or diving. With no current sensor (the
+ * K110S), past half the pitch it flies with upright, if that is nearer: it hovers on +16 to +27 % and flips on -15 to
+ * -21 %, never a quarter of the travel.
  */
 function otherSidePasses(series: TelemetrySeries): {from: number; to: number}[] {
   const pitch = series.channels.ch6 ?? [];
-  const current = series.channels.current ?? [];
   const upright = hoverSide(series);
   if (!upright) return [];
-  const loaded = pitch.map((_, index) => (current[index] ?? 0) >= IDLE_AMPS);
+  const load = underLoad(series);
+  const loaded = pitch.map((_, index) => load[index] ?? false);
+  let beyond = 512 * INVERTED_SHARE;
+  if (!series.channels.current?.length) {
+    // The pitch it flies with upright: the median under load on its upright side.
+    const flown = pitch
+      .filter((value, index) => loaded[index] && upright * (value - 1500) > 0)
+      .map(value => Math.abs(value - 1500))
+      .sort((left, right) => left - right);
+    if (flown.length) beyond = Math.min(beyond, flown[Math.floor(flown.length / 2)] * UPRIGHT_SHARE);
+  }
   const passes: {from: number; to: number}[] = [];
   let from = -1;
   for (let index = 0; index <= pitch.length; index += 1) {
-    const over = index < pitch.length && loaded[index] && -upright * (pitch[index] - 1500) >= 512 * INVERTED_SHARE;
+    const over = index < pitch.length && loaded[index] && -upright * (pitch[index] - 1500) >= beyond;
     if (over && from < 0) from = index;
     if (!over && from >= 0) {
       passes.push({from, to: index});

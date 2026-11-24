@@ -2,20 +2,9 @@ import type {Sortie, TelemetryLog, TelemetrySeries} from '../types';
 import {pad} from './format';
 import {newId} from './ids';
 import {flipCounts, invertedStretches, packResistance} from './insights';
+import {motorRunning} from './motor';
 
-/** From this current the motor works under load: the heli is in the air (2 A, as the radio's Session widget). */
-const FLYING_AMPS = 2;
-/** How far (µs) the motor's output strays from cut before it counts as on: past the output's jitter. */
-const MOTOR_SLACK = 20;
-/** An output's ends (µs), -100 % and +100 %: a motor cut sits at one of them. */
-const CUT_ENDS = [988, 2012];
-
-/** The value a list holds most often. */
-function mostFrequent(values: number[]): number {
-  const counts = new Map<number, number>();
-  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
-  return [...counts].sort((left, right) => right[1] - left[1])[0][0];
-}
+export {motorRunning};
 
 /** A cell of a log: text from a CSV, or a number from a spreadsheet (days and times are numbers there). */
 export type Cell = string | number | null;
@@ -138,31 +127,6 @@ function thin(time: number[], channels: Record<string, number[]>) {
   return {time: thinTime, channels: thinChannels};
 }
 
-/**
- * Reads an EdgeTX log (a CSV from the radio's LOGS folder, or the same table pasted in a sheet): the summary kept
- * with the sortie, and the samples kept apart for its charts.
- */
-/**
- * Whether the motor runs at each sample: its output (CH3) away from where it sits cut (its value while the pack draws
- * nothing), as the radio's PACK timer counts it; in a log with no outputs, the pack under load, as the Session widget
- * counts it.
- */
-export function motorRunning(channels: TelemetrySeries['channels']): boolean[] {
-  const motor = channels.ch3;
-  const currents = channels.current ?? [];
-  if (motor?.length) {
-    const idle = currents.length ? motor.filter((_, index) => (currents[index] ?? 0) < 0.5) : [];
-    if (idle.length) {
-      const cut = mostFrequent(idle);
-      return motor.map(value => Math.abs(value - cut) > MOTOR_SLACK);
-    }
-    // No current to tell (the K110S has no telemetry, and logs only once its motor may run): the motor is cut at an
-    // end of the output's travel (-100 %, or +100 % on a reversed channel), where a running one never sits.
-    return motor.map(value => value > CUT_ENDS[0] + MOTOR_SLACK && value < CUT_ENDS[1] - MOTOR_SLACK);
-  }
-  return currents.map(value => value >= FLYING_AMPS);
-}
-
 /** Seconds kept before the motor first runs and after it last stops, when a log's quiet start and end are cut. */
 const SPAN_MARGIN = 5;
 
@@ -182,6 +146,10 @@ export function activeSpan(series: TelemetrySeries): {from: number; to: number} 
   return from - start + (end - to) >= 10 ? {from, to} : null;
 }
 
+/**
+ * Reads an EdgeTX log (a CSV from the radio's LOGS folder, or the same table pasted in a sheet): the summary kept
+ * with the sortie, and the samples kept apart for its charts.
+ */
 export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog; series: TelemetrySeries} | null {
   const headerIndex = rows.findIndex(row => row && isTelemetryHeader(row));
   if (headerIndex < 0) return null;
@@ -279,7 +247,7 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     ...(signals.length && {minRssi: Math.min(...signals)}),
     ...(packButton !== undefined && {packButton}),
     ...((channels.ch3?.length || currents.length) && {flying: Math.round(flying)}),
-    ...(channels.ch6?.length && currents.length && {inverted: Math.round(upsideDown)}),
+    ...(channels.ch6?.length && (currents.length || channels.ch3?.length) && {inverted: Math.round(upsideDown)}),
     ...(Object.keys(flips).length > 0 && {flips}),
     ...(resistance !== null && {resistance: Math.round(resistance)}),
   };
