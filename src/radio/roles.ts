@@ -95,7 +95,7 @@ const K110S: Record<string, SwitchRole> = {
   SH: {
     job: 'Rescue, while held',
     up: ['Released'],
-    down: ['Rescue', '6G, the pitch flat, then a climb at 60% after 0.1 s'],
+    down: ['Rescue', '6G, the pitch flat, then a climb at 40% after 0.1 s'],
   },
   SG: {
     job: 'Practice rates',
