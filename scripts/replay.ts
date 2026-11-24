@@ -4,7 +4,8 @@
  * really happened: how long each pack flies before a crash, how many of its flips and rolls it makes, and whether the
  * sim crashes where a real crash is marked. Run it after reading new logs, then tune the sim (physics.ts) or the
  * stand-in (standIn.ts) until the score is as good or better. `npm run replay`, or `npm run replay -- K110S` for one
- * heli, `-- --since 2026-11-20` for the newer packs only, `-- --quiet` for the totals.
+ * heli, `-- --since 2026-11-20` for the newer packs only, `-- --quiet` for the totals, `-- --wind 0.7` to fly each pack in
+ * that share of its sortie's recorded wind (Open-Meteo's at 10 m; read now for a sortie that has none yet).
  */
 import {Vector3} from 'three';
 import {loadEnv} from 'vite';
@@ -12,6 +13,8 @@ import {sortiePacks, joinSeries} from '../src/model/packs';
 import {heliParams, restingState, step} from '../src/sim/physics';
 import {loggedControls, replayStart, replayEnd} from '../src/sim/replay';
 import {modelMapping} from '../src/sim/modelMixer';
+import {windAt} from '../src/sim/wind';
+import {fetchSortieWeather, weatherSpotFor} from '../src/model/pastWeather';
 import {
   FlipGuide,
   LET_CRASH,
@@ -31,7 +34,8 @@ const {edgeTx, readCard} = await import('../api/_lib/edgetx');
 const args = process.argv.slice(2);
 const quiet = args.includes('--quiet');
 const since = args.includes('--since') ? args[args.indexOf('--since') + 1] : '2026';
-const only = args.find(arg => !arg.startsWith('--') && arg !== since);
+const windShare = args.includes('--wind') ? Number(args[args.indexOf('--wind') + 1]) : 0;
+const only = args.find(arg => !arg.startsWith('--') && arg !== since && arg !== String(windShare));
 const DT = 1 / 240;
 
 const card = await readCard(edgeTx());
@@ -46,6 +50,13 @@ for (const sortie of [...doc.sorties].sort((left, right) => left.date.localeComp
   if (!heli || !model || (only && !heli.name.startsWith(only))) continue;
   const params = heliParams(heli);
   const mapping = modelMapping(model);
+  let weather = sortie.indoor ? null : (sortie.weather ?? null);
+  const spot = doc.spots.find(one => one.id === sortie.spotId);
+  const located = weatherSpotFor(sortie, spot, new Date('2100-01-01'));
+  if (windShare && !weather && !sortie.indoor && located) weather = await fetchSortieWeather(sortie, located);
+  const wind = (weather?.wind ?? 0) * windShare;
+  const gusts = (weather?.gusts ?? 0) * windShare;
+  const air = new Vector3();
   for (const pack of sortiePacks(sortie)) {
     const parts = await Promise.all(pack.files.map(file => readSeries(file.id)));
     if (parts.some(part => !part)) continue;
@@ -78,7 +89,7 @@ for (const sortie of [...doc.sorties].sort((left, right) => left.date.localeComp
             untilCut(cuts, second),
             untilManoeuvre(found, second),
           );
-      const events = step(state, controls, params, new Vector3(), DT, 1);
+      const events = step(state, controls, params, windAt(second, wind, gusts, air), DT, 1);
       // Each manoeuvre's turn, counted until the next one starts.
       const index = found.findIndex(
         (one, number) =>

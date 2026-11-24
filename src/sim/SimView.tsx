@@ -26,6 +26,7 @@ import {drawAmps, idleUpOf, packVolts, type SimFeed, type SimPack} from './radio
 import type {RotorSound} from './sound';
 import {ModelMixer, modelMapping} from './modelMixer';
 import {loggedControls, loggedOutputs, loggedSticks, replayEnd, type Replay} from './replay';
+import {windAt} from './wind';
 import {FlipGuide, LET_CRASH, STAND_IN, standIn, untilCut, untilManoeuvre} from './standIn';
 import {sampleAt} from '../model/telemetry';
 import type {CardModel} from '../radio/card';
@@ -563,9 +564,7 @@ export default function SimView({
       }
 
       // The wind from the left, gusting a third either way.
-      const blowing = (live.current.wind / 3.6) * (1 + 0.35 * Math.sin(time * 0.7) * Math.sin(time * 0.23 + 1));
-      const veer = 0.25 * Math.sin(time * 0.11);
-      gust.set(Math.cos(veer), 0, Math.sin(veer)).multiplyScalar(blowing);
+      windAt(time, live.current.wind, undefined, gust);
 
       const happened: StepEvents = {};
       for (spare += dt; spare >= STEP; spare -= STEP)
