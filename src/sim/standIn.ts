@@ -39,10 +39,9 @@ export interface StandInTuning {
 
 /**
  * Tuned by replaying every 2026 log on the physics fitted to the M2 EVO's calibration flight (1.9° hover pitch, 300°/s
- * at full stick, the FBL answering the stick in a straight line: an expo scored worse). None of the M2 EVO's 21 packs
- * crashed for real: they fly 93 % of the time, 18 of them to the end, 124 of their 182 turns made (two hold a third of
- * a stick for seconds while the log shows the heli upright, which a rate FBL cannot do). The K110S's two real crashes
- * come back within 2 s once the stand-in lets go before them (SimView's LET_CRASH).
+ * at full stick, the FBL answering the stick in a straight line: an expo scored worse). All 21 of the M2 EVO's packs
+ * fly to the end (none crashed for real), 153 of their 162 turns made; the K110S's two real crashes come back within 2 s
+ * once the stand-in lets go before them (`LET_CRASH`). `npm run replay` scores it again on every log.
  */
 export const STAND_IN: StandInTuning = {
   attitudeLag: 0.3,
@@ -74,6 +73,11 @@ export interface Manoeuvre {
 
 /** Which way up the pilot flies around a stretch of the log: the sign of the collective's mean, 0 when near nothing. */
 const SIDE_FOR = 0.8;
+function lowest(controlsAt: (second: number) => Controls, from: number, to: number): number {
+  let low = Infinity;
+  for (let second = from; second <= to; second += 0.05) low = Math.min(low, controlsAt(second).collective);
+  return low;
+}
 function side(controlsAt: (second: number) => Controls, from: number, to: number): number {
   let sum = 0;
   let count = 0;
@@ -113,7 +117,9 @@ export function stickManoeuvres(
       continue;
     }
     // Longer than a manoeuvre: the stick held with the heli down (after a crash), or a slow drift of it.
-    if (run.peak >= FULL && second - run.from <= LONGEST) {
+    // A long push with the collective never below zero kept the real heli upright (a flip that long goes inverted).
+    const upright = second - run.from > 3 && lowest(controlsAt, run.from, second) > -0.15;
+    if (run.peak >= FULL && second - run.from <= LONGEST && !upright) {
       const axis = Math.abs(run.pitch) >= Math.abs(run.roll) ? 'pitch' : 'roll';
       const turns = Math.abs(run[axis]) / (2 * Math.PI);
       // Over to the other side (the collective changes sign, as it does from upright to inverted): half turns.
@@ -204,6 +210,12 @@ export class FlipGuide {
   }
 }
 
+/**
+ * Before a crash marked on the replayed pack, the stand-in lets go this long (s): the log's sticks alone then crash the
+ * sim heli about when the real one did (both K110S crashes of Nov 2026 come within 2 s).
+ */
+export const LET_CRASH = 6;
+
 /** The stretches of a log the stand-in keeps out of: its flips and rolls, with a second or so either side. */
 export function manoeuvres(series: TelemetrySeries, margin = 1.2) {
   return turnOvers(series).map(turn => ({from: turn.start - margin, to: turn.end + margin}));
@@ -263,11 +275,8 @@ export function standIn(
   upcoming: number | null = null,
 ): Controls {
   if (state.crashed) return logged;
-  // The motor cut with the heli sitting, or just above the ground and not sinking hard (a cushion is still the log's):
-  // the collective the real pilot raised on the ground would hop the sim heli off on its spinning rotor.
-  const sitting = state.grounded || (state.position.y < 2 && state.velocity.y > -1);
-  if (logged.throttle <= 0 && sitting) return {...logged, collective: Math.min(logged.collective, 0)};
-  if (state.grounded) return logged;
+  // Sitting with the motor cut: the collective the real pilot raised would hop the sim heli off on its spinning rotor.
+  if (state.grounded) return logged.throttle <= 0 ? {...logged, collective: Math.min(logged.collective, 0)} : logged;
   // A manoeuvre coming: room for it first.
   if (upcoming !== null && tuning.low < tuning.flipHeight) {
     tuning = {...tuning, low: tuning.flipHeight, high: Math.max(tuning.high, tuning.flipHeight + 4)};
@@ -327,7 +336,9 @@ export function standIn(
 
   // Touching down: the last seconds before the log cuts the motor, the real heli was sitting; the stand-in puts the sim
   // heli down on its own collective, sinking gently and slower near the ground.
-  if (landing !== null && landing <= TOUCHDOWN && up.y > 0.7) {
+  // The same when the motor is cut just above the ground (the real pilot cut it there and landed on the rotor's spin).
+  const cutLow = logged.throttle <= 0 && state.position.y < 2;
+  if (((landing !== null && landing <= TOUCHDOWN) || cutLow) && up.y > 0.7) {
     const sink = -Math.min(2, 0.3 + state.position.y * 0.6);
     const hover = params.hoverPitch / params.maxPitch;
     return {...logged, roll, pitch, collective: clamp(hover + (sink - state.velocity.y) * 0.3, -0.3, 0.6)};

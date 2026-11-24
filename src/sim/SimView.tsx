@@ -26,7 +26,7 @@ import {drawAmps, idleUpOf, packVolts, type SimFeed, type SimPack} from './radio
 import type {RotorSound} from './sound';
 import {ModelMixer, modelMapping} from './modelMixer';
 import {loggedControls, loggedOutputs, loggedSticks, replayEnd, type Replay} from './replay';
-import {FlipGuide, STAND_IN, standIn, untilCut, untilManoeuvre} from './standIn';
+import {FlipGuide, LET_CRASH, STAND_IN, standIn, untilCut, untilManoeuvre} from './standIn';
 import {sampleAt} from '../model/telemetry';
 import type {CardModel} from '../radio/card';
 import {FACINGS, HOVER_HEIGHT, PAD, PAD_RADIUS, startDrill, updateDrill, type Drill, type Facing} from './drills';
@@ -67,11 +67,6 @@ const EYES = new THREE.Vector3(0, 1.7, 0);
 const EYE_FOV = 30;
 /** A stick moved past this (share of its travel) while a replay flies the heli: the pilot takes over. */
 const TAKE_OVER = 0.25;
-/**
- * Before a crash marked on the replayed pack, the stand-in lets go this long (s): the log's sticks alone then crash the
- * sim heli about when the real one did (both K110S crashes of Nov 2026 come within 2 s).
- */
-const LET_CRASH = 6;
 /** The heli may stray this share of its distance from where the eyes look before they turn after it, and they turn
  * after it over this, s. */
 const LOOK_SLACK = 0.07;

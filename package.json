@@ -13,7 +13,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"api/**/*.ts\" \"scripts/**/*.ts\" local-api.ts vite.config.ts sw/sw.js index.html",
     "logs": "tsx scripts/logs.ts",
     "cutouts": "tsx scripts/cutouts.ts",
-    "reread": "tsx scripts/reread.ts"
+    "reread": "tsx scripts/reread.ts",
+    "replay": "tsx scripts/replay.ts"
   },
   "dependencies": {
     "@upstash/redis": "1.39.0",
