@@ -413,6 +413,10 @@ export function Sim() {
           return flights.map((flown, index) => ({
             key: `${sortie.id}:${index}`,
             pack: flown,
+            // Its crashes marked on the timeline, as seconds of its log.
+            crashes: (sortie.crashTimes ?? [])
+              .map(time => (Date.parse(time) - Date.parse(flown.start ?? '')) / 1000)
+              .filter(second => second >= 0 && second <= flown.duration + 5),
             label: [
               `${formatDay(sortie.date, {weekday: false, year: true})}${flown.start ? `, ${flown.start.slice(11, 16)}` : ''}`,
               heli?.name,
@@ -449,6 +453,7 @@ export function Sim() {
       from: replayStart(series),
       stretches: stickManoeuvres(series, second => loggedControls(series, second, logMapping), params),
       cuts: motorCuts(series, second => loggedControls(series, second, logMapping).throttle),
+      crashes: chosen.crashes,
       label: chosen.label,
     });
   };

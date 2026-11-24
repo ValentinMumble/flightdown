@@ -41,8 +41,8 @@ export interface StandInTuning {
  * Tuned by replaying every 2026 log on the physics fitted to the M2 EVO's calibration flight (1.9° hover pitch, 300°/s
  * at full stick, the FBL answering the stick in a straight line: an expo scored worse). None of the M2 EVO's 21 packs
  * crashed for real: they fly 93 % of the time, 18 of them to the end, 124 of their 182 turns made (two hold a third of
- * a stick for seconds while the log shows the heli upright, which a rate FBL cannot do). The K110S's 6 fly 84 %, the
- * one crash 12 s after its real one.
+ * a stick for seconds while the log shows the heli upright, which a rate FBL cannot do). The K110S's two real crashes
+ * come back within 2 s once the stand-in lets go before them (SimView's LET_CRASH).
  */
 export const STAND_IN: StandInTuning = {
   attitudeLag: 0.3,
@@ -84,6 +84,8 @@ function side(controlsAt: (second: number) => Controls, from: number, to: number
 
 /** Under this the stick is at rest, between manoeuvres; a manoeuvre's stick passes `FULL` at least once. */
 const QUIET = 0.25;
+/** A push of the stick longer than this (s) is not a flip or roll. */
+const LONGEST = 10;
 const FULL = 0.5;
 
 /**
@@ -110,7 +112,8 @@ export function stickManoeuvres(
       run.peak = Math.max(run.peak, size);
       continue;
     }
-    if (run.peak >= FULL) {
+    // Longer than a manoeuvre: the stick held with the heli down (after a crash), or a slow drift of it.
+    if (run.peak >= FULL && second - run.from <= LONGEST) {
       const axis = Math.abs(run.pitch) >= Math.abs(run.roll) ? 'pitch' : 'roll';
       const turns = Math.abs(run[axis]) / (2 * Math.PI);
       // Over to the other side (the collective changes sign, as it does from upright to inverted): half turns.

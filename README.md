@@ -66,7 +66,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   the logged outputs from the logged sticks). A logged pack replays: Watch it (its sticks fly the heli, a stand-in pilot adding the corrections a log
   cannot hold, each flip and roll read from the sticks and flown to the whole turns the real heli made, the heli put down
   before each motor cut, inverted flight levelled upside down (scored on every 2026 log: the M2 EVO's 21 packs fly 93 % of
-  the time before a crash, 18 to the end, the calibration packs among them; a crash is picked up
+  the time before a crash, 18 to the end, the calibration packs among them; before a crash marked on the timeline the
+  stand-in lets go, and the K110S's two real crashes come back within 2 s; a crash is picked up
   and the log goes on); touching a stick takes over), or Follow it (you fly, an amber mark on each stick where the real
   pack's was). Its current draw is fitted to the logs, its hover pitch (1.9°) and full-stick rate (300°/s) to the M2 EVO's
   calibration flight of 24 Nov 2026 (10 s hovers in each idle up, flips and rolls at full stick, each marked with SB). Flybarless rate-mode physics sized from the heli's weight and rotor: rates that settle with a little

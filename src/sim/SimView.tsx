@@ -67,6 +67,11 @@ const EYES = new THREE.Vector3(0, 1.7, 0);
 const EYE_FOV = 30;
 /** A stick moved past this (share of its travel) while a replay flies the heli: the pilot takes over. */
 const TAKE_OVER = 0.25;
+/**
+ * Before a crash marked on the replayed pack, the stand-in lets go this long (s): the log's sticks alone then crash the
+ * sim heli about when the real one did (both K110S crashes of Nov 2026 come within 2 s).
+ */
+const LET_CRASH = 6;
 /** The heli may stray this share of its distance from where the eyes look before they turn after it, and they turn
  * after it over this, s. */
 const LOOK_SLACK = 0.07;
@@ -533,15 +538,18 @@ export default function SimView({
             // The log flies, its flips and rolls made whole turns, the stand-in pilot adding the corrections the log
             // cannot hold (see standIn.ts).
             const steered = flips.steer(ghost, state, second, dt, replay.stretches);
-            controls = standIn(
-              steered.controls,
-              state,
-              params,
-              steered.manoeuvre,
-              STAND_IN,
-              untilCut(replay.cuts, second),
-              untilManoeuvre(replay.stretches, second),
-            );
+            const crashing = replay.crashes.some(crash => second >= crash - LET_CRASH && second <= crash + 1);
+            controls = crashing
+              ? ghost
+              : standIn(
+                  steered.controls,
+                  state,
+                  params,
+                  steered.manoeuvre,
+                  STAND_IN,
+                  untilCut(replay.cuts, second),
+                  untilManoeuvre(replay.stretches, second),
+                );
             outputs = loggedOutputs(replay.series, second);
             const se = sampleAt(replay.series.time, replay.series.channels.se, second) ?? 0;
             // Practice rates: SG down since 24 Nov 2026, SD down before.

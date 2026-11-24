@@ -19,6 +19,8 @@ export interface Replay {
   /** Its flips and rolls (the stand-in pilot keeps out of them) and its motor cuts (its landings). */
   stretches: Manoeuvre[];
   cuts: number[];
+  /** Its real crashes (s of its log): the stand-in lets go before each, the log's sticks crashing it as they did. */
+  crashes: number[];
   /** What it is called, for the banner over the view. */
   label: string;
   /** When it was started (performance.now), and the log's second it started from. */
