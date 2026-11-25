@@ -165,3 +165,53 @@ export function crashesByWind(sorties: Sortie[]): WindBand[] {
   }
   return bands;
 }
+
+/** A wind band needs this many sorties before its record says anything. */
+export const RECORD_SORTIES = 3;
+
+/** Your own record in a wind: go, careful or no-go, from how often you crash in that band against your usual. */
+export interface WindRecord {
+  band: WindBand;
+  /** Packs flown for each crash in that band; null with no crash there. */
+  perCrash: number | null;
+  /** Crashes a pack in that band, against all your outdoor packs with their weather: 2 is twice as often. */
+  ratio: number;
+  verdict: 'go' | 'careful' | 'no-go';
+}
+
+/**
+ * How you have flown in this wind (km/h), from the bands of `crashesByWind`: null while its band has too few sorties
+ * to say. Go up to a quarter more crashes than usual, careful up to twice, no-go beyond.
+ */
+export function windRecord(bands: WindBand[], wind: number): WindRecord | null {
+  const band = [...bands].reverse().find(one => wind >= one.from);
+  if (!band || band.sorties < RECORD_SORTIES || !band.packs) return null;
+  const packs = bands.reduce((sum, one) => sum + one.packs, 0);
+  const crashes = bands.reduce((sum, one) => sum + one.crashes, 0);
+  const usual = crashes / packs;
+  const here = band.crashes / band.packs;
+  // No crash at all yet: every band is as usual.
+  const ratio = usual ? here / usual : 1;
+  return {
+    band,
+    perCrash: band.crashes ? band.packs / band.crashes : null,
+    ratio,
+    verdict: ratio <= 1.25 ? 'go' : ratio <= 2 ? 'careful' : 'no-go',
+  };
+}
+
+/** A record in words: "you crash twice as often as usual here (a crash every 3 packs)". */
+export function recordText({perCrash, ratio}: WindRecord): string {
+  const often =
+    ratio < 0.8
+      ? 'you crash less than usual in this wind'
+      : ratio <= 1.25
+        ? 'you crash about as often as usual in this wind'
+        : ratio < 1.75
+          ? `you crash ${Math.round(ratio * 10) / 10}× as often as usual in this wind`
+          : ratio < 2.5
+            ? 'you crash twice as often as usual in this wind'
+            : `you crash ${Math.round(ratio)}× as often as usual in this wind`;
+  const every = perCrash === null ? 'no crash yet' : `a crash every ${Math.round(perCrash * 10) / 10} packs`;
+  return `${often} (${every})`;
+}

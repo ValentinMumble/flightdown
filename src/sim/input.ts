@@ -147,12 +147,13 @@ export class KeyboardSticks {
   read(dt: number, raw = false): Controls {
     const axis = (plus: string, minus: string) => Number(this.down.has(plus)) - Number(this.down.has(minus));
     this.collective = clamp(this.collective + axis('w', 's') * 0.8 * dt);
-    // The keys give full rate at once: a third of it is plenty.
+    // The keys give full rate at once: a third of it is plenty for the cyclic; the rudder gets all of it (the tail's
+    // 280°/s at full stick, from the replays), as 40 % turned far too slowly.
     const {cyclic, rudder} = raw ? RATES[0] : RATES[this.rates];
     return {
       roll: axis('ArrowRight', 'ArrowLeft') * 0.35 * cyclic,
       pitch: axis('ArrowUp', 'ArrowDown') * 0.35 * cyclic,
-      yaw: axis('d', 'a') * 0.4 * rudder,
+      yaw: axis('d', 'a') * rudder,
       collective: this.collective,
       throttle: this.hold || !this.armed ? 0 : KEY_IDLE_UPS[this.idleUp],
       rescue: this.down.has('e'),
@@ -250,7 +251,7 @@ export class GameControllerSticks {
     if (tapped(BUTTON.rightBumper)) this.rates = (this.rates + 1) % RATES.length;
     const {cyclic, rudder} = raw ? RATES[0] : RATES[this.rates];
     // Short game controller sticks, shaped: the cyclic with a light expo (full rate at the ends); the rudder softer
-    // round the centre (and 80 % at the ends when not mixed: the model's own rudder line is softer); the collective
+    // round the centre, full rate at the ends; the collective
     // very soft round hover pitch, so a nudge does not shoot the heli up, yet reaching the full pitch at the ends, so
     // it climbs upside down too.
     const expo = (value: number, amount: number) => value * (1 - amount + amount * value * value);
@@ -258,7 +259,7 @@ export class GameControllerSticks {
     return {
       roll: cyclic * expo(dead(pad.axes[2] ?? 0), 0.25),
       pitch: cyclic * expo(-dead(pad.axes[3] ?? 0), 0.25),
-      yaw: raw ? expo(dead(pad.axes[0] ?? 0), 0.3) : 0.8 * rudder * expo(dead(pad.axes[0] ?? 0), 0.6),
+      yaw: raw ? expo(dead(pad.axes[0] ?? 0), 0.3) : rudder * expo(dead(pad.axes[0] ?? 0), 0.6),
       collective: lift >= 0 ? hover + lift * (1 - hover) : hover + lift * (1 + hover),
       throttle: this.hold || !this.armed ? 0 : KEY_IDLE_UPS[this.idleUp],
       rescue: held(BUTTON.rightTrigger),

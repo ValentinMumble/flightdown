@@ -12,7 +12,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   packs per crash on a tape and the time in the air per crash (all time, and the last 20 sorties), the crash-free run
   in packs and days, the last five sorties by month beside the helis on the flight line (each with its own small hour
   meter, as in the Hangar), the last session at a glance (its packs and their notes, a throttle hold undone in flight,
-  the link lost, a hard stop) beside the flying weather at your latest spot for three days (Open-Meteo), then the live packs
+  the link lost, a hard stop) beside the flying weather at your latest spot for three days (Open-Meteo, each day a go,
+  careful or no-go from how often you crash in its wind), then the live packs
   by their buttons (flights, last flown, resistance, tiring or worn against their first reading and the freshest
   pack's) beside what changed on the radio since the last flight (edge-tx's commits).
 - **Sorties:** every sortie as a flight strip (today's and yesterday's say so), a month at a time, the airtime shown on
@@ -66,14 +67,15 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   the logged outputs from the logged sticks). A logged pack replays: Watch it (its sticks fly the heli, a stand-in pilot adding the corrections a log
   cannot hold, each flip and roll read from the sticks and flown to the whole turns the real heli made, the heli put down
   before each motor cut, inverted flight levelled upside down (scored on every 2026 log: all 21 of the M2 EVO's packs fly to
-  the end, 153 of their 162 flips and rolls made, `npm run replay` scoring it again after new logs; before a crash marked on the timeline the
+  the end, 152 of their 162 flips and rolls made, `npm run replay` scoring it again after new logs; before a crash marked on the timeline the
   stand-in lets go, and the K110S's two real crashes come back within 2 s; a crash is picked up
   and the log goes on); touching a stick takes over), or Follow it (you fly, an amber mark on each stick where the real
   pack's was). Its current draw is fitted to the logs, its hover pitch (1.9°) and full-stick rate (300°/s) to the M2 EVO's
   calibration flight of 24 Nov 2026 (10 s hovers in each idle up, flips and rolls at full stick, each marked with SB). Flybarless rate-mode physics sized from the heli's weight and rotor: rates that settle with a little
   overshoot, momentum (it keeps a lean and carries its speed, the FBL taking out most of the disc's blowback), a quick soft start, turbulence, translational lift, tail kick, a governor that sags, hold and autorotation, the
   rescue, self-level, ground effect, wind, crashes; the rotor and motor heard. The eyes see through a fixed lens (the heli
-  shrinks as it goes away), with a zoom slider on the view. The TX16S's screen in a corner, its own
+  shrinks as it goes away), with a zoom slider on the view; they step back from a heli flown too close, and turn at once
+  before it leaves the view. The TX16S's screen in a corner, its own
   widgets (the Cockpit, the top bar) running on the sim's flight and a simulated pack (current from the load, sized on
   the logs, volts sagging). Free flight to start with, and two drills: hover in a box over the pad in each facing, and
   soft landings graded by touchdown speed.
@@ -84,8 +86,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   lasts) and its own chart colour (picked in its form). Helis, radios, packs and
   spares take a photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac;
   others are cut out in the page). Spare parts in their own tab, a group a heli: each counted on a day, each break logged since
-  taking one off, those below what to keep on the Cockpit's flight line (`SHOW_SPARES` in `src/model/parts.ts` hides
-  them).
+  taking one off, how long each lasts at the rate it breaks and you fly now, and a shopping list for the minimum plus 4
+  weeks; those below what to keep on the Cockpit's flight line (`SHOW_SPARES` in `src/model/parts.ts` hides them).
 - **Radio:** a tab of its own: the TX16S, running the Lua that goes on it (in the browser, with Fengari), its switches
   around the screen where they sit on the radio, each saying what it does on the model where it is set (`roles.ts`,
   written by hand from the model files). Model screens: the M2 EVO's and the K110S's screens as the radio draws them

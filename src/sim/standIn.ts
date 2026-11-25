@@ -39,7 +39,7 @@ export interface StandInTuning {
 /**
  * Tuned by replaying every 2026 log on the physics fitted to the M2 EVO's calibration flight (1.9° hover pitch, 300°/s
  * at full stick, the FBL answering the stick in a straight line: an expo scored worse). All 21 of the M2 EVO's packs
- * fly to the end (none crashed for real), 153 of their 162 turns made; the K110S's two real crashes come back within 2 s
+ * fly to the end (none crashed for real), 152 of their 162 turns made (tail at 420°/s); the K110S's two real crashes come back within 2 s
  * once the stand-in lets go before them (`LET_CRASH`). `npm run replay` scores it again on every log.
  */
 export const STAND_IN: StandInTuning = {
@@ -206,7 +206,8 @@ export class FlipGuide {
     const ahead = second > now.to ? goal : this.wanted;
     const lead = second > now.to ? FINISH_STICK : (share * now.rate) / this.fullRate;
     const stick = clamp(lead + (ahead - this.turned) / TRACK / this.fullRate, 0, 1);
-    return {controls: {...controls, [now.axis]: now.way * stick}, manoeuvre: true};
+    // The tail held still through the turn: the log's rudder there was the pilot's touch on the real heli's turn.
+    return {controls: {...controls, yaw: 0, [now.axis]: now.way * stick}, manoeuvre: true};
   }
 }
 
@@ -253,6 +254,9 @@ const scratch = {
   axis: new Vector3(),
   inverse: new Quaternion(),
 };
+
+/** How late a cyclic correction reaches the disc (the servos, then the rates settling), s: the pirouette lead. */
+const PIRO_LEAD = 0.12;
 
 /** The log's controls with the stand-in's corrections added; the log's own while `manoeuvre` or on the ground. */
 export function standIn(
@@ -321,6 +325,12 @@ export function standIn(
   let pitch = logged.pitch;
   if (axis.lengthSq() > 1e-9) {
     axis.normalize().applyQuaternion(scratch.inverse.copy(state.attitude).invert());
+    // Pirouetting, the correction reaches the disc a moment late, the body turned on: it is aimed ahead by that turn,
+    // as a flybarless unit's pirouette compensation does.
+    const ahead = state.rates.y * PIRO_LEAD;
+    const x = axis.x * Math.cos(ahead) + axis.z * Math.sin(ahead);
+    axis.z = -axis.x * Math.sin(ahead) + axis.z * Math.cos(ahead);
+    axis.x = x;
     const rate = angle / tuning.attitudeLag / params.cyclicRate;
     pitch = clamp(pitch - axis.x * rate);
     roll = clamp(roll - axis.z * rate);

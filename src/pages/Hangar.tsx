@@ -24,9 +24,19 @@ import {TipForm} from '../components/forms/TipForm';
 import {MinuteMeter, Stamp} from '../components/instruments';
 import {useSeriesColor} from '../components/colors';
 import {VisitorBanner} from '../components/VisitorBanner';
-import {ago, formatAirtime, formatDay, formatNumber, formatPrice, formatRate, heliSpecs, plural} from '../model/format';
+import {
+  ago,
+  formatAirtime,
+  formatDay,
+  formatNumber,
+  formatPrice,
+  formatRate,
+  heliSpecs,
+  plural,
+  today,
+} from '../model/format';
 import {groupBy, packsSinceCrash, type GroupTally} from '../model/stats';
-import {brokenRanking, partKey, SHOW_SPARES, spareStock} from '../model/parts';
+import {brokenRanking, partKey, runwayText, RUNWAY_WEEKS, SHOW_SPARES, spareRunway, spareStock} from '../model/parts';
 import {now} from '../model/ids';
 import {kindFlights, livePacks} from '../model/packs';
 import {HeliPhoto} from '../components/HeliPhoto';
@@ -248,7 +258,10 @@ function Spares() {
   const rows = useMemo(
     () =>
       doc.spares
-        .map(spare => ({spare, stock: spareStock(spare, doc.sorties)}))
+        .map(spare => {
+          const stock = spareStock(spare, doc.sorties);
+          return {spare, stock, runway: spareRunway(spare, doc.sorties, stock, today())};
+        })
         .sort(
           (left, right) =>
             (heli(left.spare.heliId)?.name ?? '').localeCompare(heli(right.spare.heliId)?.name ?? '') ||
@@ -264,8 +277,9 @@ function Spares() {
       .sort(([left], [right]) => Number(!left) - Number(!right))
       .map(([heliId, parts]) => ({heliId, parts}));
   }, [rows]);
-  const toBuy = rows.filter(({spare, stock}) => stock < spare.min);
-  const cost = toBuy.reduce((sum, {spare, stock}) => sum + (spare.price ?? 0) * (spare.min - Math.max(0, stock)), 0);
+  // Below its minimum, or not enough for the next weeks at the rate it breaks and you fly.
+  const toBuy = rows.filter(({runway}) => runway.buy > 0);
+  const cost = toBuy.reduce((sum, {spare, runway}) => sum + (spare.price ?? 0) * runway.buy, 0);
   // Parts that broke more than once and are not stocked: worth keeping a few.
   const stocked = new Set(doc.spares.map(spare => partKey(spare.name)));
   const ideas = brokenRanking(doc.sorties.filter(sortie => heli(sortie.heliId)?.status === 'active'))
@@ -285,11 +299,23 @@ function Spares() {
         </button>
       </div>
       {toBuy.length > 0 && (
-        <div className="banner">
+        <div className="banner shopping">
           <span>
             <ShoppingCart size={15} /> <b>{plural(toBuy.length, 'part')} to buy</b>
             {cost > 0 && <span className="muted"> · about {formatPrice(cost)}</span>}
           </span>
+          <ul className="shopping-list">
+            {toBuy.map(({spare, runway}) => (
+              <li key={spare.id}>
+                {runway.buy} × {spare.name}
+                {spare.heliId && <span className="muted"> · {heli(spare.heliId)?.name}</span>}
+                {spare.price ? <span className="muted"> · {formatPrice(spare.price * runway.buy)}</span> : null}
+              </li>
+            ))}
+          </ul>
+          <small className="muted">
+            Enough for its minimum and {RUNWAY_WEEKS} weeks at the rate it breaks, flying as much as the last 8 weeks.
+          </small>
         </div>
       )}
       {rows.length ? (
@@ -300,7 +326,7 @@ function Spares() {
               <span className="muted">· {group.parts.length}</span>
             </h3>
             <div className="list">
-              {group.parts.map(({spare, stock}) => (
+              {group.parts.map(({spare, stock, runway}) => (
                 <div key={spare.id} className="list-row">
                   <span className="spare-photo">
                     {spare.photo ? <HeliPhoto url={spare.photo} alt={spare.name} /> : <Wrench size={18} />}
@@ -317,6 +343,15 @@ function Spares() {
                     <div className="row-sub">
                       keep {spare.min}
                       {spare.price ? ` · ${formatPrice(spare.price)} each` : ''}
+                      {runway.weeks !== null && (
+                        <span
+                          className={runway.weeks < RUNWAY_WEEKS ? 'runway short' : 'runway'}
+                          title={`Broken ${Math.round(runway.perPack * 100) / 100} a pack, ${Math.round(runway.packsPerWeek * 10) / 10} packs a week`}
+                        >
+                          {' '}
+                          · {runwayText(runway.weeks)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span className={`pill ${stock <= 0 ? 'critical' : stock < spare.min ? 'caution' : 'good'}`}>

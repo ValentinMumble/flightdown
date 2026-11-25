@@ -71,6 +71,16 @@ const TAKE_OVER = 0.25;
  * after it over this, s. */
 const LOOK_SLACK = 0.07;
 const LOOK_LAG = 0.18;
+/**
+ * The heli's rotor may fill at most this share of the view's height: closer than that, the eyes step back from it
+ * (straight away from it, as a pilot steps back), over this, s, and come back to where the pilot stands once it goes.
+ */
+const NEAR_SHARE = 0.35;
+const STEP_BACK_LAG = 0.3;
+/** The eyes never go lower than this, stepping back from a heli flown low over the ground. */
+const LOWEST_EYES = 0.4;
+/** The heli always stays within this share of the way from the view's middle to its edge: past it, the eyes turn at once. */
+const IN_VIEW = 0.75;
 
 /**
  * The simulator's 3D view: the field seen from the pilot's eyes, the heli flown by the radio, a game controller or the
@@ -162,6 +172,13 @@ export default function SimView({
     const camera = new THREE.PerspectiveCamera(EYE_FOV, 1, 0.05, 900);
     camera.position.copy(EYES);
     const look = PAD.clone();
+    // Where the eyes want to be (the pilot's place, else stepped back from a heli too close), and scratch vectors.
+    const eyesWanted = new THREE.Vector3();
+    const away = new THREE.Vector3();
+    const toHeli = new THREE.Vector3();
+    const toLook = new THREE.Vector3();
+    const turn = new THREE.Quaternion();
+    const still = new THREE.Quaternion();
 
     const heading = FACINGS.find(one => one.value === facing)?.heading ?? 0;
     const start = () => restingState(PAD, kind === 'hover' ? heading : 0);
@@ -417,13 +434,6 @@ export default function SimView({
       // and turn after it, slowly, only for what it strays past that. Their lens is fixed, zoomed by the pilot.
       const aim = state.position.clone();
       aim.y += hubHeight(params) / 2;
-      const distance = camera.position.distanceTo(aim);
-      const stray = aim.clone().sub(look);
-      const slack = LOOK_SLACK * distance;
-      if (stray.length() > slack) {
-        look.addScaledVector(stray, (1 - slack / stray.length()) * (1 - Math.exp(-dt / LOOK_LAG)));
-      }
-      camera.lookAt(look);
       const zoomed = THREE.MathUtils.radToDeg(
         2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(EYE_FOV) / 2) / live.current.zoom),
       );
@@ -431,6 +441,42 @@ export default function SimView({
         camera.fov = zoomed;
         camera.updateProjectionMatrix();
       }
+      // Too close to the pilot (its rotor past a share of the view's height): the eyes step back from it, only as far as
+      // needed, and come back once it goes. Straight away from the heli, so the view hardly turns.
+      // Measured on the lens at zoom 1: zooming in is the pilot's choice to see it bigger, not a reason to step back.
+      const nearest = (2 * params.radius) / (NEAR_SHARE * 2 * Math.tan(THREE.MathUtils.degToRad(EYE_FOV) / 2));
+      eyesWanted.copy(EYES);
+      away.copy(EYES).sub(aim);
+      if (away.length() < nearest) {
+        // Right on the pilot: back the way the eyes look from, towards the pilot's side of the field.
+        if (away.lengthSq() < 1e-6) away.copy(camera.position).sub(look);
+        away.normalize();
+        eyesWanted.copy(aim).addScaledVector(away, nearest);
+        eyesWanted.y = Math.max(LOWEST_EYES, eyesWanted.y);
+      }
+      camera.position.lerp(eyesWanted, 1 - Math.exp(-dt / STEP_BACK_LAG));
+      const distance = camera.position.distanceTo(aim);
+      const stray = aim.clone().sub(look);
+      const slack = LOOK_SLACK * distance;
+      if (stray.length() > slack) {
+        look.addScaledVector(stray, (1 - slack / stray.length()) * (1 - Math.exp(-dt / LOOK_LAG)));
+      }
+      // Never out of the view: past a share of the way to its edge, the eyes turn at once to keep it there.
+      toHeli.copy(aim).sub(camera.position).normalize();
+      toLook.copy(look).sub(camera.position);
+      const lookDistance = Math.max(1, toLook.length());
+      toLook.normalize();
+      const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+      const halfWidth = halfHeight * camera.aspect;
+      const edge = IN_VIEW * Math.atan(Math.min(halfHeight, halfWidth));
+      const off = toLook.angleTo(toHeli);
+      if (off > edge) {
+        turn.setFromUnitVectors(toLook, toHeli);
+        still.identity().slerp(turn, (off - edge) / off);
+        toLook.applyQuaternion(still);
+        look.copy(camera.position).addScaledVector(toLook, lookDistance);
+      }
+      camera.lookAt(look);
       renderer.render(scene, camera);
       live.current.noise.update(
         rpm,

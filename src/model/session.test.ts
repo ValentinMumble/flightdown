@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {Sortie} from '../types';
-import {flyingHours} from './pastWeather';
+import {flyingHours, recordText, windRecord} from './pastWeather';
 import {clockAt, holdsInFlight, lastSession, packEvents, radioClockAhead, sessionEnd} from './session';
 
 describe('the last session', () => {
@@ -79,5 +79,30 @@ describe('the hours a sortie flew', () => {
     } as unknown as Sortie;
     expect(flyingHours(sortie)).toEqual({from: 16, to: 16});
     expect(flyingHours(sortie, 1)).toEqual({from: 15, to: 15});
+  });
+});
+
+describe('your record in a wind', () => {
+  const band = (from: number, sorties: number, packs: number, crashes: number) => ({
+    label: '',
+    from,
+    sorties,
+    packs,
+    crashes,
+  });
+  const bands = [band(0, 6, 30, 3), band(10, 4, 20, 2), band(15, 3, 9, 3), band(20, 2, 4, 2), band(25, 0, 0, 0)];
+
+  it('is a go about as often as usual, careful or no-go when you crash more', () => {
+    // Usual: 10 crashes in 63 packs. 15 to 20 km/h: a crash every 3 packs, about twice as often.
+    expect(windRecord(bands, 12)?.verdict).toBe('go');
+    expect(windRecord(bands, 17)?.verdict).toBe('no-go');
+    expect(recordText(windRecord(bands, 17)!)).toBe(
+      'you crash twice as often as usual in this wind (a crash every 3 packs)',
+    );
+  });
+
+  it('says nothing for a wind you have flown too little', () => {
+    expect(windRecord(bands, 22)).toBeNull();
+    expect(windRecord(bands, 30)).toBeNull();
   });
 });

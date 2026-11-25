@@ -26,6 +26,7 @@ import {
 import {Panel} from './instruments';
 import {Empty, spotLabel} from './ui';
 import {readJson, writeJson} from '../data/storage';
+import {crashesByWind, recordText, windRecord, type WindBand, type WindRecord} from '../model/pastWeather';
 
 /** A forecast kept on this device: when it came, and for which point. */
 interface KeptForecast {
@@ -125,14 +126,37 @@ function asOf(at: number) {
 const RATING_WORD: Record<Rating, string> = {good: 'good', fair: 'fair', no: 'no flying'};
 const REASON_WORD: Record<Reason, string> = {rain: 'rain', wind: 'too windy', gusts: 'too gusty'};
 
-/** A day: its name and best stretch, then its daylight hours, each on the spot's shared hour scale. */
-function DayRow({day, first, span}: {day: DayWeather; first: number; span: number}) {
+const RECORD_WORD: Record<WindRecord['verdict'], {label: string; pill: string}> = {
+  go: {label: 'Go', pill: 'good'},
+  careful: {label: 'Careful', pill: 'caution'},
+  'no-go': {label: 'No-go', pill: 'critical'},
+};
+
+/**
+ * A day: its name and best stretch, your own record in that stretch's wind (go, careful, no-go), then its daylight
+ * hours, each on the spot's shared hour scale.
+ */
+function DayRow({day, first, span, bands}: {day: DayWeather; first: number; span: number; bands: WindBand[]}) {
+  const record = day.best ? windRecord(bands, day.best.wind) : null;
   return (
     <div className="weather-day">
       <div className="weather-day-head">
         <span className="weather-day-name">{day.label}</span>
         <span className={`weather-verdict ${day.best ? 'good' : ''}`}>{dayVerdict(day)}</span>
+        {record && (
+          <span
+            className={`pill weather-record ${RECORD_WORD[record.verdict].pill}`}
+            title={`At ${day.best!.wind} km/h, ${recordText(record)}`}
+          >
+            {RECORD_WORD[record.verdict].label}
+          </span>
+        )}
       </div>
+      {record && record.verdict !== 'go' && (
+        <div className="weather-record-note">
+          At {day.best!.wind} km/h, {recordText(record)}
+        </div>
+      )}
       <div className="weather-hours" style={{gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))`}}>
         {day.hours.map(hour => (
           <span
@@ -149,7 +173,7 @@ function DayRow({day, first, span}: {day: DayWeather; first: number; span: numbe
   );
 }
 
-function SpotWeather({spot}: {spot: Spot & LatLng}) {
+function SpotWeather({spot, bands}: {spot: Spot & LatLng; bands: WindBand[]}) {
   const weather = useWeather(spot);
   const days = useMemo(
     () => (weather.kept ? flyingDays(weather.kept.forecast, weather.now) : []),
@@ -177,7 +201,7 @@ function SpotWeather({spot}: {spot: Spot & LatLng}) {
       {days.length ? (
         <div className="weather-days">
           {days.map(day => (
-            <DayRow key={day.date} day={day} first={first} span={span} />
+            <DayRow key={day.date} day={day} first={first} span={span} bands={bands} />
           ))}
         </div>
       ) : (
@@ -194,18 +218,20 @@ function SpotWeather({spot}: {spot: Spot & LatLng}) {
 export function FlyingWeather({className = ''}: {className?: string}) {
   const {doc} = useStore();
   const spots = useMemo(() => weatherSpots(doc.spots, doc.sorties), [doc.spots, doc.sorties]);
+  // Your crashes by wind, for each day's go or no-go: from the weather kept on your outdoor sorties.
+  const bands = useMemo(() => crashesByWind(doc.sorties), [doc.sorties]);
 
   return (
     <Panel
       label="Flying weather"
-      note="Wind, gusts and rain at your latest spot, the next 3 days"
+      note="Wind, gusts and rain at your latest spot, the next 3 days, against how you fly in that wind"
       className={`weather-panel ${className}`}
     >
       {spots.length ? (
         <>
           <div className="weather-spots">
             {spots.map(spot => (
-              <SpotWeather key={spot.id} spot={spot} />
+              <SpotWeather key={spot.id} spot={spot} bands={bands} />
             ))}
           </div>
           <div className="gauge-legend weather-legend">

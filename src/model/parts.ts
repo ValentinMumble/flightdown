@@ -1,4 +1,5 @@
 import type {BrokenPart, Sortie, Spare} from '../types';
+import {addDays} from './format';
 
 /** Spare parts: the Hangar's Spares tab and the Cockpit's spares to buy, hidden when this is false. */
 export const SHOW_SPARES = true;
@@ -58,6 +59,52 @@ export function spareStock(spare: Spare, sorties: Sortie[]) {
     for (const broken of sortie.broken) if (partKey(broken.part) === key) used += broken.qty;
   }
   return spare.count - used;
+}
+
+/** The shopping list keeps this many weeks of each part at the rate you break it. */
+export const RUNWAY_WEEKS = 4;
+/** How you fly now: the packs of the last 8 weeks. */
+const RECENT_DAYS = 56;
+
+/** How long a spare lasts at the rate you break it and fly now, and how many to buy. */
+export interface Runway {
+  /** Parts broken a pack flown, over the heli's whole log (or every heli's, for a part that fits several). */
+  perPack: number;
+  /** Packs flown a week, over the last 8 weeks. */
+  packsPerWeek: number;
+  /** Weeks until the stock runs out; null when it does not at this rate (never broken, or not flying). */
+  weeks: number | null;
+  /** How many to buy to keep its minimum and 4 weeks' worth. */
+  buy: number;
+}
+
+export function spareRunway(spare: Spare, sorties: Sortie[], stock: number, day: string): Runway {
+  const key = partKey(spare.name);
+  const own = spare.heliId ? sorties.filter(sortie => sortie.heliId === spare.heliId) : sorties;
+  const packs = own.reduce((sum, sortie) => sum + sortie.packs, 0);
+  let broken = 0;
+  for (const sortie of own) for (const part of sortie.broken) if (partKey(part.part) === key) broken += part.qty;
+  const since = addDays(day, -RECENT_DAYS);
+  const recent = own.filter(sortie => sortie.date > since && sortie.date <= day);
+  const packsPerWeek = (recent.reduce((sum, sortie) => sum + sortie.packs, 0) * 7) / RECENT_DAYS;
+  const perPack = packs ? broken / packs : 0;
+  const perWeek = perPack * packsPerWeek;
+  const left = Math.max(0, stock);
+  return {
+    perPack,
+    packsPerWeek,
+    weeks: perWeek > 0 ? left / perWeek : null,
+    buy: Math.max(0, spare.min - stock, Math.ceil(perWeek * RUNWAY_WEEKS) - stock),
+  };
+}
+
+/** How long a runway is, in words: "runs out this week", "about 3 weeks", "about 4 months". */
+export function runwayText(weeks: number | null): string {
+  if (weeks === null) return 'lasts at this rate';
+  if (weeks < 1) return 'runs out this week';
+  if (weeks < 8) return `about ${Math.round(weeks)} week${Math.round(weeks) === 1 ? '' : 's'}`;
+  if (weeks < 52) return `about ${Math.round(weeks / 4.35)} months`;
+  return 'a year or more';
 }
 
 export interface PartTally {

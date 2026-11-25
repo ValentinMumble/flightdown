@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {Sortie, Spare} from '../types';
-import {brokenRanking, parseBrokenParts, partKey, spareStock, WHOLE_HELI} from './parts';
+import {brokenRanking, parseBrokenParts, partKey, runwayText, spareRunway, spareStock, WHOLE_HELI} from './parts';
 
 const sortie = (overrides: Partial<Sortie>): Sortie => ({
   id: 's',
@@ -76,5 +76,40 @@ describe('brokenRanking', () => {
       ['Main shaft', 3, 2],
       ['Canopy', 1, 1],
     ]);
+  });
+});
+
+describe('a spare runway', () => {
+  const sortie = (date: string, packs: number, broken: {part: string; qty: number}[] = []) =>
+    ({date, packs, heliId: 'k110', broken, loggedAt: `${date}T20:00:00`}) as unknown as Sortie;
+  const spare = {id: 's', name: 'Tail blade', heliId: 'k110', count: 2, countedAt: '2026-01-01', min: 1} as Spare;
+
+  it('lasts as long as the stock does at the rate it breaks and you fly now', () => {
+    // 2 tail blades in 16 packs, all flown in the last 8 weeks: 1/8 a pack, 2 packs a week, so 1 every 4 weeks.
+    const sorties = [
+      sortie('2026-11-01', 8, [{part: 'Tail blades', qty: 1}]),
+      sortie('2026-11-20', 8, [{part: 'tail blade', qty: 1}]),
+    ];
+    const runway = spareRunway(spare, sorties, 2, '2026-11-24');
+    expect(runway.perPack).toBe(1 / 8);
+    expect(runway.packsPerWeek).toBe(2);
+    expect(runway.weeks).toBe(8);
+    expect(runway.buy).toBe(0);
+    expect(runwayText(runway.weeks)).toBe('about 2 months');
+  });
+
+  it('asks for enough to keep its minimum and the next weeks', () => {
+    const sorties = [sortie('2026-11-20', 8, [{part: 'Tail blade', qty: 4}])];
+    const runway = spareRunway(spare, sorties, 0, '2026-11-24');
+    expect(runway.weeks).toBe(0);
+    expect(runway.buy).toBe(2);
+    expect(runwayText(runway.weeks)).toBe('runs out this week');
+  });
+
+  it('does not run out when the part never broke or the heli is not flown', () => {
+    expect(spareRunway(spare, [sortie('2026-11-20', 8)], 2, '2026-11-24').weeks).toBeNull();
+    expect(
+      spareRunway(spare, [sortie('2025-01-20', 8, [{part: 'Tail blade', qty: 1}])], 2, '2026-11-24').weeks,
+    ).toBeNull();
   });
 });
