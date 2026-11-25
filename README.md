@@ -85,7 +85,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
 - **Hangar:** the flight line and the helis that left (stamped sold or lost), the radio (and whether its clock runs an hour ahead, as it keeps summer time) and other gear (a tab), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
   the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), notes. Helis and packs keep the day they were bought, helis and radios
-  their price, helis their class, rotor size and weight (under the maker and model). Each heli has a data plate page (its personal bests: longest inverted, most flips in a pack, longest clean run; each part's time since it last broke there, against how long it
+  their price, helis their class, rotor size and weight (under the maker and model). Each heli has a data plate page (its personal bests: in a pack the longest in the air, inverted, flips, flip chain and current; in a day the most
+  airtime and packs; in a row the clean packs and flying days; each part's time since it last broke there, against how long it
   lasts) and its own chart colour (picked in its form). Helis, radios, packs and
   spares take a photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac;
   others are cut out in the page). Spare parts in their own tab, a group a heli: each counted on a day, each break logged since
