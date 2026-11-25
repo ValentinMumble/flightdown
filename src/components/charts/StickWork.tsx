@@ -56,7 +56,7 @@ export function useFlyingStats(sorties: Sortie[]): FlownSortie[] | null {
       for (const log of sortie.telemetry) {
         const series = loaded.get(log.id);
         const day = log.start?.slice(0, 10) ?? sortie.date;
-        const stats = series && flyingStats(series, day);
+        const stats = series && flyingStats(series, log.start ?? sortie.date);
         if (!stats) continue;
         const battery = log.packButton
           ? buttonBattery(log.packButton, doc.batteries, day, sortie.heliId)?.battery

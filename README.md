@@ -28,7 +28,9 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   made without signal wait and sync later.
 - **Telemetry:** add EdgeTX logs (the radio's `LOGS` folder) to a sortie. It shows a card per pack, named by the
   6-position button pressed for it (packs get buttons in the Hangar; files a few seconds apart are one pack, the radio
-  splits a log when the link drops, unless their buttons differ; one row pinned under the top bar, so another pack is
+  splits a log when the link drops, unless their buttons differ, and so are files on the same button within 10 minutes,
+  disarmed and armed again on that pack; with volts in the log, a file starting at rest where the one before stopped
+  is that pack flown on, one starting higher a fresh pack; one row pinned under the top bar, so another pack is
   one tap away from anywhere in the charts), and for the chosen pack: voltage, current, signal and
   throttle as lanes of one recorder (each reads out at the cursor; the flight only, the quiet start and end cut, or the
   whole log; its exceedances marked along the top; crashes marked by a tap at their moment, a red line across the
@@ -38,7 +40,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   the sticks, turned over through each flip the way they took it, the small heli fixed in its middle), then a caution
   panel (LOW VOLT, HIGH AMP, DEEP, LINK, NOT FULL, PACK WORN, STRIKE, RESCUE, INVERTED, each lit amber, red or green
   with why), its figures, what the log says (the pack ran flat, how much of it was used, sag per cell, when 80 % was
-  used, pack resistance, the radio link, the time upside down, the flips and rolls: whole turns, the way read from the
+  used, pack resistance (how far the volts fall an amp, fitted over the whole flight), the radio link, the time upside down, the flips and rolls: whole turns, the way read from the
   cyclic), its exceedance events as flight data monitoring lists them (over current, a cell under 3.3 V, the link low,
   past 85 % of the pack, a strike: the current jumping then the motor stopping), and a map of the sticks. A sortie
   flown with logs shows its exact air time, each pack as a bar (named by its button, the inverted part in violet) with
@@ -68,8 +70,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   keyboard, these two flown through the model's own mixer from the card (its rates, curves and switches; it gives back
   the logged outputs from the logged sticks). A logged pack replays: Watch it (its sticks fly the heli, a stand-in pilot adding the corrections a log
   cannot hold, each flip and roll read from the sticks and flown to the whole turns the real heli made, the heli put down
-  before each motor cut, inverted flight levelled upside down (scored on every 2026 log: all 21 of the M2 EVO's packs fly to
-  the end, 152 of their 162 flips and rolls made, `npm run replay` scoring it again after new logs; before a crash marked on the timeline the
+  before each motor cut, inverted flight levelled upside down (scored on every 2026 log: all 26 of the M2 EVO's packs fly to
+  the end, 187 of their 197 flips and rolls made, `npm run replay` scoring it again after new logs; before a crash marked on the timeline the
   stand-in lets go, and the K110S's two real crashes come back within 2 s; a crash is picked up
   and the log goes on); touching a stick takes over), or Follow it (you fly, an amber mark on each stick where the real
   pack's was, scored by the share of time on the marks, the best kept by pack). Replays play at 1×, ½× or ¼×, their
@@ -84,7 +86,9 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   soft landings graded by touchdown speed, and autorotations (cut the motor past 5 m, land on the rotor's spin).
 - **Hangar:** the flight line and the helis that left (stamped sold or lost), the radio (and whether its clock runs an hour ahead, as it keeps summer time) and other gear (a tab), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
-  the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), notes. Helis and packs keep the day they were bought, helis and radios
+  the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), their health over
+  time under them, heli by heli (each pack's resistance and trend, then its resistance, mAh a flight and lowest cell,
+  flight by flight), notes. Helis and packs keep the day they were bought, helis and radios
   their price, helis their class, rotor size and weight (under the maker and model). Each heli has a data plate page (its personal bests: in a pack the longest in the air, inverted, flips, flip chain and current; in a day the most
   airtime and packs; in a row the clean packs and flying days; each part's time since it last broke there, against how long it
   lasts) and its own chart colour (picked in its form). Helis, radios, packs and

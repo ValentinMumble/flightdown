@@ -949,7 +949,7 @@ export default function RadioView() {
           now={{
             stick: valueAt('Thr') / 10.24,
             idleUp: Math.round(valueAt('SE') / 1024) + 2,
-            practice: valueAt('SG') > 512,
+            practice: valueAt('SG') < -512,
           }}
         />
       )}

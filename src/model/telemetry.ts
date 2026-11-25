@@ -207,9 +207,18 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
   if (time.length < 2 || firstClock === null) return null;
 
   const duration = time[time.length - 1];
+  const round = (value: number) => Math.round(value * 100) / 100;
   const voltages = (channels.voltage ?? []).filter(value => value > 0.5);
   const currents = channels.current ?? [];
   const signals = (channels.rssi ?? []).filter(value => value > 0);
+  // At rest at either end: the median of the volts read under 3 A in the first or last 3 s.
+  const resting = (near: (second: number) => boolean) => {
+    const values = time.flatMap((second, index) => {
+      const volts = channels.voltage?.[index] ?? 0;
+      return near(second) && volts > 0.5 && (currents[index] ?? 0) < 3 ? [volts] : [];
+    });
+    return values.length ? round(values.sort((left, right) => left - right)[Math.floor(values.length / 2)]) : undefined;
+  };
   let mAh: number | undefined;
   if (channels.capacity?.some(value => value > 0)) mAh = Math.max(...channels.capacity);
   else if (currents.length) {
@@ -220,6 +229,8 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     mAh = Math.round(used);
   }
   if (!channels.capacity?.some(value => value > 0)) delete channels.capacity;
+  const startVoltage = resting(second => second <= 3);
+  const endVoltage = resting(second => second >= duration - 3);
   // A count that does not start near 0 was carried on from the file before: the pack counts this file from there.
   const mAhFrom = channels.capacity && channels.capacity[0] > 5 ? Math.round(channels.capacity[0]) : undefined;
   // In the air: each sample with the motor running, as the radio's PACK timer counts it.
@@ -238,7 +249,6 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
   const start = day
     ? `${day}T${pad(Math.floor(clock / 3600))}:${pad(Math.floor((clock % 3600) / 60))}:${pad(clock % 60)}`
     : undefined;
-  const round = (value: number) => Math.round(value * 100) / 100;
   // The pack: the 6-position button pressed through most of the log.
   const pressed = (channels.buttons ?? []).map(buttonOf);
   const counts = pressed.reduce<Record<number, number>>(
@@ -248,9 +258,9 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
   const packButton = pressed.length
     ? Number(Object.entries(counts).sort((left, right) => right[1] - left[1])[0][0])
     : undefined;
-  // The samples as kept, and the pack's resistance from them, as its card reads it.
+  // The samples as kept; the pack's resistance from every sample, before they are thinned.
   const series = {id, ...thin(time, channels)};
-  const resistance = packResistance(series);
+  const resistance = packResistance({id, time, channels});
   const log: TelemetryLog = {
     id,
     name,
@@ -260,6 +270,8 @@ export function readTelemetry(rows: Cell[][], name: string): {log: TelemetryLog;
     ...(mAh !== undefined && {mAh}),
     ...(mAhFrom !== undefined && {mAhFrom}),
     ...(voltages.length && {minVoltage: round(Math.min(...voltages))}),
+    ...(startVoltage !== undefined && {startVoltage}),
+    ...(endVoltage !== undefined && {endVoltage}),
     ...(currents.length && {maxCurrent: round(Math.max(...currents)), avgCurrent: round(average(currents))}),
     ...(currents.length && {heldCurrent: round(heldCurrent(time, currents))}),
     ...(signals.length && {minRssi: Math.min(...signals)}),

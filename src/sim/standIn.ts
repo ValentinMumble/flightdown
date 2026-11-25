@@ -38,8 +38,8 @@ export interface StandInTuning {
 
 /**
  * Tuned by replaying every 2026 log on the physics fitted to the M2 EVO's calibration flight (1.9° hover pitch, 300°/s
- * at full stick, the FBL answering the stick in a straight line: an expo scored worse). All 21 of the M2 EVO's packs
- * fly to the end (none crashed for real), 152 of their 162 turns made (tail at 420°/s); the K110S's two real crashes come back within 2 s
+ * at full stick, the FBL answering the stick in a straight line: an expo scored worse). All 26 of the M2 EVO's packs
+ * fly to the end (none crashed for real), 187 of their 197 turns made (tail at 420°/s); the K110S's two real crashes come back within 2 s
  * once the stand-in lets go before them (`LET_CRASH`). `npm run replay` scores it again on every log.
  */
 export const STAND_IN: StandInTuning = {
@@ -150,6 +150,11 @@ const FINISH_FOR = 0.8;
 const LET_GO = 0.35;
 /** It closes the gap to the real heli's turn over this, s. */
 const TRACK = 0.25;
+/**
+ * In a flip, the other cyclic axis keeps the axis the heli turns about level: this much stick a unit of its tilt (sine).
+ * Scored on every 2026 log: 0.2 to 0.3 fly all the M2 EVO's packs to the end, the log's own stick crashed one (25 Nov).
+ */
+const KEEP_LEVEL = 0.25;
 
 /**
  * Flies a replay's flips and rolls as the real heli did them: the sim's rate is not the real heli's to the degree (its
@@ -206,8 +211,13 @@ export class FlipGuide {
     const ahead = second > now.to ? goal : this.wanted;
     const lead = second > now.to ? FINISH_STICK : (share * now.rate) / this.fullRate;
     const stick = clamp(lead + (ahead - this.turned) / TRACK / this.fullRate, 0, 1);
-    // The tail held still through the turn: the log's rudder there was the pilot's touch on the real heli's turn.
-    return {controls: {...controls, yaw: 0, [now.axis]: now.way * stick}, manoeuvre: true};
+    // The tail held still through the turn: the log's rudder there was the pilot's touch on the real heli's turn. So was
+    // the other cyclic axis: it keeps the axis the heli turns about level instead, so the flip does not corkscrew.
+    const other = now.axis === 'pitch' ? 'roll' : 'pitch';
+    const pitching = now.axis === 'pitch';
+    const tilt = scratch.axis.set(pitching ? 1 : 0, 0, pitching ? 0 : 1).applyQuaternion(state.attitude).y;
+    const level = clamp(KEEP_LEVEL * tilt * (pitching ? -1 : 1), -0.3, 0.3);
+    return {controls: {...controls, yaw: 0, [other]: level, [now.axis]: now.way * stick}, manoeuvre: true};
   }
 }
 

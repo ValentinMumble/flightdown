@@ -55,7 +55,7 @@ export function radioSource(state: RadioState, name: string): number {
     case 'SC':
       return state.level ? DOWN : UP;
     case 'SG':
-      return state.practice ? DOWN : UP;
+      return state.practice ? UP : DOWN;
     case 'SH':
       return state.rescue ? DOWN : UP;
     case 'SB':

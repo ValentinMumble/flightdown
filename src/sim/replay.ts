@@ -24,6 +24,8 @@ export interface Replay {
   /** What it is called, for the banner over the view, and the pack's key (its sortie and number), for its best score. */
   label: string;
   key: string;
+  /** When its log started (radio time), for what its switches meant then. */
+  start?: string;
   /** When it was started (performance.now), and the log's second it started from. */
   startedAt: number;
   from: number;

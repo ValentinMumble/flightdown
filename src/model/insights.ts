@@ -179,21 +179,46 @@ export function addFlips(
   return sum;
 }
 
+/** The flight is cut into windows this long (s) for the resistance: the pack's resting volts barely move in one. */
+const RESISTANCE_WINDOW = 10;
+/** A window counts with this many samples flying, and the current swinging over this much (A). */
+const WINDOW_SAMPLES = 8;
+const WINDOW_SWING = 3;
+
 /**
- * A pack's resistance (mΩ, the whole pack) from the voltage drop at each sharp rise in current (more than 6 A from one
- * sample to the next): the median of three or more, else null. It climbs as a pack ages.
+ * A pack's resistance (mΩ, the whole pack): how far its volts fall for each amp drawn, over the whole flight. The
+ * flight is cut into short windows (the resting volts barely move in one, so what moves the volts there is the
+ * current), and one straight line fitted through every window's samples at once, each around its own mean. Three
+ * windows with the current swinging at least are needed, else null. It climbs as a pack ages.
  */
 export function packResistance(series: TelemetrySeries): number | null {
   const voltage = series.channels.voltage ?? [];
   const current = series.channels.current ?? [];
-  if (!voltage.length) return null;
-  const drops: number[] = [];
-  for (let index = 1; index < current.length; index += 1) {
-    const rise = current[index] - current[index - 1];
-    if (rise > 6) drops.push((voltage[index - 1] - voltage[index]) / rise);
+  if (!voltage.length || !current.length) return null;
+  const windows = new Map<number, {amps: number[]; volts: number[]}>();
+  series.time.forEach((second, index) => {
+    if (voltage[index] <= 0.5 || current[index] < 2) return;
+    const key = Math.floor((second - series.time[0]) / RESISTANCE_WINDOW);
+    const window = windows.get(key) ?? {amps: [], volts: []};
+    window.amps.push(current[index]);
+    window.volts.push(voltage[index]);
+    windows.set(key, window);
+  });
+  let across = 0;
+  let spread = 0;
+  let counted = 0;
+  for (const {amps, volts} of windows.values()) {
+    if (amps.length < WINDOW_SAMPLES || Math.max(...amps) - Math.min(...amps) < WINDOW_SWING) continue;
+    const meanAmps = amps.reduce((sum, value) => sum + value, 0) / amps.length;
+    const meanVolts = volts.reduce((sum, value) => sum + value, 0) / volts.length;
+    amps.forEach((value, index) => {
+      across += (value - meanAmps) * (volts[index] - meanVolts);
+      spread += (value - meanAmps) ** 2;
+    });
+    counted += 1;
   }
-  if (drops.length < 3) return null;
-  const resistance = drops.sort((left, right) => left - right)[Math.floor(drops.length / 2)] * 1000;
+  if (counted < 3 || spread <= 0) return null;
+  const resistance = (-across / spread) * 1000;
   return resistance > 0 ? resistance : null;
 }
 
@@ -224,7 +249,7 @@ export function packOf(heli: Heli | undefined, batteries: Battery[]): {cells?: n
  * of it used (a good timer for flying like that), how the radio link held, how long it flew upside down.
  */
 export function telemetryInsights(
-  log: Pick<TelemetryLog, 'mAh'>,
+  log: Pick<TelemetryLog, 'mAh' | 'resistance'>,
   series: TelemetrySeries,
   pack: {cells?: number; capacity?: number} = {},
 ): Insight[] {
@@ -327,8 +352,9 @@ export function telemetryInsights(
     }
   }
 
-  // Pack resistance from the voltage drop at each sharp rise in current: it climbs as a pack ages.
-  const resistance = packResistance(series);
+  // Pack resistance, read from the whole flight when the log was added (its samples here are thinned): it climbs as a
+  // pack ages.
+  const resistance = log.resistance ?? packResistance(series);
   if (resistance !== null && cells) {
     insights.push({
       tone: 'info',

@@ -1,4 +1,4 @@
-import {useEffect, useMemo} from 'react';
+import {lazy, Suspense, useEffect, useMemo} from 'react';
 import {Link, useParams, useSearchParams} from 'react-router';
 import {
   BatteryCharging,
@@ -40,6 +40,9 @@ import {brokenRanking, partKey, runwayText, RUNWAY_WEEKS, SHOW_SPARES, spareRunw
 import {now} from '../model/ids';
 import {kindFlights, livePacks} from '../model/packs';
 import {HeliPhoto} from '../components/HeliPhoto';
+
+// The charts load only when the view opens.
+const PackHealthView = lazy(() => import('../components/PackHealthView'));
 
 const VIEWS = [
   {to: '/hangar', label: 'Fleet', view: undefined},
@@ -501,6 +504,9 @@ function Batteries() {
           <Empty emoji="🔋">No packs yet. Add them to count their cycles from the packs you log.</Empty>
         </div>
       )}
+      <Suspense fallback={<div className="muted">Reading the packs…</div>}>
+        <PackHealthView />
+      </Suspense>
     </>
   );
 }
@@ -566,7 +572,7 @@ export function Hangar() {
       </nav>
       {view === 'spares' && SHOW_SPARES ? (
         <Spares />
-      ) : view === 'batteries' ? (
+      ) : view === 'batteries' || view === 'health' ? (
         <Batteries />
       ) : view === 'gear' ? (
         <Gear />

@@ -67,6 +67,10 @@ export interface TelemetryLog {
   /** The count it starts from, when the radio carried it on from the file before (it does while armed). */
   mAhFrom?: number;
   minVoltage?: number;
+  /** The pack's volts at rest (under 3 A) in the first and last 3 s: a fresh pack starts high, a flown one where it
+   * stopped. */
+  startVoltage?: number;
+  endVoltage?: number;
   maxCurrent?: number;
   /** The highest current held for 2 s (its average over them), A: what the pack gave for long, not in a punch. */
   heldCurrent?: number;
@@ -80,7 +84,7 @@ export interface TelemetryLog {
   inverted?: number;
   /** Whole flips and rolls, by the way they went (see flipCounts). */
   flips?: Partial<Record<TurnWay, number>>;
-  /** The pack's resistance (mΩ, the whole pack) from the voltage drop when the current jumps: it climbs with age. */
+  /** The pack's resistance (mΩ, the whole pack): how far its volts fall an amp, over the whole flight. It climbs with age. */
   resistance?: number;
 }
 

@@ -140,7 +140,10 @@ export function TelemetryCharts({
     setMarking(false);
   };
 
-  const insights = useMemo(() => telemetryInsights({mAh}, series, pack), [mAh, series, pack]);
+  const insights = useMemo(
+    () => telemetryInsights({mAh, ...(ohms !== undefined && {resistance: ohms * 1000})}, series, pack),
+    [mAh, ohms, series, pack],
+  );
   // The whole log's exceedances and caution lights (not only the part shown).
   const events = useMemo(() => exceedances(series, pack), [series, pack]);
   const lights = useMemo(() => cautions(series, pack, wear), [series, pack, wear]);

@@ -50,6 +50,26 @@ describe('groupPacks', () => {
     expect(groupPacks(buttons, 3).length).toBe(4);
   });
 
+  it('joins files on one button minutes apart: disarmed after a crash and flown on', () => {
+    // The K110S on 25 Nov 2026: XK #2 crashed, picked up, armed again 70 s later.
+    const day = [
+      file('one', '2026-11-25T13:50:09', 40, {packButton: 2}),
+      file('two', '2026-11-25T13:51:08', 38, {packButton: 2}),
+      file('three', '2026-11-25T13:52:56', 108, {packButton: 2}),
+      file('next', '2026-11-25T13:55:51', 202, {packButton: 3}),
+    ];
+    expect(groupPacks(day).map(pack => pack.files.map(one => one.id))).toEqual([['one', 'two', 'three'], ['next']]);
+  });
+
+  it('tells packs apart by their volts at rest: a fresh one starts high, a flown one where it stopped', () => {
+    const day = [
+      file('flown', '2026-11-20T16:32:08', 133, {startVoltage: 12.51, endVoltage: 11.53}),
+      file('on', '2026-11-20T16:35:30', 240, {startVoltage: 11.56, endVoltage: 11.13}),
+      file('fresh', '2026-11-20T16:39:40', 236, {startVoltage: 12.36, endVoltage: 10.91}),
+    ];
+    expect(groupPacks(day).map(pack => pack.files.map(one => one.id))).toEqual([['flown', 'on'], ['fresh']]);
+  });
+
   it('joins files a few seconds apart into one pack, in the order flown', () => {
     const packs = groupPacks(logs);
     expect(packs.map(pack => pack.files.map(one => one.id))).toEqual([['first'], ['second', 'third']]);

@@ -1,7 +1,8 @@
 /**
  * How a pack was flown, from its log's switches and sticks: the rescues pulled, the time in self-level, on practice
  * rates and in each idle up, how busy the cyclic was, and the current each idle up drew. The switches are the M2 EVO's
- * and the K110S's (src/radio/roles.ts): SC down self-level, SG down practice rates (SD down before 23 Nov 2026), SE the
+ * and the K110S's (src/radio/roles.ts): SC down self-level, SG up practice rates (SG down before 25 Nov 2026 14:00, SD
+ * down before 23 Nov), SE the
  * idle up, SH held the rescue.
  */
 import type {TelemetrySeries} from '../types';
@@ -12,6 +13,12 @@ import {motorRunning} from './telemetry';
  * moved to SG on 23 Nov 2026 (practice_on_sg.py); neither switch has had another job since, so either one down counts.
  */
 export const PRACTICE_SINCE = '2026-11-21';
+/** From this radio time the practice rates are on SG up (practice_sg_up.py), easier to flip back down to land. */
+export const PRACTICE_UP_SINCE = '2026-11-25T14:00';
+
+/** Whether a log's SG and SD say practice rates, in a log started then (its radio time, or only its day). */
+export const onPractice = (sg: number | null | undefined, sd: number | null | undefined, when: string) =>
+  when >= PRACTICE_UP_SINCE ? (sg ?? 0) <= -1 : (sg ?? 0) >= 1 || (sd ?? 0) >= 1;
 
 /** A gap between samples longer than this is a gap in the log, not flying time. */
 const MAX_STEP = 1.5;
@@ -37,7 +44,8 @@ export interface FlyingStats {
 }
 
 /** What a log says of how it was flown, or null when the motor never ran. `day` is the log's (YYYY-MM-DD). */
-export function flyingStats(series: TelemetrySeries, day: string): FlyingStats | null {
+/** `when` is when the log started (its radio time), or only its day. */
+export function flyingStats(series: TelemetrySeries, when: string): FlyingStats | null {
   const {time, channels} = series;
   const running = motorRunning(channels);
   if (!running.some(Boolean)) return null;
@@ -49,7 +57,7 @@ export function flyingStats(series: TelemetrySeries, day: string): FlyingStats |
     flying: 0,
     rescues: 0,
     level: 0,
-    practice: day >= PRACTICE_SINCE && (channels.sd || channels.sg) ? 0 : null,
+    practice: when >= PRACTICE_SINCE && (channels.sd || channels.sg) ? 0 : null,
     idleUps: [0, 0, 0],
     amps: [null, null, null],
     travel: null,
@@ -64,7 +72,7 @@ export function flyingStats(series: TelemetrySeries, day: string): FlyingStats |
     stats.flying += step;
     if (at('sh', index) === 1 && at('sh', index - 1) !== 1) stats.rescues += 1;
     if (at('sc', index) === 1) stats.level += step;
-    if (stats.practice !== null && (at('sd', index) === 1 || at('sg', index) === 1)) stats.practice += step;
+    if (stats.practice !== null && onPractice(at('sg', index), at('sd', index), when)) stats.practice += step;
     const switchE = at('se', index);
     if (switchE !== undefined) {
       const idleUp = Math.round(switchE) + 1;

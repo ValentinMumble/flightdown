@@ -7,6 +7,17 @@ import {daysBetween, today} from './format';
  * when the telemetry drops for a moment, and no pack is swapped that fast.
  */
 const SAME_PACK_GAP = 30;
+/**
+ * Files with the same pack button this close (s) are one pack too: the pilot disarmed and armed again on it (after a
+ * crash, picked up and flown on: the K110S on 25 Nov 2026). No pack is charged again that fast.
+ */
+const SAME_BUTTON_GAP = 600;
+/**
+ * A file that starts at rest no more than this above where the file before stopped at rest is the same pack, flown on
+ * (within SAME_BUTTON_GAP); one starting higher is another pack. A pack rests up a little, never by 4 %: a fresh 3S pack
+ * starts at 12.3 to 12.6 V, a flown one stops at 10.9 to 11.7 (the M2 EVO, Nov 2026).
+ */
+const SAME_PACK_RISE = 1.04;
 
 /** A pack flown, as the radio logged it: one file or more. */
 export interface PackLog {
@@ -108,7 +119,15 @@ export function groupPacks(logs: TelemetryLog[], count?: number): PackLog[] {
     const gap = previous ? (startSeconds(log) ?? 0) - ((startSeconds(previous) ?? 0) + previous.duration) : Infinity;
     const otherPack =
       previous?.packButton !== undefined && log.packButton !== undefined && previous.packButton !== log.packButton;
-    if (group && gap <= SAME_PACK_GAP && !otherPack) group.push(log);
+    const sameButton = !!previous?.packButton && previous.packButton === log.packButton;
+    // The volts tell best, when both ends were read at rest; else the time between, and the button.
+    const byVolts =
+      previous?.endVoltage && log.startVoltage ? log.startVoltage <= previous.endVoltage * SAME_PACK_RISE : null;
+    const samePack =
+      byVolts === null
+        ? gap <= SAME_PACK_GAP || (sameButton && gap <= SAME_BUTTON_GAP)
+        : byVolts && gap <= SAME_BUTTON_GAP;
+    if (group && !otherPack && samePack) group.push(log);
     else groups.push([log]);
   }
   while (count && groups.length > count) {

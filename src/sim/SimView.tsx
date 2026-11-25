@@ -29,6 +29,7 @@ import {loggedControls, loggedOutputs, loggedSticks, replayEnd, type Replay} fro
 import {windAt} from './wind';
 import {ReplayPilot} from './replayPilot';
 import {sampleAt} from '../model/telemetry';
+import {onPractice} from '../model/flying';
 import type {CardModel} from '../radio/card';
 import {FACINGS, PAD, startDrill, updateDrill, type Drill, type Facing} from './drills';
 import {buildHeli, buildField, buildHoverBox} from './scene';
@@ -350,10 +351,9 @@ export default function SimView({
             controls = ghost;
             outputs = loggedOutputs(replay.series, second);
             const se = sampleAt(replay.series.time, replay.series.channels.se, second) ?? 0;
-            // Practice rates: SG down since 24 Nov 2026, SD down before.
-            const down = (name: string) =>
-              (sampleAt(replay.series.time, replay.series.channels[name], second) ?? -1) >= 1;
-            const practice = down('sg') || down('sd');
+            // Practice rates: SG up since 25 Nov 2026, SG down before, SD down before 24 Nov.
+            const position = (name: string) => sampleAt(replay.series.time, replay.series.channels[name], second);
+            const practice = onPractice(position('sg'), position('sd'), replay.start ?? '');
             loggedIdleUp = se < -0.5 ? 1 : se > 0.5 ? 3 : 2;
             sticks = {
               ...loggedSticks(replay.series, second),

@@ -136,7 +136,7 @@ export function simSource(
     case 'sc':
       return feed.controls.level ? DOWN : UP;
     case 'sg':
-      return isLowered(feed.controls.rates) ? DOWN : UP;
+      return isLowered(feed.controls.rates) ? UP : DOWN;
     case 'sb':
     case 'sd':
       return UP;

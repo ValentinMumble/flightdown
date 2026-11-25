@@ -116,7 +116,8 @@ for (const name of files) {
     lines.push(`  · ${name}: ${read.log.duration} s, the radio switched on and off`);
     continue;
   }
-  if ((read.log.maxCurrent ?? 0) < 4) {
+  // A heli with no current sensor (the K110S) can't tell a bench check from a flight here: keep its logs.
+  if (read.log.maxCurrent !== undefined && read.log.maxCurrent < 4) {
     lines.push(`  · ${name}: never above 4 A, a check on the bench`);
     continue;
   }

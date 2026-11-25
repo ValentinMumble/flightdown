@@ -1,7 +1,7 @@
 /**
  * A heli model's idle ups as its own mixer makes them (the card's inputs, curves, mixes and logical switches, run as the
  * radio runs them): the throttle (CH3) and the pitch (CH6) across the collective stick in each idle up (SE up, middle,
- * down), on full rates and on practice rates (SG down). Armed, out of hold, no rescue, no self-level.
+ * down), on full rates and on practice rates (SG up). Armed, out of hold, no rescue, no self-level.
  */
 import type {CardModel} from './card';
 import {ModelMixer, type RadioState} from '../sim/modelMixer';

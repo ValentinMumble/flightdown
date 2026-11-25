@@ -235,6 +235,7 @@ export function Sim() {
       crashes: chosen.crashes,
       label: chosen.label,
       key: chosen.key,
+      start: chosen.pack.start,
       speed: Number(replaySpeed),
     });
   };

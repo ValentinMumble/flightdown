@@ -5,7 +5,7 @@ import {switchRole} from '../radio/roles';
 import {useChartInk, useSeriesColor} from './colors';
 import {Panel} from './instruments';
 
-/** Where the radio is now: the collective stick (%), the idle up on SE (1 to 3) and the practice rates (SG down). */
+/** Where the radio is now: the collective stick (%), the idle up on SE (1 to 3) and the practice rates (SG up). */
 export interface IdleUpsNow {
   stick: number;
   idleUp: number;
@@ -124,7 +124,7 @@ function Chart({
 
 /**
  * The model's idle ups side by side, as its own mixer makes them from the card: the throttle and the pitch across the
- * collective stick in each, the practice rates (SG down) dashed where they change the pitch, and the values that tell
+ * collective stick in each, the practice rates (SG up) dashed where they change the pitch, and the values that tell
  * them apart. Pointing at a chart reads every curve at that stick; otherwise it reads them where the radio's stick is.
  */
 export function IdleUps({model, now}: {model: CardModel; now?: IdleUpsNow}) {
@@ -177,7 +177,7 @@ export function IdleUps({model, now}: {model: CardModel; now?: IdleUpsNow}) {
         ))}
         {pitch.some(line => line.dashed) && (
           <span>
-            <i className="idle-dashed" /> Practice rates (SG down)
+            <i className="idle-dashed" /> Practice rates (SG up)
           </span>
         )}
       </div>
@@ -206,7 +206,7 @@ export function IdleUps({model, now}: {model: CardModel; now?: IdleUpsNow}) {
           <span role="columnheader">Idle up</span>
           <span role="columnheader">Throttle</span>
           <span role="columnheader">Pitch: bottom · mid · top</span>
-          <span role="columnheader">Practice pitch (SG down)</span>
+          <span role="columnheader">Practice pitch (SG up)</span>
           <span role="columnheader">At {signed(probe)} % stick</span>
         </div>
         {curves.map(curve => {

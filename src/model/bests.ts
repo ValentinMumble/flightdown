@@ -92,7 +92,7 @@ export function personalBests(sorties: Sortie[], series: ReadonlyMap<string, Tel
       let upsideDown = 0;
       let flips = 0;
       for (const read of reads) {
-        flying += flyingStats(read, sortie.date)?.flying ?? 0;
+        flying += flyingStats(read, pack.start ?? sortie.date)?.flying ?? 0;
         for (const stretch of invertedStretches(read)) {
           upsideDown += stretch.seconds;
           offer({kind: 'inverted', value: stretch.seconds, ...set});

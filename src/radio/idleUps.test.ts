@@ -15,7 +15,7 @@ const mix = (channel: number, source: string, swtch = 'NONE', curve?: number): C
 
 /**
  * The K110S as set on 23 Nov 2026, in short: a throttle curve an idle up on CH3 (reversed here, as the M2 EVO's is),
- * the pitch on CH6 the stick straight, CPP on practice rates (SG down), and Low RPM's own curve CPL in idle up 1.
+ * the pitch on CH6 the stick straight, CPP on practice rates (SG up), and Low RPM's own curve CPL in idle up 1.
  */
 const model = {
   id: 'model21',
@@ -42,7 +42,7 @@ const model = {
     mix(2, 'I2', 'SE1', 2),
     mix(2, 'I2', 'SE2', 3),
     mix(5, 'I2'),
-    mix(5, 'I2', 'SG2', 5),
+    mix(5, 'I2', 'SG0', 5),
     mix(5, 'I2', 'SE0', 4),
   ],
 } as unknown as CardModel;
