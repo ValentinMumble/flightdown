@@ -111,11 +111,12 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   from the current, as the radio does. Widgets read the model's global variables (mAhRe its cell count), and its timers
   run as on the radio, on its logical switches (`timers.ts`); its outputs come from its own inputs, curves and mixes
   when no log drives them (`mixer.ts`).
-- **Spots:** every flying spot on a satellite map (spots close together share a pin with a count until you zoom in).
+- **Spots:** every flying spot on a satellite map (spots close together share a pin with a count until you zoom in),
+  with a button to show where you are.
   Set a spot's GPS point by tapping the map, pasting coordinates or a Maps link, or from the phone's position; each
   sortie then shows its spot from above.
-- **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`): Cockpit, Sorties, Radio, Hangar and More
-  (Debrief, Spots, Sim, Settings), with a round log button; swipe sideways to change tab. Add it to the home screen: it
+- **Phones:** a liquid glass dock (as in `papyrus/design/liquid-glass.md`): Cockpit, Sorties, Hangar, Debrief and More
+  (Radio, Spots, Sim, Settings), with a round log button; swipe sideways to change tab. The Sorties title counts them. Add it to the home screen: it
   opens like an app, with the 🚁 icon, at once and offline at the field (as in `papyrus/guidelines/web-apps.md`),
   and reloads into a new deploy by itself. The log, the latest 40 logs' samples (and any opened since) and the radio's
   card stay on the phone (IndexedDB), so packs, the Debrief and replays work with no signal.

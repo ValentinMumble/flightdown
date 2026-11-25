@@ -268,3 +268,51 @@
 .leaflet-tooltip.map-label::before {
   display: none;
 }
+
+/* The Spots map's locate button, under the zoom, in Leaflet's bar style; the dot where you are and its ring. */
+.map-locate {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--ink);
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.map-locate.busy svg {
+  animation: locate-pulse 1s ease-in-out infinite;
+}
+
+.map-locate.failed {
+  color: var(--warning);
+}
+
+@keyframes locate-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-locate.busy svg {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+.map-you {
+  fill: #4da3ff;
+  fill-opacity: 1;
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.map-you-ring {
+  fill: #4da3ff;
+  fill-opacity: 0.12;
+  stroke: #4da3ff;
+  stroke-opacity: 0.4;
+  stroke-width: 1;
+}

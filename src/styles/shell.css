@@ -258,6 +258,14 @@ button.dock-tab {
 
   .main {
     padding: 0 14px calc(var(--dock-height) + var(--dock-gap) + env(safe-area-inset-bottom) + 28px);
+    /* Anything wider than the phone is cut, not scrolled: a page wider than the screen makes the browser lay it out
+       wider and taller, and the dock, fixed to its bottom, drops below the screen (the Debrief, 25 Nov 2026). Clip, not
+       hidden, so the sticky bars still stick. */
+    overflow-x: clip;
+  }
+
+  .topbar-count {
+    color: var(--brand);
   }
 
   .topbar {
@@ -268,7 +276,8 @@ button.dock-tab {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin: 0 -14px 12px;
+    /* No margin of its own: the page's gap (16px) sits under it, as between its panels. */
+    margin: 0 -14px;
     padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
     background-color: var(--glass-regular);
     -webkit-backdrop-filter: blur(20px) saturate(180%);

@@ -123,7 +123,18 @@ export function Sorties() {
 
   return (
     <div className="page">
-      <PageHeader title="Sorties" menuNamed sub="Every sortie, a flight strip each" />
+      <PageHeader
+        title="Sorties"
+        menuNamed
+        sub="Every sortie, a flight strip each"
+        phone={{
+          title: (
+            <>
+              Sorties <span className="topbar-count">{filtered.length}</span>
+            </>
+          ),
+        }}
+      />
       <VisitorBanner />
 
       <div className="filters">

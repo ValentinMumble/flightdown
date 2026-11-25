@@ -1187,3 +1187,14 @@ button.card {
 .runway.short {
   color: var(--caution);
 }
+
+/* A spare group's heli: a link to its page, in the title's own ink. */
+.spare-group-heli {
+  color: inherit;
+  text-decoration: none;
+}
+
+.spare-group-heli:hover,
+.spare-group-heli:focus-visible {
+  text-decoration: underline;
+}

@@ -322,7 +322,13 @@ function Spares() {
         groups.map(group => (
           <section key={group.heliId || 'any'} className="spare-group">
             <h3 className="spare-group-title">
-              {group.heliId ? <HeliName heli={heli(group.heliId)} /> : 'Any heli'}
+              {group.heliId ? (
+                <Link to={`/helis/${group.heliId}`} className="spare-group-heli">
+                  <HeliName heli={heli(group.heliId)} />
+                </Link>
+              ) : (
+                'Any heli'
+              )}
               <span className="muted">· {group.parts.length}</span>
             </h3>
             <div className="list">

@@ -48,6 +48,54 @@ function useMap(element: RefObject<HTMLDivElement | null>, setUp: (map: L.Map) =
   return mapRef;
 }
 
+/** Lucide's locate-fixed, for the map's button. */
+const LOCATE_ICON =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="2" x2="5" y1="12" y2="12"/><line x1="19" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="5"/><line x1="12" x2="12" y1="19" y2="22"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/></svg>';
+
+/**
+ * A button under the zoom that shows where you are (the phone's position, with how sure it is as a ring) and moves the
+ * map there: to find a new spot, or the nearest one.
+ */
+function addLocateMe(map: L.Map) {
+  const control = new L.Control({position: 'topleft'});
+  control.onAdd = () => {
+    const button = L.DomUtil.create('button', 'leaflet-bar map-locate') as HTMLButtonElement;
+    button.type = 'button';
+    button.title = 'Show where I am';
+    button.setAttribute('aria-label', 'Show where I am');
+    button.innerHTML = LOCATE_ICON;
+    L.DomEvent.disableClickPropagation(button);
+    let you: L.LayerGroup | null = null;
+    button.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        button.title = 'This browser cannot tell where you are';
+        return;
+      }
+      button.classList.add('busy');
+      navigator.geolocation.getCurrentPosition(
+        ({coords}) => {
+          button.classList.remove('busy', 'failed');
+          const at: [number, number] = [coords.latitude, coords.longitude];
+          you?.remove();
+          you = L.layerGroup([
+            L.circle(at, {radius: coords.accuracy, className: 'map-you-ring', interactive: false}),
+            L.circleMarker(at, {radius: 7, className: 'map-you', interactive: false}),
+          ]).addTo(map);
+          map.setView(at, Math.max(map.getZoom(), 15));
+        },
+        () => {
+          button.classList.remove('busy');
+          button.classList.add('failed');
+          button.title = 'Your position is not available: allow location for Flightdown';
+        },
+        {enableHighAccuracy: true, timeout: 15000, maximumAge: 30000},
+      );
+    });
+    return button;
+  };
+  control.addTo(map);
+}
+
 /** A round pin with the spot's emoji, bigger where more sorties were flown, and a count when it stands for several. */
 function pin(spot: Spot, size: number, faint = false, count = 1) {
   const html = document.createElement('span');
@@ -82,6 +130,7 @@ export function SpotsMap({
   select.current = onSelect;
   const map = useMap(element, created => {
     layer.current = L.layerGroup().addTo(created);
+    addLocateMe(created);
   });
 
   useEffect(() => {

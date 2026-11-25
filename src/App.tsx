@@ -44,9 +44,12 @@ const TABS = [
   {to: '/sim', label: 'Sim', icon: Gamepad2},
 ];
 
-/** The phone dock's tabs: the first four; the others, and Settings, go in its More menu. */
-const DOCK_TABS = TABS.slice(0, 4);
-const MORE = [...TABS.slice(4), {to: '/settings', label: 'Settings', icon: SettingsIcon}];
+/** The phone dock's tabs: Cockpit, Sorties, Hangar and Debrief; the others, and Settings, go in its More menu. */
+const DOCK_TABS = TABS.filter(({to}) => ['/', '/sorties', '/hangar', '/stats'].includes(to));
+const MORE = [
+  ...TABS.filter(tab => !DOCK_TABS.includes(tab)),
+  {to: '/settings', label: 'Settings', icon: SettingsIcon},
+];
 
 function isActive(to: string, pathname: string) {
   if (to === '/') return pathname === '/';
@@ -107,7 +110,7 @@ function CockpitBar() {
 }
 
 /**
- * The phone dock: liquid glass, four tabs and More (Debrief, Spots, Settings in a menu above it), a lens under the open
+ * The phone dock: liquid glass, four tabs and More (Radio, Spots, Sim, Settings in a menu above it), a lens under the open
  * tab, and the round log button beside it. A page from the menu has no lens: More takes the accent instead.
  */
 function Dock() {
