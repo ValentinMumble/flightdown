@@ -1,5 +1,5 @@
 import {isLowered, type Mapping, type Stick} from './input';
-import {FACINGS, HOVER_GOAL, type Facing} from './drills';
+import {AUTO_HEIGHT, FACINGS, HOVER_GOAL, type Facing} from './drills';
 import type {SimInfo} from './SimView';
 import type {Replay} from './replay';
 import {useLive, type Live} from './live';
@@ -26,6 +26,10 @@ export interface Settings {
   /** The longest hover in the box by facing, s, and the softest landing on the pad, m/s. */
   hover?: Partial<Record<Facing, number>>;
   landing?: number;
+  /** The softest autorotation on the pad, m/s. */
+  auto?: number;
+  /** Following a replay: the best share of it with the sticks on the log's marks, by pack. */
+  follow?: Record<string, number>;
 }
 
 export const readSettings = (): Settings => readJson<Settings>(SETTINGS) ?? {};
@@ -86,6 +90,29 @@ function DrillCard({info, facing, settings}: {info: SimInfo; facing: Facing; set
             {drill.last.onPad ? ', on the pad' : `, ${drill.last.distance.toFixed(1)} m off the pad`}
           </span>
         )}
+        {best !== undefined && <span>Softest on the pad: {best.toFixed(2)} m/s</span>}
+      </div>
+    );
+  }
+  if (drill.kind === 'auto') {
+    const best = drill.best?.speed ?? settings.auto;
+    const ask = {
+      climb: `Climb past ${AUTO_HEIGHT} m, motor on`,
+      cut: 'Cut the motor: throttle hold',
+      glide: 'Down on the rotor: flare and land on the pad',
+    }[drill.phase];
+    return (
+      <div className="sim-card">
+        <b>{ask}</b>
+        {drill.last &&
+          ('failed' in drill.last ? (
+            <span>Last: {drill.last.failed}</span>
+          ) : (
+            <span>
+              Last: {drill.last.grade}, {drill.last.speed.toFixed(2)} m/s
+              {drill.last.onPad ? ', on the pad' : `, ${drill.last.distance.toFixed(1)} m off the pad`}
+            </span>
+          ))}
         {best !== undefined && <span>Softest on the pad: {best.toFixed(2)} m/s</span>}
       </div>
     );
@@ -311,9 +338,13 @@ export function LiveReplayClock({live, className}: {live: LiveInfo; className?: 
 }
 
 /** The replay playing, over the view. */
-export function LiveReplayBanner({live, replay}: {live: LiveInfo; replay: Replay}) {
+export function LiveReplayBanner({live, replay, best}: {live: LiveInfo; replay: Replay; best?: number}) {
   const playing = useLive(live, value => !!value?.replay);
   const pickedUp = useLive(live, value => value?.replay?.pickedUp ?? 0);
+  const followed = useLive(live, value => {
+    const share = value?.replay?.followed;
+    return share === null || share === undefined ? null : Math.round(share * 100);
+  });
   if (!playing) return null;
   return (
     <div className="sim-replaying" role="status">
@@ -321,6 +352,12 @@ export function LiveReplayBanner({live, replay}: {live: LiveInfo; replay: Replay
       · <LiveReplayClock live={live} />
       {pickedUp > 0 && ` · picked up ${plural(pickedUp, 'time')}`}
       {replay.mode === 'fly' && <small>Move a stick to take over</small>}
+      {replay.mode === 'sticks' && (
+        <small>
+          On the marks {followed ?? 0} % of the time
+          {best !== undefined ? ` · best ${Math.round(best * 100)} %` : ''}
+        </small>
+      )}
     </div>
   );
 }
@@ -342,17 +379,46 @@ export function LiveSeek({live, replay, onSeek}: {live: LiveInfo; replay: Replay
   const at = useLive(live, value => value?.replay?.at ?? null);
   const end = useLive(live, value => value?.replay?.end ?? null);
   if (at === null || end === null) return null;
+  const start = replay.series.time[0] ?? 0;
+  const place = (second: number) => `${(Math.max(0, Math.min(end, second) - start) / Math.max(1, end - start)) * 100}%`;
+  // The next flip or roll, from a moment before it.
+  const next = replay.stretches.find(one => one.from > at + 0.5);
   return (
-    <input
-      type="range"
-      className="sim-seek"
-      min={replay.series.time[0] ?? 0}
-      max={end}
-      step={0.1}
-      value={at}
-      onChange={event => onSeek(Number(event.target.value))}
-      aria-label="Where in the pack"
-    />
+    <div className="sim-seek-row">
+      <div className="sim-seek-track">
+        {/* Its flips and rolls as ticks along it, its real crashes in red. */}
+        <div className="sim-seek-marks" aria-hidden>
+          {replay.stretches.map(one => (
+            <i
+              key={`flip-${one.from}`}
+              className="sim-seek-flip"
+              style={{left: place(one.from), width: `calc(${place(one.to)} - ${place(one.from)})`}}
+            />
+          ))}
+          {replay.crashes.map(second => (
+            <i key={`crash-${second}`} className="sim-seek-crash" style={{left: place(second)}} />
+          ))}
+        </div>
+        <input
+          type="range"
+          className="sim-seek"
+          min={start}
+          max={end}
+          step={0.1}
+          value={at}
+          onChange={event => onSeek(Number(event.target.value))}
+          aria-label="Where in the pack"
+        />
+      </div>
+      <button
+        className="button small"
+        disabled={!next}
+        onClick={() => next && onSeek(Math.max(start, next.from - 1.5))}
+        title={next ? `The next ${next.axis === 'pitch' ? 'flip' : 'roll'}` : 'No flip or roll left in this pack'}
+      >
+        Next {next?.axis === 'roll' ? 'roll' : 'flip'}
+      </button>
+    </div>
   );
 }
 

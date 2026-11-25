@@ -1,6 +1,6 @@
 import type {Battery, Pack, Sortie, TelemetryLog, TelemetrySeries} from '../types';
 import {usedMah} from './battery';
-import {today} from './format';
+import {daysBetween, today} from './format';
 
 /**
  * Log files this close (seconds from the end of one to the start of the next) are one pack: the radio starts a new file
@@ -288,6 +288,44 @@ export function packRecords(sorties: Sortie[], batteries: Battery[]): PackRecord
     }
   }
   return [...records.values()];
+}
+
+/**
+ * How worn a pack is: its latest resistance against its own first reading and against the freshest pack's, the larger
+ * (1.5 is tiring, 2 worn); null with no reading.
+ */
+export function packWear(record: PackRecord, freshest: number): number | null {
+  if (!record.first || !record.latest) return null;
+  return Math.max(record.latest / record.first, Number.isFinite(freshest) ? record.latest / freshest : 0);
+}
+
+/** A LiPo left charged this long, in days, should go to storage charge (3.8 V a cell). */
+export const STORAGE_DAYS = 10;
+
+/**
+ * The packs to take next, best first: the live ones not worn, the most rested first (never flown before any), fewer
+ * flights first on a tie, tiring ones last, so the packs wear evenly. And those unflown long enough to go to storage
+ * charge, longest first.
+ */
+export function nextPacks(records: PackRecord[], day = today()) {
+  const live = records.filter(record => !record.pack.dead);
+  const freshest = Math.min(...live.flatMap(record => (record.latest === undefined ? [] : [record.latest])));
+  const rested = (record: PackRecord) => (record.last ? daysBetween(record.last, day) : Infinity);
+  const next = live
+    .map(record => ({record, wear: packWear(record, freshest), rested: rested(record)}))
+    .filter(({wear}) => wear === null || wear < 2)
+    .sort(
+      (left, right) =>
+        Number((left.wear ?? 0) >= 1.5) - Number((right.wear ?? 0) >= 1.5) ||
+        right.rested - left.rested ||
+        left.record.flights - right.record.flights,
+    )
+    .map(({record}) => record);
+  const storage = live
+    .filter(record => record.last && rested(record) >= STORAGE_DAYS)
+    .map(record => ({record, days: rested(record)}))
+    .sort((left, right) => right.days - left.days);
+  return {next, storage};
 }
 
 /** The mAh a pack used, from its joined samples: the radio's count or the current added up. */

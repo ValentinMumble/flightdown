@@ -41,10 +41,18 @@ const SimCockpit = lazy(() => import('../sim/SimCockpit'));
 /** The view's zoom slider, on the eyes' fixed lens: from twice as wide to three times closer. */
 const ZOOM_RANGE = {min: 0.5, max: 3, step: 0.05};
 
+/** A replay's slow motion: real time, half and a quarter, to see a flip through. */
+const SPEEDS = [
+  {value: '1', label: '1×'},
+  {value: '0.5', label: '½×'},
+  {value: '0.25', label: '¼×'},
+];
+
 const DRILLS: {value: DrillKind; label: string}[] = [
   {value: 'free', label: 'Free flight'},
   {value: 'hover', label: 'Hover'},
   {value: 'landing', label: 'Soft landing'},
+  {value: 'auto', label: 'Autorotation'},
 ];
 
 const WINDS = [
@@ -139,8 +147,11 @@ export function Sim() {
         if (current?.kind === 'landing' && current.best && current.best.speed < (settings.landing ?? Infinity)) {
           save({landing: current.best.speed});
         }
+        if (current?.kind === 'auto' && current.best && current.best.speed < (settings.auto ?? Infinity)) {
+          save({auto: current.best.speed});
+        }
       }),
-    [live, settings.hover, settings.landing],
+    [live, settings.hover, settings.landing, settings.auto],
   );
 
   // Setting up the sticks: each step waits for one axis to move, then the next starts from where the axes are.
@@ -190,6 +201,9 @@ export function Sim() {
   );
   const [packKey, setPackKey] = useState('');
   const [replayMode, setReplayMode] = useState<ReplayMode>('fly');
+  const [replaySpeed, setReplaySpeed] = useState('1');
+  // Slowed or sped up while it plays: it goes on from where it is.
+  useEffect(() => setReplay(current => current && {...current, speed: Number(replaySpeed)}), [replaySpeed]);
   const [replay, setReplay] = useState<Replay | null>(null);
   const [replayProblem, setReplayProblem] = useState('');
   const chosen = packs.find(one => one.key === packKey) ?? packs[0];
@@ -220,8 +234,35 @@ export function Sim() {
       cuts,
       crashes: chosen.crashes,
       label: chosen.label,
+      key: chosen.key,
+      speed: Number(replaySpeed),
     });
   };
+  // Following a pack: its share on the marks, kept as its best when it stops (played a minute at least, at full speed).
+  // The last reading is kept as it plays: at the end of the log the view stops reporting the replay.
+  const lastFollow = useRef<{at: number; share: number} | null>(null);
+  useEffect(
+    () =>
+      live.subscribe(() => {
+        const shown = live.get()?.replay;
+        if (shown?.followed !== null && shown?.followed !== undefined) {
+          lastFollow.current = {at: shown.at, share: shown.followed};
+        }
+      }),
+    [live],
+  );
+  useEffect(() => {
+    lastFollow.current = null;
+    if (!replay || replay.mode !== 'sticks' || replay.speed !== 1) return;
+    const {key, from} = replay;
+    return () => {
+      const last = lastFollow.current;
+      if (!last || last.at - from < 60) return;
+      const kept = readSettings().follow;
+      if (last.share > (kept?.[key] ?? 0)) save({follow: {...kept, [key]: last.share}});
+    };
+  }, [replay?.startedAt, replay?.mode, replay?.speed]);
+
   // It stops by itself at the end of its log.
   useEffect(() => {
     if (replay && started && !replaying && performance.now() - replay.startedAt > 500) setReplay(null);
@@ -332,7 +373,7 @@ export function Sim() {
                 <div className="sim-hud sim-hud-right">
                   <LiveFigures live={live} />
                 </div>
-                {replay && <LiveReplayBanner live={live} replay={replay} />}
+                {replay && <LiveReplayBanner live={live} replay={replay} best={settings.follow?.[replay.key]} />}
                 <LiveCrash live={live} flying={replay?.mode === 'fly'} />
                 <div className="sim-hud sim-hud-bottom">
                   {/* Let go, it hands the keys back to the sticks; a double click sets it back to 1×. */}
@@ -433,6 +474,7 @@ export function Sim() {
                   {value: 'sticks', label: 'Follow it'},
                 ]}
               />
+              <Segmented label="Speed" value={replaySpeed} onChange={setReplaySpeed} options={SPEEDS} />
               {replay ? (
                 <button className="button" onClick={() => setReplay(null)}>
                   <Square size={14} /> Stop

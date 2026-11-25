@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {Vector3} from 'three';
-import {HOVER_HEIGHT, PAD, startDrill, updateDrill, type Frame} from './drills';
+import {type Frame, HOVER_HEIGHT, PAD, startDrill, updateDrill} from './drills';
 import {DEFAULT_MAPPING, GameControllerSticks, movedAxis, radioSwitches, readAxes} from './input';
 
 const frame = (overrides: Partial<Frame>): Frame => ({
@@ -146,5 +146,39 @@ describe('a game controller', () => {
     sticks.read(press(-1), 0);
     sticks.read(press(5), 0);
     expect(sticks.read(press(-1), 0, true)).toMatchObject({rates: '55 %', roll: 1});
+  });
+});
+
+describe('the autorotation drill', () => {
+  const at = (y: number) => new Vector3(0, y, -5);
+  const frame = (y: number, motor: boolean, extra: Partial<Frame> = {}): Frame => ({
+    dt: 0.1,
+    position: at(y),
+    heading: 0,
+    grounded: y <= 0,
+    crashed: false,
+    motor,
+    ...extra,
+  });
+
+  it('asks for the climb, the cut, then grades the touchdown on the rotor', () => {
+    let drill = startDrill('auto');
+    drill = updateDrill(drill, frame(3, true));
+    expect(drill).toMatchObject({phase: 'climb'});
+    drill = updateDrill(drill, frame(6, true));
+    expect(drill).toMatchObject({phase: 'cut'});
+    drill = updateDrill(drill, frame(6, false));
+    expect(drill).toMatchObject({phase: 'glide'});
+    drill = updateDrill(drill, frame(0, false, {landed: {speed: 0.5, at: at(0)}}));
+    expect(drill).toMatchObject({phase: 'climb', count: 1, last: {grade: 'Firm', onPad: true}, best: {speed: 0.5}});
+  });
+
+  it('does not count a power recovery or a crash as a landing', () => {
+    const gliding = {kind: 'auto', phase: 'glide', last: null, best: null, count: 0} as const;
+    expect(updateDrill(gliding, frame(3, true))).toMatchObject({last: {failed: 'Motor back on: a power recovery'}});
+    expect(updateDrill(gliding, frame(1, false, {crashed: true}))).toMatchObject({
+      last: {failed: 'Crashed'},
+      best: null,
+    });
   });
 });

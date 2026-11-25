@@ -1,6 +1,16 @@
 import {describe, expect, it} from 'vitest';
 import type {Battery, Pack, TelemetryLog, TelemetrySeries} from '../types';
-import {buttonPack, crashesIn, groupPacks, joinSeries, packUsed, radioSeconds, radioTime} from './packs';
+import {
+  buttonPack,
+  crashesIn,
+  groupPacks,
+  joinSeries,
+  nextPacks,
+  type PackRecord,
+  packUsed,
+  radioSeconds,
+  radioTime,
+} from './packs';
 
 const file = (id: string, start: string | undefined, duration: number, extra: Partial<TelemetryLog> = {}) =>
   ({id, name: `${id}.csv`, start, duration, samples: duration, ...extra}) as TelemetryLog;
@@ -165,5 +175,40 @@ describe('radio times', () => {
     const crashes = ['2026-11-24T16:09:02', '2026-11-24T16:10:12', '2026-11-24T16:15:08', '2026-11-24T16:08:00'];
     expect(crashesIn(pack, crashes)).toEqual([53, 123]);
     expect(crashesIn({duration: 120}, crashes)).toEqual([]);
+  });
+});
+
+describe('the packs to take next', () => {
+  const record = (number: number, flights: number, last?: string, first?: number, latest?: number, dead?: string) =>
+    ({
+      battery: {id: 'b', name: 'Gens', cells: 2},
+      pack: {number, ...(dead && {dead})},
+      label: `#${number}`,
+      flights,
+      last,
+      first,
+      latest,
+      readings: [],
+      mahs: [],
+      lows: [],
+    }) as unknown as PackRecord;
+
+  it('takes the most rested first, fewer flights on a tie, tiring last, never worn or dead ones', () => {
+    const rested = record(1, 10, '2026-11-01', 10, 11);
+    const recent = record(2, 4, '2026-11-24', 10, 10);
+    const tie = record(3, 2, '2026-11-01', 10, 10);
+    const tiring = record(4, 1, '2026-10-01', 10, 16);
+    const worn = record(5, 1, '2026-10-01', 10, 22);
+    const dead = record(6, 1, '2026-10-01', 10, 10, '2026-11-02');
+    const {next} = nextPacks([rested, recent, tie, tiring, worn, dead], '2026-11-25');
+    expect(next.map(one => one.label)).toEqual(['#3', '#1', '#2', '#4']);
+  });
+
+  it('puts the packs unflown 10 days or more at storage charge, longest first', () => {
+    const {storage} = nextPacks(
+      [record(1, 3, '2026-11-20'), record(2, 3, '2026-11-01'), record(3, 3, '2026-11-14'), record(4, 0)],
+      '2026-11-25',
+    );
+    expect(storage.map(({record: one, days}) => `${one.label} ${days}`)).toEqual(['#2 24', '#3 11']);
   });
 });

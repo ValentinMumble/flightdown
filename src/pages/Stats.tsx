@@ -24,6 +24,7 @@ import {crashTrend, groupBy, sortSorties, totals} from '../model/stats';
 import {CAUSES, crashCauses, milestones, packsPerSortie} from '../model/debrief';
 import {addFlips} from '../model/insights';
 import type {Sortie, TurnWay} from '../types';
+import {PersonalBests} from '../components/PersonalBests';
 
 /** The debrief's sections, each from the panel that opens it. */
 const SECTIONS = [
@@ -248,6 +249,18 @@ export function Stats() {
                   </div>
                 ))}
               </div>
+            </Panel>
+
+            <Panel
+              label="Personal bests"
+              note={
+                heliId
+                  ? 'On this heli, over the period picked'
+                  : 'Every heli, over the period picked: each says which set it'
+              }
+              className="span-12"
+            >
+              <PersonalBests sorties={sorties} named={!heliId} />
             </Panel>
 
             <Panel

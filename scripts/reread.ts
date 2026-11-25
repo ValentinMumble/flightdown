@@ -38,7 +38,8 @@ for (const sortie of doc.sorties) {
     console.log(
       `  ~ ${log.name}: ${channels} sensors${fresh.log.packButton ? `, button ${fresh.log.packButton}` : ''}`,
     );
-    telemetry.push({...fresh.log, id: log.id});
+    // The pack button kept as it was: some were set by hand (the K110S logs, by their order in the day, 25 Nov 2026).
+    telemetry.push({...fresh.log, id: log.id, ...(log.packButton !== undefined && {packButton: log.packButton})});
     if (!dryRun) await putSeries({...fresh.series, id: log.id});
     read += 1;
   }

@@ -53,7 +53,7 @@ export interface SimInfo {
   /** A logged pack replayed: what it flew now (as the controls), and where it is in its log (s). */
   ghost: Controls | null;
   /** Where the replay is in its log (s), its end, and how often a crash was picked up into a hover. */
-  replay: {at: number; end: number; pickedUp: number} | null;
+  replay: {at: number; end: number; pickedUp: number; followed: number | null} | null;
 }
 
 /** The physics runs at this step, whatever the screen's frame rate. */
@@ -67,6 +67,8 @@ const EYES = new THREE.Vector3(0, 1.7, 0);
 const EYE_FOV = 30;
 /** A stick moved past this (share of its travel) while a replay flies the heli: the pilot takes over. */
 const TAKE_OVER = 0.25;
+/** Following a replay, the sticks count as on the log's marks within this, on average over the four (share of travel). */
+const FOLLOW_BAND = 0.15;
 /** The heli may stray this share of its distance from where the eyes look before they turn after it, and they turn
  * after it over this, s. */
 const LOOK_SLACK = 0.07;
@@ -203,6 +205,9 @@ export default function SimView({
     let replayClock = 0;
     let pilot: ReplayPilot | null = null;
     let pickedUp = 0;
+    // Following a replay: how long the sticks were on the log's marks, of how long it played.
+    let onMarks = 0;
+    let followedFor = 0;
     let mixer: ModelMixer | null = null;
     // Which way up the heli is, for a game controller's collective: its stick springs back to centre, so the centre
     // is the hover pitch on the side the heli is on (upside down, the inverted one). It changes side past sideways,
@@ -241,7 +246,8 @@ export default function SimView({
     const gust = new THREE.Vector3();
     let frame = 0;
     const tick = (now: number) => {
-      const dt = Math.min(0.1, (now - last) / 1000);
+      // A replay in slow motion slows the whole sim: the heli, its log and the eyes.
+      const dt = Math.min(0.1, (now - last) / 1000) * (live.current.replay?.speed ?? 1);
       last = now;
       time += dt;
 
@@ -315,6 +321,8 @@ export default function SimView({
           pilot = new ReplayPilot(replay, params);
           replayClock = replay.from;
           pickedUp = 0;
+          onMarks = 0;
+          followedFor = 0;
           state = start();
           drill = startDrill(kind, facing);
           used = 0;
@@ -357,6 +365,18 @@ export default function SimView({
         }
       }
 
+      // Following it: the sticks on the log's marks while they are within FOLLOW_BAND of them, on average.
+      if (replay?.mode === 'sticks' && ghost && replayAt !== null) {
+        const off =
+          (Math.abs(controls.roll - ghost.roll) +
+            Math.abs(controls.pitch - ghost.pitch) +
+            Math.abs(controls.yaw - ghost.yaw) +
+            Math.abs(controls.collective - ghost.collective)) /
+          4;
+        followedFor += dt;
+        if (off < FOLLOW_BAND) onMarks += dt;
+      }
+
       // The wind from the left, gusting a third either way.
       windAt(time, live.current.wind, undefined, gust);
 
@@ -390,6 +410,7 @@ export default function SimView({
         grounded: state.grounded,
         crashed: !!state.crashed,
         landed: happened.landed,
+        motor: controls.throttle > 0,
       });
 
       // The heli, its rotor turning clockwise seen from above (the disc shows as it speeds up), the sun over it.
@@ -504,7 +525,15 @@ export default function SimView({
           axes: flown ? [...flown.axes] : [],
           idleUp,
           ghost,
-          replay: replay && replayAt !== null ? {at: replayAt, end: replayEnd(replay.series), pickedUp} : null,
+          replay:
+            replay && replayAt !== null
+              ? {
+                  at: replayAt,
+                  end: replayEnd(replay.series),
+                  pickedUp,
+                  followed: followedFor > 1 ? onMarks / followedFor : null,
+                }
+              : null,
         });
       }
       frame = requestAnimationFrame(tick);

@@ -13,7 +13,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   in packs and days, the last five sorties by month beside the helis on the flight line (each with its own small hour
   meter, as in the Hangar), the last session at a glance (its packs and their notes, a throttle hold undone in flight,
   the link lost, a hard stop) beside the flying weather at your latest spot for three days (Open-Meteo, each day a go,
-  careful or no-go from how often you crash in its wind), then the live packs
+  careful or no-go from how often you crash in its wind), then the live packs (the next to take, most rested first, and
+  those to put at storage charge)
   by their buttons (flights, last flown, resistance, tiring or worn against their first reading and the freshest
   pack's) beside what changed on the radio since the last flight (edge-tx's commits).
 - **Sorties:** every sortie as a flight strip (today's and yesterday's say so), a month at a time, the airtime shown on
@@ -44,7 +45,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   a word or two on it (too deep, sagged, past its rating for 2 s, flown hard, tiring or worn, or within its limits; none for
   a pack with no telemetry), the share upside down as a ring, and its flips and rolls, how often they came and each
   pack's. `npm run logs` brings them from the plugged-in radio.
-- **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, where the
+- **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, personal bests
+  over every heli (each naming the heli that set it), where the
   heli breaks (a damage map on a 3D Huey you turn by dragging, a part's breaks on hover or tap; the flat drawing
   while it loads; the low-poly Huey by Sami, CC BY 4.0, turned into the zones by `scripts/huey.ts`, see
   `assets/huey/CREDIT.md`), what brings it down (crash causes read from the notes), crash patterns (after a crash,
@@ -70,7 +72,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   the end, 152 of their 162 flips and rolls made, `npm run replay` scoring it again after new logs; before a crash marked on the timeline the
   stand-in lets go, and the K110S's two real crashes come back within 2 s; a crash is picked up
   and the log goes on); touching a stick takes over), or Follow it (you fly, an amber mark on each stick where the real
-  pack's was). Its current draw is fitted to the logs, its hover pitch (1.9°) and full-stick rate (300°/s) to the M2 EVO's
+  pack's was, scored by the share of time on the marks, the best kept by pack). Replays play at 1×, ½× or ¼×, their
+  flips and rolls and real crashes marked along the seek bar, with a button to the next flip. Its current draw is fitted to the logs, its hover pitch (1.9°) and full-stick rate (300°/s) to the M2 EVO's
   calibration flight of 24 Nov 2026 (10 s hovers in each idle up, flips and rolls at full stick, each marked with SB). Flybarless rate-mode physics sized from the heli's weight and rotor: rates that settle with a little
   overshoot, momentum (it keeps a lean and carries its speed, the FBL taking out most of the disc's blowback), a quick soft start, turbulence, translational lift, tail kick, a governor that sags, hold and autorotation, the
   rescue, self-level, ground effect, wind, crashes; the rotor and motor heard. The eyes see through a fixed lens (the heli
@@ -78,11 +81,11 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   before it leaves the view. The TX16S's screen in a corner, its own
   widgets (the Cockpit, the top bar) running on the sim's flight and a simulated pack (current from the load, sized on
   the logs, volts sagging). Free flight to start with, and two drills: hover in a box over the pad in each facing, and
-  soft landings graded by touchdown speed.
+  soft landings graded by touchdown speed, and autorotations (cut the motor past 5 m, land on the rotor's spin).
 - **Hangar:** the flight line and the helis that left (stamped sold or lost), the radio (and whether its clock runs an hour ahead, as it keeps summer time) and other gear (a tab), packs and their
   cycles (each pack numbered for good, with its button and the day it died: a new pack can take a dead one's button,
   the dead one keeps its logs and charts; a pack moved to another button keeps its logs on the old one), notes. Helis and packs keep the day they were bought, helis and radios
-  their price, helis their class, rotor size and weight (under the maker and model). Each heli has a data plate page (with each part's time since it last broke there, against how long it
+  their price, helis their class, rotor size and weight (under the maker and model). Each heli has a data plate page (its personal bests: longest inverted, most flips in a pack, longest clean run; each part's time since it last broke there, against how long it
   lasts) and its own chart colour (picked in its form). Helis, radios, packs and
   spares take a photo link; photos are lifted out of their background (`npm run cutouts`, with Apple's Vision on the Mac;
   others are cut out in the page). Spare parts in their own tab, a group a heli: each counted on a day, each break logged since

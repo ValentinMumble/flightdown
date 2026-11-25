@@ -15,6 +15,7 @@ import {daysSinceCrash, monthly, packsSinceCrash, sortSorties, totals} from '../
 import {SHOW_SPARES, spareStock} from '../model/parts';
 import {partTimes} from '../model/cockpit';
 import {HeliPhoto} from '../components/HeliPhoto';
+import {PersonalBests} from '../components/PersonalBests';
 
 /** One heli: its data plate, its months, where it breaks, its spares, its setup and its sorties. */
 export function HeliPage() {
@@ -107,6 +108,10 @@ export function HeliPage() {
       </section>
 
       <div className="bento">
+        <Panel label="Personal bests" note="On this heli, from its sorties and their logs" className="span-12">
+          <PersonalBests sorties={sorties} />
+        </Panel>
+
         <Panel label="Where it breaks" note="Parts replaced on this heli" className="span-7">
           <DamageMap sorties={sorties} />
         </Panel>

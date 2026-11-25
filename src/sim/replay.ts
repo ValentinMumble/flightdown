@@ -21,11 +21,14 @@ export interface Replay {
   cuts: number[];
   /** Its real crashes (s of its log): the stand-in lets go before each, the log's sticks crashing it as they did. */
   crashes: number[];
-  /** What it is called, for the banner over the view. */
+  /** What it is called, for the banner over the view, and the pack's key (its sortie and number), for its best score. */
   label: string;
+  key: string;
   /** When it was started (performance.now), and the log's second it started from. */
   startedAt: number;
   from: number;
+  /** Slow motion: the share of real time it plays at (1, ½ or ¼), the whole sim slowed with it. */
+  speed: number;
 }
 
 /** Where a replay starts in its log: a couple of seconds before the motor first runs, else at its start. */

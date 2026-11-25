@@ -1,10 +1,11 @@
 /**
  * The simulator's drills. Hover: hold the heli in a box over the pad, facing the way asked, as long as you can.
- * Landing: take off, then set it down on the pad as softly as you can. Each is fed every frame and says how it goes.
+ * Landing: take off, then set it down on the pad as softly as you can. Autorotation: climb past 5 m, cut the motor (hold),
+ * and land on the rotor's spin alone. Each is fed every frame and says how it goes.
  */
 import {Vector3} from 'three';
 
-export type DrillKind = 'free' | 'hover' | 'landing';
+export type DrillKind = 'free' | 'hover' | 'landing' | 'auto';
 
 /** Which way the heli faces the pilot in a hover. */
 export type Facing = 'tail' | 'left' | 'right' | 'nose';
@@ -30,6 +31,8 @@ export const HOVER_GOAL = 30;
 export const PAD_RADIUS = 1;
 /** Climb this high before a landing counts, m. */
 const CLIMB = 1;
+/** An autorotation starts with the motor cut this high or higher, m. */
+export const AUTO_HEIGHT = 5;
 
 export interface HoverDrill {
   kind: 'hover';
@@ -61,11 +64,23 @@ export interface LandingDrill {
   count: number;
 }
 
-export type Drill = {kind: 'free'} | HoverDrill | LandingDrill;
+export interface AutoDrill {
+  kind: 'auto';
+  /** Climbing past AUTO_HEIGHT with the motor on, then cutting it there, then down on the rotor's spin. */
+  phase: 'climb' | 'cut' | 'glide';
+  /** The last try: its touchdown, or why it did not count. */
+  last: Landing | {failed: string} | null;
+  /** The softest touchdown on the pad so far. */
+  best: Landing | null;
+  count: number;
+}
+
+export type Drill = {kind: 'free'} | HoverDrill | LandingDrill | AutoDrill;
 
 export function startDrill(kind: DrillKind, facing: Facing = 'tail'): Drill {
   if (kind === 'hover') return {kind, facing, inside: false, streak: 0, best: 0, total: 0};
   if (kind === 'landing') return {kind, phase: 'climb', last: null, best: null, count: 0};
+  if (kind === 'auto') return {kind, phase: 'climb', last: null, best: null, count: 0};
   return {kind};
 }
 
@@ -82,6 +97,14 @@ export interface Frame {
   grounded: boolean;
   crashed: boolean;
   landed?: {speed: number; at: Vector3};
+  /** The motor driving the rotor (not held, not cut). */
+  motor?: boolean;
+}
+
+/** A touchdown, graded: how fast, and how far from the pad's centre. */
+function landingAt(landed: {speed: number; at: Vector3}): Landing {
+  const distance = Math.hypot(landed.at.x - PAD.x, landed.at.z - PAD.z);
+  return {speed: landed.speed, distance, grade: gradeOf(landed.speed), onPad: distance <= PAD_RADIUS};
 }
 
 /** Moves the drill on by a frame. */
@@ -110,13 +133,23 @@ export function updateDrill(drill: Drill, frame: Frame): Drill {
     }
     if (frame.crashed) return {...drill, phase: 'climb'};
     if (!frame.landed) return drill;
-    const distance = Math.hypot(frame.landed.at.x - PAD.x, frame.landed.at.z - PAD.z);
-    const landing: Landing = {
-      speed: frame.landed.speed,
-      distance,
-      grade: gradeOf(frame.landed.speed),
-      onPad: distance <= PAD_RADIUS,
-    };
+    const landing = landingAt(frame.landed);
+    const better = landing.onPad && (!drill.best || landing.speed < drill.best.speed);
+    return {...drill, phase: 'climb', last: landing, best: better ? landing : drill.best, count: drill.count + 1};
+  }
+  if (drill.kind === 'auto') {
+    const high = !frame.grounded && !frame.crashed && frame.position.y >= AUTO_HEIGHT;
+    if (drill.phase === 'climb') return high && frame.motor ? {...drill, phase: 'cut'} : drill;
+    if (drill.phase === 'cut') {
+      if (frame.grounded || frame.crashed) return {...drill, phase: 'climb'};
+      return high && !frame.motor ? {...drill, phase: 'glide'} : drill;
+    }
+    if (frame.crashed) return {...drill, phase: 'climb', last: {failed: 'Crashed'}, count: drill.count + 1};
+    if (frame.motor && !frame.grounded) {
+      return {...drill, phase: 'climb', last: {failed: 'Motor back on: a power recovery'}, count: drill.count + 1};
+    }
+    if (!frame.landed) return drill;
+    const landing = landingAt(frame.landed);
     const better = landing.onPad && (!drill.best || landing.speed < drill.best.speed);
     return {...drill, phase: 'climb', last: landing, best: better ? landing : drill.best, count: drill.count + 1};
   }

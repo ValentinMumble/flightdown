@@ -15,7 +15,7 @@ import {useSeriesColor} from '../components/colors';
 import {ago, formatAirtime, formatDay, formatMonth, formatNumber, formatRate, plural} from '../model/format';
 import {daysSinceCrash, groupBy, monthOf, packsSinceCrash, sortSorties, streaks, totals} from '../model/stats';
 import {SHOW_SPARES, spareStock} from '../model/parts';
-import {packRecords} from '../model/packs';
+import {nextPacks, packRecords, packWear, STORAGE_DAYS} from '../model/packs';
 import {HeliPhoto} from '../components/HeliPhoto';
 
 /**
@@ -55,6 +55,16 @@ export function Home() {
     .filter(record => !record.pack.dead)
     .sort((left, right) => (left.pack.button ?? 7) - (right.pack.button ?? 7) || left.label.localeCompare(right.label));
   const deadPacks = records.length - rack.length;
+  // The packs to take on the next sortie (as many as the last sorties flew), and those to put at storage charge.
+  const picks = nextPacks(records);
+  const usual = Math.max(
+    1,
+    Math.round(
+      sorties.slice(-5).reduce((sum, sortie) => sum + sortie.packs, 0) / Math.max(1, Math.min(5, sorties.length)),
+    ),
+  );
+  const takeNext = picks.next.slice(0, usual);
+  const toStore = new Set(picks.storage.map(({record}) => record));
   // The freshest pack flown: the lowest latest resistance, what the others compare to.
   const freshest = Math.min(...rack.flatMap(record => (record.latest === undefined ? [] : [record.latest])));
   const logSortie = () => open(<SortieForm />);
@@ -250,7 +260,7 @@ export function Home() {
         {/* The packs beside what changed on the radio since the last flight. */}
         <Panel
           label="Packs"
-          note={`The live ones by their buttons, their resistance a cell's share against their first reading and the freshest pack's${deadPacks ? `; ${plural(deadPacks, 'dead pack')} left out` : ''}`}
+          note={`The live ones by their buttons, their resistance a cell's share against their first reading and the freshest pack's; the next to take, most rested first, and those unflown ${STORAGE_DAYS} days to put at storage charge${deadPacks ? `; ${plural(deadPacks, 'dead pack')} left out` : ''}`}
           className="span-7"
           action={
             <Link to="/hangar/batteries" className="button small ghost">
@@ -268,10 +278,8 @@ export function Home() {
               </div>
               {rack.map(record => {
                 // Twice its own first reading, or twice the freshest pack's, is worn; half again is tiring.
-                const change =
-                  record.first && record.latest
-                    ? Math.max(record.latest / record.first, record.latest / freshest)
-                    : null;
+                const change = packWear(record, freshest);
+                const nextAt = takeNext.indexOf(record);
                 const worn = change !== null && change >= 2;
                 const tiring = change !== null && change >= 1.5;
                 return (
@@ -280,6 +288,8 @@ export function Home() {
                       <span className="name-main">{record.label}</span>
                       <small className="name-note">
                         {record.pack.button ? `button ${record.pack.button}` : 'no button'}
+                        {nextAt >= 0 && <span className="pill good rack-next">next {nextAt + 1}</span>}
+                        {toStore.has(record) && <span className="pill caution rack-next">storage charge</span>}
                       </small>
                     </span>
                     <span>{record.flights || '–'}</span>

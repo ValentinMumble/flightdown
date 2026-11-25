@@ -447,3 +447,40 @@
     max-width: 55%;
   }
 }
+
+/* The replay's place in its pack, its flips and rolls as amber ticks, its real crashes in red; the next flip beside. */
+.sim-seek-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sim-seek-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.sim-seek-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sim-seek-flip,
+.sim-seek-crash {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  min-width: 2px;
+  border-radius: 1px;
+}
+
+.sim-seek-flip {
+  background: color-mix(in srgb, var(--caution) 55%, transparent);
+}
+
+.sim-seek-crash {
+  width: 2px;
+  background: var(--warning);
+}
