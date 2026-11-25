@@ -281,3 +281,66 @@
 .lane-reading span {
   color: var(--muted);
 }
+
+/* Each pack's volts at rest once landed, typed in after the flight: one small field a pack, in a row, Enter to the next. */
+.landed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: -6px 0 18px;
+}
+
+.landed-title {
+  font-family: var(--mono);
+  font-size: 0.71875rem;
+  color: var(--label);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.landed-pack {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.landed-label,
+.landed-unit,
+.landed-charge {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.landed-charge {
+  color: var(--muted);
+}
+
+/* The app's stepper, small: the volts between a minus and a plus. */
+.landed-stepper.stepper {
+  gap: 2px;
+  padding: 2px;
+}
+
+.landed-stepper.stepper button {
+  width: 28px;
+  height: 28px;
+  color: var(--ink-2);
+}
+
+.landed-stepper .stepper-input {
+  width: 3.4em;
+  flex: 0 0 auto;
+  font-size: 0.9375rem;
+}
+
+@media (max-width: 860px) {
+  .landed {
+    margin-top: -4px;
+  }
+
+  .landed-title {
+    flex-basis: 100%;
+  }
+}

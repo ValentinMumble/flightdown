@@ -71,6 +71,11 @@ export interface TelemetryLog {
    * stopped. */
   startVoltage?: number;
   endVoltage?: number;
+  /**
+   * The pack's volts at rest once landed (the whole pack), typed in after the flight, on its last file: how a heli with
+   * no telemetry (the K110S) tells what a pack has left.
+   */
+  landedVoltage?: number;
   maxCurrent?: number;
   /** The highest current held for 2 s (its average over them), A: what the pack gave for long, not in a punch. */
   heldCurrent?: number;

@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {Trash} from 'lucide-react';
+import {Minus, Plus, Trash} from 'lucide-react';
 import type {TelemetryLog, TelemetrySeries} from '../types';
 import {useStore} from '../data/store';
 import {useSeries} from '../data/useSeries';
@@ -15,11 +15,92 @@ import {
   radioTime,
 } from '../model/packs';
 import {formatTimer, plural} from '../model/format';
+import {chargeFromCell} from '../model/battery';
 import {TelemetryCharts} from './charts/TelemetryCharts';
 import {topBarHeight} from './topBar';
 
 /** Below this the radio lost the voltage for a sample: left out of the lines. */
 const NO_VOLTAGE = 0.5;
+
+/** Volts typed in as 3.91 or 3,91; null when empty, undefined when not a voltage. */
+const readVolts = (text: string) => {
+  const trimmed = text.trim().replace(',', '.');
+  if (!trimmed) return null;
+  const volts = Number(trimmed);
+  return Number.isFinite(volts) && volts > 0 && volts < 60 ? Math.round(volts * 100) / 100 : undefined;
+};
+
+/** A tap on the minus or plus: a hundredth of a volt. */
+const VOLT_STEP = 0.01;
+/** Taps on the minus or plus are saved once they stop for this long (ms), not one write a tap. */
+const STEP_SAVE = 500;
+
+/**
+ * A pack's landed volts, typed in or stepped a hundredth at a time: saved when the field is left or Enter is pressed
+ * (Enter moves to the next one), or once the taps stop. An empty field steps from its usual 3.85 V a cell.
+ */
+function LandedInput({
+  label,
+  volts,
+  cells,
+  onSave,
+}: {
+  label: string;
+  volts?: number;
+  cells?: number;
+  onSave: (volts: number | undefined) => void;
+}) {
+  const [text, setText] = useState(volts?.toFixed(2) ?? '');
+  useEffect(() => setText(volts?.toFixed(2) ?? ''), [volts]);
+  const pending = useRef(0);
+  useEffect(() => () => window.clearTimeout(pending.current), []);
+  const usual = 3.85 * (cells ?? 1);
+  const save = (typed = text) => {
+    window.clearTimeout(pending.current);
+    const read = readVolts(typed);
+    if (read === undefined) return setText(volts?.toFixed(2) ?? '');
+    if ((read ?? undefined) !== volts) onSave(read ?? undefined);
+  };
+  const step = (way: 1 | -1) => {
+    const from = readVolts(text);
+    const next = (from ? from + way * VOLT_STEP : usual).toFixed(2);
+    setText(next);
+    window.clearTimeout(pending.current);
+    pending.current = window.setTimeout(() => save(next), STEP_SAVE);
+  };
+  const charge = volts !== undefined && cells ? Math.round(chargeFromCell(volts / cells)) : undefined;
+  return (
+    <label className="landed-pack">
+      <span className="landed-label">{label}</span>
+      <span className="stepper landed-stepper">
+        <button type="button" aria-label={`${label}: a hundredth of a volt less`} onClick={() => step(-1)}>
+          <Minus size={14} />
+        </button>
+        <input
+          className="stepper-input landed-input"
+          inputMode="decimal"
+          enterKeyHint="next"
+          placeholder={usual.toFixed(2)}
+          value={text}
+          onChange={event => setText(event.target.value)}
+          onBlur={() => save()}
+          onKeyDown={event => {
+            if (event.key !== 'Enter') return;
+            const inputs = [...document.querySelectorAll<HTMLInputElement>('.landed-input')];
+            const next = inputs[inputs.indexOf(event.currentTarget) + 1];
+            if (next) next.focus();
+            else event.currentTarget.blur();
+          }}
+        />
+        <button type="button" aria-label={`${label}: a hundredth of a volt more`} onClick={() => step(1)}>
+          <Plus size={14} />
+        </button>
+      </span>
+      <span className="landed-unit">V</span>
+      {charge !== undefined && <span className="landed-charge">{charge}%</span>}
+    </label>
+  );
+}
 
 /** A pack's voltage as a small line, on a scale shared by every pack of the sortie so their sag compares. */
 function Sparkline({series, low, high}: {series?: TelemetrySeries | null; low: number; high: number}) {
@@ -56,6 +137,7 @@ export function TelemetryPacks({
   pack,
   packs,
   onRemove,
+  onLanded,
 }: {
   logs: TelemetryLog[];
   /** How many packs the sortie says were flown: logs close in time join to make that many. */
@@ -68,6 +150,8 @@ export function TelemetryPacks({
   pack?: {cells?: number; capacity?: number};
   packs: number[];
   onRemove: (logId: string) => void;
+  /** Saves a pack's landed volts (on its last file), or clears them. */
+  onLanded?: (logId: string, volts: number | undefined) => void;
 }) {
   const {doc} = useStore();
   const flights = useMemo(() => groupPacks(logs, packCount), [logs, packCount]);
@@ -239,6 +323,25 @@ export function TelemetryPacks({
               {one.files.length > 1 && <span className="pack-card-note">{one.files.length} files</span>}
             </button>
           ))}
+        </div>
+      )}
+
+      {onLanded && (
+        <div className="landed" role="group" aria-label="Volts at rest once landed">
+          <span className="landed-title">Landed at, resting</span>
+          {flights.map((one, index) => {
+            const last = one.files[one.files.length - 1];
+            const kind = buttonBattery(one.packButton ?? 0, doc.batteries, one.start?.slice(0, 10), heliId);
+            return (
+              <LandedInput
+                key={last.id}
+                label={packName(one, doc.batteries, heliId) ?? `Pack ${index + 1}`}
+                volts={one.files.find(file => file.landedVoltage !== undefined)?.landedVoltage}
+                cells={kind?.battery.cells ?? pack?.cells}
+                onSave={volts => onLanded(last.id, volts)}
+              />
+            );
+          })}
         </div>
       )}
 

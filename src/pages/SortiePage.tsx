@@ -309,6 +309,15 @@ export function SortiePage() {
             pack={pack}
             packs={packs}
             onRemove={removeLog}
+            onLanded={(logId, volts) =>
+              patch('sorties', sortie.id, {
+                telemetry: sortie.telemetry.map(log => {
+                  if (log.id !== logId) return log;
+                  const {landedVoltage: _old, ...rest} = log;
+                  return volts === undefined ? rest : {...rest, landedVoltage: volts};
+                }),
+              })
+            }
           />
         </Card>
       </div>

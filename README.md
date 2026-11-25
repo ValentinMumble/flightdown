@@ -31,7 +31,8 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   splits a log when the link drops, unless their buttons differ, and so are files on the same button within 10 minutes,
   disarmed and armed again on that pack; with volts in the log, a file starting at rest where the one before stopped
   is that pack flown on, one starting higher a fresh pack; one row pinned under the top bar, so another pack is
-  one tap away from anywhere in the charts), and for the chosen pack: voltage, current, signal and
+  one tap away from anywhere in the charts), each pack's volts at rest once landed typed in or stepped under them (Enter to the
+  next, the charge they mean beside; what the K110S, with no telemetry, has), and for the chosen pack: voltage, current, signal and
   throttle as lanes of one recorder (each reads out at the cursor; the flight only, the quiet start and end cut, or the
   whole log; its exceedances marked along the top; crashes marked by a tap at their moment, a red line across the
   lanes; each flip and roll a gold band, its way marked, the pack's count above; the lines broken between a pack's files), under it a replay of the sticks with throttle, power and battery
