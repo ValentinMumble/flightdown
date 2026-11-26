@@ -85,11 +85,10 @@ export function heliParams(heli?: {weight?: number; rotor?: number}): HeliParams
     hoverPitch: (1.9 * Math.PI) / 180,
     maxPitch: (12 * Math.PI) / 180,
     // The FBL's rates at full stick, before the radio's own rates and expo: its calibration flight's 12 flips and rolls
-    // at full stick (24 Nov 2026) took 1.0 to 1.3 s each, about 300°/s both ways. The tail is not measured (no gyro in
-    // the logs): 280°/s felt far too slow on the TX (25 Nov 2026); 420°/s, as fast as the replays still fly to the end
-    // (faster, the logs' pirouettes over the field drift it into the ground).
+    // at full stick (24 Nov 2026) took 1.0 to 1.3 s each, about 300°/s both ways (the 26 Nov flips agree). The tail:
+    // its marked pirouettes (26 Nov 2026), 3 turns each way counted aloud in 1.8 s of full rudder output, about 610°/s.
     cyclicRate: (300 * Math.PI) / 180,
-    yawRate: (420 * Math.PI) / 180,
+    yawRate: (600 * Math.PI) / 180,
     inertia: 0.015 * mass * radius * radius,
     maxPower: 300 * mass,
     spoolRate: hoverRpm / 1.3,
