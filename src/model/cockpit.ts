@@ -460,7 +460,7 @@ export function packDebrief(
   sortie: Sortie,
   batteries: Battery[],
   records: PackRecord[],
-): {name: string; notes: PackNote[]}[] {
+): {index: number; name: string; batteryId?: string; notes: PackNote[]}[] {
   const freshest = Math.min(...records.filter(one => !one.pack.dead && one.latest).map(one => one.latest!));
   const packs = sortiePacks(sortie).map((flown, index) => {
     const found = buttonBattery(
@@ -483,7 +483,7 @@ export function packDebrief(
     .sort((left, right) => left - right);
   const typical = averages.length ? averages[Math.floor(averages.length / 2)] : null;
 
-  return packs.flatMap(({flown, found, name, average}) => {
+  return packs.flatMap(({flown, found, name, average}, index) => {
     const measured =
       flown.mAh !== undefined ||
       flown.minVoltage !== undefined ||
@@ -527,6 +527,6 @@ export function packDebrief(
         notes.push({tone: 'caution', text: `tiring: ${Math.round(reading)} mΩ a cell, ${wear.toFixed(1)}×`});
     }
     if (!notes.length) notes.push({tone: 'good', text: 'within its limits'});
-    return [{name, notes}];
+    return [{index, name, batteryId: found?.battery.id, notes}];
   });
 }

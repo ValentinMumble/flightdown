@@ -355,7 +355,7 @@
   gap: 16px;
 }
 
-/* The sortie's packs in a word or two each, under the bars: a row a pack, its notes as pills. */
+/* The last session's packs in a word or two each (the Cockpit): a row a pack, its notes as pills. */
 .pack-debrief {
   grid-column: 1 / -1;
   display: flex;
@@ -392,24 +392,28 @@
   margin: 0;
 }
 
-/* Each pack's flips, under the sortie's. */
-.debrief-flip-packs {
-  display: grid;
-  gap: 2px;
-  margin: 6px 0 0;
-  padding: 0 0 0 26px;
-  list-style: none;
-  font-size: 0.8125rem;
-  color: var(--muted);
-}
-
-.debrief-flip-packs span {
-  color: var(--ink-2);
-}
-
 .pack-bars {
   display: grid;
-  gap: 6px;
+  gap: 10px;
+}
+
+/* A pack: its bar, then its flips, its volts once landed and what its log says, as pills. */
+.pack-row {
+  display: grid;
+  gap: 5px;
+}
+
+.pack-row-notes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8125rem;
+}
+
+.pack-row-flips {
+  margin-right: 4px;
+  color: var(--muted);
 }
 
 .pack-bar-row {
@@ -1212,4 +1216,15 @@
     grid-template-columns: minmax(0, 1fr) repeat(3, auto);
     gap: 10px;
   }
+}
+
+/* A pack's name on a sortie, a link to its battery's details: the text's own colour, a faint underline. */
+.pack-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 3px;
+}
+.pack-link:hover {
+  text-decoration-color: currentColor;
 }

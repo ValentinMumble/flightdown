@@ -559,6 +559,16 @@ export function Hangar() {
     open(<HeliForm />);
   }, [params, setParams, open]);
 
+  // A pack's details asked for from elsewhere (a sortie's pack): its battery's sheet open over the batteries.
+  const {doc} = useStore();
+  const asked = params.get('battery');
+  const battery = asked ? doc.batteries.find(one => one.id === asked) : undefined;
+  useEffect(() => {
+    if (!asked || !battery) return;
+    setParams({}, {replace: true});
+    open(<BatteryForm battery={battery} />);
+  }, [asked, battery, setParams, open]);
+
   return (
     <div className="page">
       <PageHeader title="Hangar" menuNamed sub="The helis, their gear, and what keeps them flying" />

@@ -146,6 +146,7 @@
   font-size: 0.9375rem;
   line-height: 1.55;
   color: var(--ink);
+  white-space: pre-line;
 }
 
 .accent-mark {

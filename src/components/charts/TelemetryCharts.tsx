@@ -12,7 +12,14 @@ import {
 } from 'recharts';
 import type {TelemetrySeries} from '../../types';
 import {activeSpan, CHANNELS, type Channel} from '../../model/telemetry';
-import {describeFlips, flipCounts, invertedStretches, telemetryInsights, turnOvers} from '../../model/insights';
+import {
+  describeFlips,
+  flipCounts,
+  invertedStretches,
+  switchMarks,
+  telemetryInsights,
+  turnOvers,
+} from '../../model/insights';
 import {INVERTED} from '../PackTimes';
 import {StickMap} from './StickMap';
 import {formatTimer} from '../../model/format';
@@ -40,6 +47,8 @@ const GAP = 2;
 const CRASH = '#ff5c5c';
 /** A flip or roll's band across the lanes, from going over to coming back. */
 const FLIP = '#e8c547';
+/** A calibration mark's band across the lanes (SB down), numbered on the top one. */
+const MARK = '#5ec8e5';
 /** A flip's mark on the top lane, by the way it went over. */
 const FLIP_MARK = {back: '↶', front: '↷', left: '⟲', right: '⟳'} as const;
 
@@ -152,11 +161,13 @@ export function TelemetryCharts({
   // Each turn over (flips and rolls, or half of one): a band across every lane, its way marked on the top one.
   const turns = useMemo(() => turnOvers(series), [series]);
   const flipWords = useMemo(() => describeFlips(flipCounts(series)), [series]);
+  // A calibration flight's marks (SB held down): a band across every lane, its number on the top one.
+  const marks = useMemo(() => switchMarks(series), [series]);
 
   const channels = ORDER.filter(channel => shown.channels[channel]?.length);
   return (
     <>
-      {(span || inverted.length > 0 || turns.length > 0 || onCrashes || crashes.length > 0) && (
+      {(span || inverted.length > 0 || turns.length > 0 || marks.length > 0 || onCrashes || crashes.length > 0) && (
         <div className="lanes-span">
           {span && (
             <button type="button" className="chip" aria-pressed={!whole} onClick={() => setWhole(current => !current)}>
@@ -178,6 +189,12 @@ export function TelemetryCharts({
           {turns.length > 0 && (
             <span className="lane-legend" title="↶ back, ↷ front, ⟲ left, ⟳ right">
               <i style={{background: FLIP}} aria-hidden /> {flipWords ?? 'turns over'}
+            </span>
+          )}
+          {marks.length > 0 && (
+            <span className="lane-legend" title="SB held down: a calibration flight's marks, numbered">
+              <i style={{background: MARK}} aria-hidden />{' '}
+              {marks.length === 1 ? '1 SB mark' : `${marks.length} SB marks`}
             </span>
           )}
           {crashes.map(second =>
@@ -291,6 +308,24 @@ export function TelemetryCharts({
                         label={
                           index === 0
                             ? {value: FLIP_MARK[turn.going], position: 'insideTop', fontSize: 12, fill: FLIP}
+                            : undefined
+                        }
+                      />
+                    ))}
+                    {marks.map((mark, number) => (
+                      <ReferenceArea
+                        key={`mark-${mark.start}`}
+                        x1={mark.start}
+                        x2={Math.max(mark.end, mark.start + 0.4)}
+                        fill={MARK}
+                        fillOpacity={0.16}
+                        stroke={MARK}
+                        strokeOpacity={0.5}
+                        strokeDasharray="3 3"
+                        ifOverflow="hidden"
+                        label={
+                          index === 0
+                            ? {value: String(number + 1), position: 'insideTopLeft', fontSize: 11, fill: MARK}
                             : undefined
                         }
                       />

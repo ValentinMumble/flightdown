@@ -74,9 +74,10 @@ export function Sim() {
   );
   const [settings, setSettings] = useState(readSettings);
   const heli = helis.find(one => one.id === settings.heliId) ?? helis[0];
+  const name = heli?.name;
   const weight = heli?.weight;
   const rotor = heli?.rotor;
-  const params = useMemo(() => heliParams({weight, rotor}), [weight, rotor]);
+  const params = useMemo(() => heliParams({name, weight, rotor}), [name, weight, rotor]);
   const [drill, setDrill] = useState<DrillKind>('free');
   const [facing, setFacing] = useState<Facing>('tail');
   const [wind, setWind] = useState('0');

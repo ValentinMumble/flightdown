@@ -98,6 +98,26 @@ export function invertedStretches(series: TelemetrySeries): {start: number; seco
   });
 }
 
+/**
+ * The marks a calibration flight for the sim left (SB down to start one, up to end it; SB does nothing else on the
+ * M2 EVO or the K110S): from each switch down to its next sample up, numbered in the order flown.
+ */
+export function switchMarks(series: TelemetrySeries): {start: number; end: number}[] {
+  const {time} = series;
+  const switchB = series.channels.sb ?? [];
+  const marks: {start: number; end: number}[] = [];
+  let from: number | null = null;
+  for (let index = 0; index <= time.length; index += 1) {
+    const down = index < time.length && (switchB[index] ?? -1) > 0.5;
+    if (down && from === null) from = index;
+    if (!down && from !== null) {
+      marks.push({start: time[from], end: time[Math.min(index, time.length - 1)]});
+      from = null;
+    }
+  }
+  return marks;
+}
+
 /** Cyclic (% of the stick) under which it says nothing of a turn over's way: no flip without the stick pushed. */
 const FLIP_STICK = 15;
 /** Seconds either side of a moment whose cyclic says which way the heli went over. */

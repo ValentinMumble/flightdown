@@ -67,12 +67,28 @@ export interface HeliParams {
   blowback: number;
 }
 
-/** A heli's numbers from its weight (g) and rotor (mm): the M2 EVO's when they are not known. */
-export function heliParams(heli?: {weight?: number; rotor?: number}): HeliParams {
+/**
+ * What a heli's calibration flight measured, by its name, over the M2 EVO's numbers. The K110S's (26 Nov 2026, its
+ * second pack, marked with SB): hovers at +25 % pitch output on 55 % throttle and +17 % on 70 % (pitch times head
+ * speed squared about the same), so about 22 % of full pitch at the 60 % the sim hovers on, 2.7°; three flips and two
+ * rolls at full stick in 0.9 to 1.0 s of full output each, about 375°/s; 3 turns each way in 2.0 s of full rudder
+ * output, about 535°/s.
+ */
+const MEASURED: Record<string, Partial<Pick<HeliParams, 'hoverPitch' | 'cyclicRate' | 'yawRate'>>> = {
+  K110S: {
+    hoverPitch: (2.7 * Math.PI) / 180,
+    cyclicRate: (375 * Math.PI) / 180,
+    yawRate: (535 * Math.PI) / 180,
+  },
+};
+
+/** A heli's numbers from its weight (g) and rotor (mm), and what its calibration flight measured: the M2 EVO's else. */
+export function heliParams(heli?: {name?: string; weight?: number; rotor?: number}): HeliParams {
   const mass = (heli?.weight ?? 345) / 1000;
   const radius = (heli?.rotor ?? 434) / 2000;
   // Small helis hover at about the same blade tip speed, so a smaller rotor spins faster: 70 m/s at the tips.
   const hoverRpm = (70 / radius) * (60 / (2 * Math.PI));
+  const measured = MEASURED[Object.keys(MEASURED).find(name => heli?.name?.startsWith(name)) ?? ''] ?? {};
   return {
     mass,
     radius,
@@ -94,6 +110,7 @@ export function heliParams(heli?: {weight?: number; rotor?: number}): HeliParams
     spoolRate: hoverRpm / 1.3,
     crashSpeed: 2.5,
     blowback: 0.006,
+    ...measured,
   };
 }
 

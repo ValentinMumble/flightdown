@@ -18,7 +18,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   by their buttons (flights, last flown, resistance, tiring or worn against their first reading and the freshest
   pack's) beside what changed on the radio since the last flight (edge-tx's commits).
 - **Sorties:** every sortie as a flight strip (today's and yesterday's say so), a month at a time, the airtime shown on
-  an hour meter (each sortie's page has its own, with its crashes, spot and indoors set in one tap). Search notes,
+  an hour meter (each sortie's page has its own, with its crashes, spot and indoors set in one tap, the spots folded to the one set until Change). Search notes,
   parts, places and days; filter by heli, spot, crashes, a broken part, sorties with a radio log or flown indoors
   (behind one Filters button on a phone).
 - **Photos:** they stay in Apple Photos, in an iCloud shared album with its public website on (its link goes in
@@ -35,7 +35,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   next, the charge they mean beside; what the K110S, with no telemetry, has), and for the chosen pack: voltage, current, signal and
   throttle as lanes of one recorder (each reads out at the cursor; the flight only, the quiet start and end cut, or the
   whole log; its exceedances marked along the top; crashes marked by a tap at their moment, a red line across the
-  lanes; each flip and roll a gold band, its way marked, the pack's count above; the lines broken between a pack's files), under it a replay of the sticks with throttle, power and battery
+  lanes; each flip and roll a gold band, its way marked, the pack's count above; a calibration flight's SB marks numbered blue bands; the lines broken between a pack's files), under it a replay of the sticks with throttle, power and battery
   dials (the power with a mark for what the pack could still give before a cell drops to 3.3 V, from its resistance;
   the battery from its charge at rest when plugged in, less the mAh used) and an attitude ball (banked and pitched by
   the sticks, turned over through each flip the way they took it, the small heli fixed in its middle), then a caution
@@ -44,10 +44,11 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   used, pack resistance (how far the volts fall an amp, fitted over the whole flight), the radio link, the time upside down, the flips and rolls: whole turns, the way read from the
   cyclic), its exceedance events as flight data monitoring lists them (over current, a cell under 3.3 V, the link low,
   past 85 % of the pack, a strike: the current jumping then the motor stopping), and a map of the sticks. A sortie
-  flown with logs shows its exact air time, each pack as a bar (named by its button, the inverted part in violet) with
-  a word or two on it (too deep, sagged, past its rating for 2 s, flown hard, tiring or worn, or within its limits; none for
-  a pack with no telemetry), the share upside down as a ring, and its flips and rolls, how often they came and each
-  pack's. `npm run logs` brings them from the plugged-in radio.
+  flown with logs shows its exact air time, then a row a pack: a bar (named by its button, the name a link to its
+  battery in the Hangar, the inverted part in violet), its flips, its volts at rest once landed and a word or two on it
+  (too deep, sagged, past its rating for 2 s, flown hard, tiring or worn, or within its limits; none for a pack with no
+  telemetry); the share upside down as a ring when it flew inverted, and its flips and rolls, how often they came.
+  Notes keep their line breaks. `npm run logs` brings them from the plugged-in radio.
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, personal bests
   over every heli (each naming the heli that set it), where the
   heli breaks (a damage map on a 3D Huey you turn by dragging, a part's breaks on hover or tap; the flat drawing
@@ -76,8 +77,9 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   stand-in lets go, and the K110S's two real crashes come back within 2 s; a crash is picked up
   and the log goes on); touching a stick takes over), or Follow it (you fly, an amber mark on each stick where the real
   pack's was, scored by the share of time on the marks, the best kept by pack). Replays play at 1×, ½× or ¼×, their
-  flips and rolls and real crashes marked along the seek bar, with a button to the next flip. Its current draw is fitted to the logs, its hover pitch (1.9°) and full-stick rate (300°/s) to the M2 EVO's
-  calibration flight of 24 Nov 2026 (10 s hovers in each idle up, flips and rolls at full stick, each marked with SB). Flybarless rate-mode physics sized from the heli's weight and rotor: rates that settle with a little
+  flips and rolls and real crashes marked along the seek bar, with a button to the next flip. Its current draw is fitted to the logs, its hover pitch and rates to each heli's calibration flights
+  (10 s hovers, flips and rolls at full stick, 3 counted pirouettes each way, each marked with SB): the M2 EVO 1.9°,
+  300°/s, tail 600°/s (24 and 26 Nov 2026), the K110S 2.7°, 375°/s, tail 535°/s (26 Nov 2026). Flybarless rate-mode physics sized from the heli's weight and rotor: rates that settle with a little
   overshoot, momentum (it keeps a lean and carries its speed, the FBL taking out most of the disc's blowback), a quick soft start, turbulence, translational lift, tail kick, a governor that sags, hold and autorotation, the
   rescue, self-level, ground effect, wind, crashes; the rotor and motor heard. The eyes see through a fixed lens (the heli
   shrinks as it goes away), with a zoom slider on the view; they step back from a heli flown too close, and turn at once

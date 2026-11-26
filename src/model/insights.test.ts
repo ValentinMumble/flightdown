@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {packResistance} from './insights';
+import {packResistance, switchMarks} from './insights';
 
 describe('packResistance', () => {
   it('reads how far the volts fall an amp over the whole flight, while the pack drains under it', () => {
@@ -17,5 +17,16 @@ describe('packResistance', () => {
     const current = time.map(() => 8);
     const voltage = time.map(second => 12.4 - second / 200);
     expect(packResistance({id: 'hover', time, channels: {voltage, current}})).toBeNull();
+  });
+});
+
+describe('switchMarks', () => {
+  it('reads each stretch with SB down as a mark, one still down at the end of the log included', () => {
+    const time = [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2];
+    const sb = [-1, 1, 1, -1, 0, 1, 1];
+    expect(switchMarks({id: 'marks', time, channels: {sb}})).toEqual([
+      {start: 0.2, end: 0.6},
+      {start: 1.0, end: 1.2},
+    ]);
   });
 });

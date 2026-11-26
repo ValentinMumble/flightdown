@@ -12,13 +12,13 @@ import {SpotForm} from '../components/forms/SpotForm';
 import {MiniMap} from '../components/MiniMap';
 import {SortiePhotos} from '../components/SortiePhotos';
 import {TelemetryPacks} from '../components/TelemetryPacks';
-import {InvertedRing, PackBars, packTimes} from '../components/PackTimes';
+import {InvertedRing, PackRows, packTimes} from '../components/PackTimes';
 import {daysBetween, formatAirtime, formatDay, formatTimer, plural, today} from '../model/format';
 import {airtime, loggedTimes, sortSorties} from '../model/stats';
 import {readTelemetry} from '../model/telemetry';
 import {addFlips, describeFlips, packOf} from '../model/insights';
 import {packDebrief} from '../model/cockpit';
-import {packRecords, sortiePacks} from '../model/packs';
+import {packRecords} from '../model/packs';
 import {parseCsv} from '../model/csv';
 import {hasLocation} from '../model/geo';
 import {weatherEmoji, weatherNote} from '../model/pastWeather';
@@ -79,10 +79,10 @@ export function SortiePage() {
   const flips = describeFlips(flipCounts);
   const flipTotal = Object.values(flipCounts).reduce((sum: number, count) => sum + (count ?? 0), 0);
   const flown = packTimes(sortie, doc.batteries);
-  const packFlips = sortiePacks(sortie).map((one, index) => ({
-    name: flown[index]?.name ?? `Pack ${index + 1}`,
-    flips: describeFlips(one.files.reduce((sum, log) => addFlips(sum, log.flips), {})),
-  }));
+  // What each pack's log says of it, by its place in the sortie (a pack with nothing measured has none).
+  const debrief = packDebrief(sortie, doc.batteries, packRecords(doc.sorties, doc.batteries));
+  const packNotes = flown.map((_, index) => debrief.find(one => one.index === index)?.notes);
+  const inverted = sortie.telemetry.reduce((sum, log) => sum + (log.inverted ?? 0), 0);
   // Every size of pack this heli flies, to pick from in a replay.
   const packs = [
     ...new Set(
@@ -170,13 +170,8 @@ export function SortiePage() {
             {/* Its packs as their logs flew them, and the share upside down. */}
             {logged && (
               <div className="debrief-packs">
-                <PackBars packs={flown} />
-                {sortie.telemetry.some(log => log.inverted !== undefined) && (
-                  <InvertedRing
-                    inverted={sortie.telemetry.reduce((sum, log) => sum + (log.inverted ?? 0), 0)}
-                    air={airtime(sortie)}
-                  />
-                )}
+                <PackRows packs={flown} notes={packNotes} />
+                {inverted > 0 && <InvertedRing inverted={inverted} air={airtime(sortie)} />}
                 {flips && (
                   <div className="debrief-flips">
                     <p>
@@ -187,31 +182,8 @@ export function SortiePage() {
                         {Math.round(airtime(sortie) / flipTotal)} s
                       </span>
                     </p>
-                    {packFlips.length > 1 && (
-                      <ul className="debrief-flip-packs">
-                        {packFlips.map(one => (
-                          <li key={one.name}>
-                            <span>{one.name}</span> {one.flips ?? 'no flips'}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
                   </div>
                 )}
-                <div className="pack-debrief">
-                  {packDebrief(sortie, doc.batteries, packRecords(doc.sorties, doc.batteries)).map(pack => (
-                    <div key={pack.name} className="pack-debrief-row">
-                      <span className="pack-debrief-name">{pack.name}</span>
-                      <span className="pack-debrief-notes">
-                        {pack.notes.map(note => (
-                          <span key={note.text} className={`pill ${note.tone === 'warning' ? 'critical' : note.tone}`}>
-                            {note.text}
-                          </span>
-                        ))}
-                      </span>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
             {sortie.skills.length > 0 && (
