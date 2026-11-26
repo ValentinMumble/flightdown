@@ -48,7 +48,7 @@ frames marked by corner brackets, a rolling counter of minutes in the air.
   battery in the Hangar, the inverted part in violet), its flips, its volts at rest once landed and a word or two on it
   (too deep, sagged, past its rating for 2 s, flown hard, tiring or worn, or within its limits; none for a pack with no
   telemetry); the share upside down as a ring when it flew inverted, and its flips and rolls, how often they came.
-  Notes keep their line breaks. `npm run logs` brings them from the plugged-in radio.
+  Notes show a paragraph a line and lines starting "- " as a list (a sortie's strip shows the first line). `npm run logs` brings them from the plugged-in radio.
 - **Debrief:** a bar to jump between its sections, the learning curve (crashes every 10 packs), milestones, personal bests
   over every heli (each naming the heli that set it), where the
   heli breaks (a damage map on a 3D Huey you turn by dragging, a part's breaks on hover or tap; the flat drawing

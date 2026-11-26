@@ -67,7 +67,7 @@ export function FlightStrip({
               {weatherEmoji(sortie.weather)}
             </span>
           )}
-          {sortie.notes && <span className="strip-notes"> · {sortie.notes}</span>}
+          {sortie.notes && <span className="strip-notes"> · {sortie.notes.split('\n')[0]}</span>}
         </span>
       </span>
       <span className="strip-cell strip-packs">

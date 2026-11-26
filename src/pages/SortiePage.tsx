@@ -35,6 +35,33 @@ function linkLabel(url: string) {
   }
 }
 
+/** A sortie's notes: a paragraph a line, the lines starting "- " a list. */
+function SortieNotes({text}: {text: string}) {
+  const blocks: {list: boolean; lines: string[]}[] = [];
+  for (const line of text.split('\n').map(one => one.trim())) {
+    if (!line) continue;
+    const item = line.startsWith('- ');
+    const last = blocks[blocks.length - 1];
+    if (item && last?.list) last.lines.push(line.slice(2));
+    else blocks.push({list: item, lines: [item ? line.slice(2) : line]});
+  }
+  return (
+    <div className="prose sortie-notes">
+      {blocks.map((block, index) =>
+        block.list ? (
+          <ul key={index}>
+            {block.lines.map(line => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : (
+          <p key={index}>{block.lines[0]}</p>
+        ),
+      )}
+    </div>
+  );
+}
+
 export function SortiePage() {
   const {id} = useParams();
   const {doc, heli, spot, patch, saveSeries} = useStore();
@@ -195,7 +222,7 @@ export function SortiePage() {
                 ))}
               </div>
             )}
-            {sortie.notes ? <p className="prose sortie-notes">{sortie.notes}</p> : <p className="muted">No notes.</p>}
+            {sortie.notes ? <SortieNotes text={sortie.notes} /> : <p className="muted">No notes.</p>}
             <Link to={`/helis/${sortie.heliId}`} className="button small ghost" style={{alignSelf: 'flex-start'}}>
               <HeliName heli={one} /> <ChevronRight size={14} />
             </Link>

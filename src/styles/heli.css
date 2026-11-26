@@ -146,7 +146,19 @@
   font-size: 0.9375rem;
   line-height: 1.55;
   color: var(--ink);
-  white-space: pre-line;
+}
+
+.sortie-notes p,
+.sortie-notes ul {
+  margin: 0 0 6px;
+}
+
+.sortie-notes ul {
+  padding-left: 1.2em;
+}
+
+.sortie-notes li + li {
+  margin-top: 2px;
 }
 
 .accent-mark {
